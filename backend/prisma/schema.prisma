@@ -1,0 +1,856 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────── Enums ───────────────────────────────
+
+enum RoleName {
+  STUDENT
+  TEACHER
+  COMMUNITY_LEADER
+  ADMIN
+}
+
+enum PublicationStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  OBSERVED
+  REJECTED
+  ARCHIVED
+}
+
+enum ProjectStage {
+  PROPOSED
+  IN_DEVELOPMENT
+  FINISHED
+  FEATURED
+}
+
+enum ProjectMilestoneStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ProjectAuditDeliveryStatus {
+  PENDING
+  PROCESSING
+  SENT
+  SKIPPED
+  FAILED
+}
+
+enum NewsCategory {
+  CONVENIOS
+  LOGROS
+  EVENTOS
+  COMUNIDAD
+  INVESTIGACION
+  PROYECTOS
+}
+
+enum EventCategory {
+  CTF
+  TALLER
+  HACKATHON
+  MENTORIA
+  CHARLA
+  COMPETENCIA
+}
+
+enum PointCategory {
+  DEV
+  RESEARCH
+  COMMUNITY
+}
+
+enum PointReason {
+  REGISTRO_COMPLETO
+  UNIRSE_COMUNIDAD
+  INSCRIPCION_EVENTO
+  PREGUNTA_PUBLICADA
+  RESPUESTA_PUBLICADA
+  RESPUESTA_ACEPTADA
+  PROYECTO_APROBADO
+  ARTICULO_APROBADO
+  LIKE_RECIBIDO
+  REPORTE_VALIDO
+  PENALIZACION_SPAM
+  AJUSTE_ADMIN
+}
+
+enum VoteTargetType {
+  QUESTION
+  ANSWER
+}
+
+enum LikeTargetType {
+  PROJECT
+  ARTICLE
+  COMMENT
+  NEWS
+}
+
+enum CommentTargetType {
+  PROJECT
+  ARTICLE
+}
+
+enum ApprovalTargetType {
+  PROJECT
+  ARTICLE
+}
+
+enum ApprovalDecision {
+  APPROVED
+  OBSERVED
+  REJECTED
+}
+
+enum ReportStatus {
+  PENDING
+  VALID
+  DISMISSED
+}
+
+enum ReportTargetType {
+  QUESTION
+  ANSWER
+  PROJECT
+  ARTICLE
+  COMMENT
+  USER
+}
+
+enum MembershipRole {
+  MEMBER
+  STUDENT_LEAD
+  TEACHER_LEAD
+}
+
+enum RegistrationStatus {
+  REGISTERED
+  ATTENDED
+  CANCELLED
+}
+
+enum MediaProvider {
+  LOCAL
+  S3
+}
+
+enum Difficulty {
+  BASICO
+  INTERMEDIO
+  AVANZADO
+}
+
+enum NotificationType {
+  CONTENT_REVIEW
+  FORUM_ANSWER
+  FORUM_ACCEPTED
+  EVENT_REGISTRATION
+  MENTORSHIP_ENROLLMENT
+  SYSTEM
+}
+
+enum AuthTokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+// ─────────────────────────── Usuarios y roles ───────────────────────────
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  username         String    @unique
+  passwordHash     String
+  refreshTokenHash String?
+  emailVerifiedAt  DateTime?
+  securityVersion  Int       @default(1)
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  roles                  UserRole[]
+  profile                Profile?
+  skills                 UserSkill[]
+  badges                 UserBadge[]
+  pointsTransactions     PointsTransaction[]
+  communityMemberships   CommunityMember[]
+  teacherLeadOf          Community[]             @relation("CommunityTeacherLead")
+  studentLeadOf          Community[]             @relation("CommunityStudentLead")
+  newsAuthored           News[]
+  projectsOwned          Project[]               @relation("ProjectOwner")
+  projectsReviewed       Project[]               @relation("ProjectReviewer")
+  projectMemberships     ProjectMember[]
+  articlesOwned          Article[]               @relation("ArticleOwner")
+  articlesReviewed       Article[]               @relation("ArticleReviewer")
+  articleAuthorships     ArticleAuthor[]
+  eventsOrganized        Event[]
+  eventRegistrations     EventRegistration[]
+  mentorshipsMentored    Mentorship[]
+  mentorshipEnrollments  MentorshipEnrollment[]
+  questions              ForumQuestion[]
+  answers                ForumAnswer[]
+  votes                  Vote[]
+  likes                  Like[]
+  comments               Comment[]
+  reportsMade            Report[]                @relation("ReportReporter")
+  reportsResolved        Report[]                @relation("ReportResolver")
+  approvalsRequested     ApprovalRequest[]       @relation("ApprovalRequester")
+  approvalsReviewed      ApprovalRequest[]       @relation("ApprovalReviewer")
+  mediaUploaded          MediaAsset[]
+  notifications          Notification[]
+  notificationPreference NotificationPreference?
+  authActionTokens       AuthActionToken[]
+  refreshSessions        RefreshSession[]
+}
+
+model Role {
+  id    Int        @id @default(autoincrement())
+  name  RoleName   @unique
+  users UserRole[]
+}
+
+model UserRole {
+  userId String
+  roleId Int
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model Profile {
+  id              String  @id @default(cuid())
+  userId          String  @unique
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName        String
+  avatarUrl       String?
+  bio             String?
+  career          String  @default("Ingeniería de Sistemas Informáticos")
+  semester        Int?
+  githubUrl       String?
+  linkedinUrl     String?
+  websiteUrl      String?
+  devPoints       Int     @default(0)
+  researchPoints  Int     @default(0)
+  communityPoints Int     @default(0)
+  totalPoints     Int     @default(0)
+
+  @@index([totalPoints])
+}
+
+model Skill {
+  id    Int         @id @default(autoincrement())
+  name  String      @unique
+  users UserSkill[]
+}
+
+model UserSkill {
+  userId  String
+  skillId Int
+  level   Int?   @default(1)
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill   Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([userId, skillId])
+}
+
+// ─────────────────────────── Comunidades ───────────────────────────
+
+model Community {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  name            String
+  description     String
+  longDescription String?
+  logoUrl         String?
+  coverUrl        String?
+  accentColor     String?
+  whatsappUrl     String?
+  teamsUrl        String?
+  discordUrl      String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  teacherLeadId String?
+  teacherLead   User?   @relation("CommunityTeacherLead", fields: [teacherLeadId], references: [id], onDelete: SetNull)
+  studentLeadId String?
+  studentLead   User?   @relation("CommunityStudentLead", fields: [studentLeadId], references: [id], onDelete: SetNull)
+
+  members     CommunityMember[]
+  projects    Project[]
+  events      Event[]
+  news        News[]
+  mentorships Mentorship[]
+}
+
+model CommunityMember {
+  id          String         @id @default(cuid())
+  communityId String
+  userId      String
+  role        MembershipRole @default(MEMBER)
+  joinedAt    DateTime       @default(now())
+  community   Community      @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([communityId, userId])
+}
+
+// ─────────────────────────── Noticias ───────────────────────────
+
+model News {
+  id          String            @id @default(cuid())
+  slug        String            @unique
+  title       String
+  summary     String
+  content     String
+  category    NewsCategory
+  coverUrl    String?
+  tags        String[]          @default([])
+  likesCount  Int               @default(0)
+  status      PublicationStatus @default(DRAFT)
+  publishedAt DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  authorId    String
+  author      User              @relation(fields: [authorId], references: [id])
+  communityId String?
+  community   Community?        @relation(fields: [communityId], references: [id], onDelete: SetNull)
+  eventId     String?
+  event       Event?            @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  projectId   String?
+  project     Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([status, publishedAt])
+  @@index([status, likesCount])
+  @@index([communityId])
+  @@index([eventId])
+  @@index([projectId])
+}
+
+// ─────────────────────────── Proyectos ───────────────────────────
+
+model Project {
+  id          String            @id @default(cuid())
+  slug        String            @unique
+  title       String
+  summary     String
+  description String
+  coverUrl    String?
+  videoUrl    String?
+  repoUrl     String?
+  demoUrl     String?
+  subject     String?
+  semester    Int?
+  phase       String?
+  status      PublicationStatus @default(DRAFT)
+  stage       ProjectStage      @default(PROPOSED)
+  isFeatured  Boolean           @default(false)
+  isIncubator Boolean           @default(false)
+  recruiting  Boolean           @default(false)
+  tags        String[]          @default([])
+  likesCount  Int               @default(0)
+  viewsCount  Int               @default(0)
+  version     Int               @default(1)
+  startedAt   DateTime?
+  publishedAt DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  ownerId     String
+  owner       User       @relation("ProjectOwner", fields: [ownerId], references: [id])
+  reviewerId  String?
+  reviewer    User?      @relation("ProjectReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  communityId String?
+  community   Community? @relation(fields: [communityId], references: [id], onDelete: SetNull)
+
+  members      ProjectMember[]
+  technologies ProjectTechnology[]
+  gallery      MediaAsset[]
+  milestones   ProjectMilestone[]
+  auditLogs    ProjectAuditLog[]
+  news         News[]
+
+  @@index([status, isFeatured])
+  @@index([communityId])
+}
+
+model ProjectMember {
+  id            String  @id @default(cuid())
+  projectId     String
+  userId        String
+  roleInProject String?
+  project       Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+}
+
+model ProjectTechnology {
+  id        String  @id @default(cuid())
+  projectId String
+  name      String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, name])
+}
+
+model ProjectMilestone {
+  id          String                 @id @default(cuid())
+  projectId   String
+  title       String
+  description String?
+  startsAt    DateTime
+  endsAt      DateTime?
+  allDay      Boolean                @default(false)
+  status      ProjectMilestoneStatus @default(PLANNED)
+  location    String?
+  url         String?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  project     Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, startsAt])
+}
+
+// Historial append-only: el actor se conserva como snapshot para que una baja
+// o cambio posterior de correo no destruya la trazabilidad de la edición.
+model ProjectAuditLog {
+  id                 String            @id @default(cuid())
+  projectId          String
+  actorId            String
+  actorEmailSnapshot String
+  action             String
+  entityType         String
+  entityId           String?
+  before             Json?
+  after              Json?
+  metadata           Json?
+  rollbackOfId       String?           @unique
+  createdAt          DateTime          @default(now())
+  project            Project           @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  rollbackOf         ProjectAuditLog?  @relation("ProjectAuditRollback", fields: [rollbackOfId], references: [id], onDelete: Restrict)
+  rollbackEntries    ProjectAuditLog[] @relation("ProjectAuditRollback")
+  delivery           ProjectAuditDelivery?
+
+  @@index([projectId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+// Outbox separado: permite reintentar el aviso sin revertir la edición ya
+// confirmada ni modificar la bitácora append-only.
+model ProjectAuditDelivery {
+  id            String                     @id @default(cuid())
+  auditLogId    String                     @unique
+  status        ProjectAuditDeliveryStatus @default(PENDING)
+  attempts      Int                        @default(0)
+  nextAttemptAt DateTime                   @default(now())
+  lastError     String?
+  sentAt        DateTime?
+  createdAt     DateTime                   @default(now())
+  updatedAt     DateTime                   @updatedAt
+  auditLog      ProjectAuditLog            @relation(fields: [auditLogId], references: [id], onDelete: Restrict)
+
+  @@index([status, nextAttemptAt])
+}
+
+// ─────────────────────────── Artículos ───────────────────────────
+
+model Article {
+  id          String            @id @default(cuid())
+  slug        String            @unique
+  title       String
+  abstract    String
+  content     String?
+  area        String
+  impact      String?
+  pdfUrl      String?
+  externalUrl String?
+  doi         String?
+  coverUrl    String?
+  tags        String[]          @default([])
+  likesCount  Int               @default(0)
+  status      PublicationStatus @default(DRAFT)
+  publishedAt DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  ownerId    String
+  owner      User    @relation("ArticleOwner", fields: [ownerId], references: [id])
+  reviewerId String?
+  reviewer   User?   @relation("ArticleReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  authors ArticleAuthor[]
+
+  @@index([status, publishedAt])
+}
+
+model ArticleAuthor {
+  id           String  @id @default(cuid())
+  articleId    String
+  userId       String?
+  externalName String?
+  article      Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user         User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([articleId, userId])
+}
+
+// ─────────────────────────── Eventos ───────────────────────────
+
+model Event {
+  id          String            @id @default(cuid())
+  slug        String            @unique
+  title       String
+  description String
+  category    EventCategory
+  coverUrl    String?
+  location    String?
+  isOnline    Boolean           @default(false)
+  meetingUrl  String?
+  rulesUrl    String?
+  startsAt    DateTime
+  endsAt      DateTime?
+  capacity    Int?
+  isFeatured  Boolean           @default(false)
+  status      PublicationStatus @default(APPROVED)
+  createdAt   DateTime          @default(now())
+
+  organizerId String
+  organizer   User       @relation(fields: [organizerId], references: [id])
+  communityId String?
+  community   Community? @relation(fields: [communityId], references: [id], onDelete: SetNull)
+
+  registrations EventRegistration[]
+  news          News[]
+  gallery       MediaAsset[]
+
+  @@index([startsAt])
+}
+
+model EventRegistration {
+  id        String             @id @default(cuid())
+  eventId   String
+  userId    String
+  status    RegistrationStatus @default(REGISTERED)
+  createdAt DateTime           @default(now())
+  event     Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+}
+
+// ─────────────────────────── Mentorías ───────────────────────────
+
+model Mentorship {
+  id          String     @id @default(cuid())
+  slug        String     @unique
+  title       String
+  description String
+  area        String
+  difficulty  Difficulty @default(BASICO)
+  syllabus    String[]   @default([])
+  startsAt    DateTime?
+  teamsUrl    String?
+  youtubeUrl  String?
+  capacity    Int?
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+
+  mentorId    String?
+  mentor      User?      @relation(fields: [mentorId], references: [id], onDelete: SetNull)
+  mentorName  String?
+  communityId String?
+  community   Community? @relation(fields: [communityId], references: [id], onDelete: SetNull)
+
+  enrollments MentorshipEnrollment[]
+}
+
+model MentorshipEnrollment {
+  id           String     @id @default(cuid())
+  mentorshipId String
+  userId       String
+  createdAt    DateTime   @default(now())
+  mentorship   Mentorship @relation(fields: [mentorshipId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([mentorshipId, userId])
+}
+
+// ─────────────────────────── Foro Q&A ───────────────────────────
+
+model ForumQuestion {
+  id           String   @id @default(cuid())
+  title        String
+  body         String
+  tags         String[] @default([])
+  subject      String?
+  semester     Int?
+  viewsCount   Int      @default(0)
+  votesScore   Int      @default(0)
+  answersCount Int      @default(0)
+  isClosed     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+
+  acceptedAnswerId String?      @unique
+  acceptedAnswer   ForumAnswer? @relation("AcceptedAnswer", fields: [acceptedAnswerId], references: [id], onDelete: SetNull)
+
+  answers ForumAnswer[]
+  images  MediaAsset[]
+
+  @@index([createdAt])
+  @@index([votesScore])
+  @@index([tags], type: Gin)
+}
+
+model ForumAnswer {
+  id         String   @id @default(cuid())
+  body       String
+  votesScore Int      @default(0)
+  isAccepted Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  questionId String
+  question   ForumQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User          @relation(fields: [authorId], references: [id])
+
+  acceptedFor ForumQuestion? @relation("AcceptedAnswer")
+  images      MediaAsset[]
+}
+
+// ─────────────────── Votos, likes, comentarios, reportes ───────────────────
+
+model Vote {
+  id         String         @id @default(cuid())
+  userId     String
+  targetType VoteTargetType
+  targetId   String
+  value      Int
+  createdAt  DateTime       @default(now())
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetType, targetId])
+  @@index([targetType, targetId])
+}
+
+model Like {
+  id         String         @id @default(cuid())
+  userId     String
+  targetType LikeTargetType
+  targetId   String
+  createdAt  DateTime       @default(now())
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetType, targetId])
+  @@index([targetType, targetId])
+}
+
+model Comment {
+  id         String            @id @default(cuid())
+  targetType CommentTargetType
+  targetId   String
+  body       String
+  createdAt  DateTime          @default(now())
+  authorId   String
+  author     User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([targetType, targetId])
+}
+
+model Report {
+  id             String           @id @default(cuid())
+  targetType     ReportTargetType
+  targetId       String
+  reason         String
+  status         ReportStatus     @default(PENDING)
+  resolutionNote String?
+  createdAt      DateTime         @default(now())
+  resolvedAt     DateTime?
+
+  reporterId   String
+  reporter     User    @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  resolvedById String?
+  resolvedBy   User?   @relation("ReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@unique([reporterId, targetType, targetId])
+  @@index([status])
+}
+
+// ─────────────────────────── Gamificación ───────────────────────────
+
+model Badge {
+  id          String      @id @default(cuid())
+  code        String      @unique
+  name        String
+  description String
+  icon        String      @default("award")
+  color       String?
+  users       UserBadge[]
+}
+
+model UserBadge {
+  id        String   @id @default(cuid())
+  userId    String
+  badgeId   String
+  awardedAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge     Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+}
+
+model PointRule {
+  id         String        @id @default(cuid())
+  reason     PointReason   @unique
+  category   PointCategory
+  points     Int
+  dailyLimit Int?
+  isActive   Boolean       @default(true)
+  label      String
+}
+
+model PointsTransaction {
+  id         String        @id @default(cuid())
+  userId     String
+  category   PointCategory
+  reason     PointReason
+  points     Int
+  sourceType String?
+  sourceId   String?
+  note       String?
+  createdAt  DateTime      @default(now())
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, reason, sourceType, sourceId])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}
+
+// ─────────────────────────── Aprobaciones y media ───────────────────────────
+
+model ApprovalRequest {
+  id         String             @id @default(cuid())
+  targetType ApprovalTargetType
+  targetId   String
+  comment    String?
+  decision   ApprovalDecision?
+  createdAt  DateTime           @default(now())
+  decidedAt  DateTime?
+
+  requesterId String
+  requester   User    @relation("ApprovalRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  reviewerId  String?
+  reviewer    User?   @relation("ApprovalReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([targetType, targetId])
+  @@index([decision])
+}
+
+model MediaAsset {
+  id         String        @id @default(cuid())
+  url        String
+  key        String?
+  provider   MediaProvider @default(LOCAL)
+  mime       String?
+  sizeBytes  Int?
+  width      Int?
+  height     Int?
+  createdAt  DateTime      @default(now())
+  archivedAt DateTime?
+
+  uploaderId      String
+  uploader        User           @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+  projectId       String?
+  project         Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  forumQuestionId String?
+  forumQuestion   ForumQuestion? @relation(fields: [forumQuestionId], references: [id], onDelete: Cascade)
+  forumAnswerId   String?
+  forumAnswer     ForumAnswer?   @relation(fields: [forumAnswerId], references: [id], onDelete: Cascade)
+  eventId         String?
+  event           Event?         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([forumQuestionId])
+  @@index([forumAnswerId])
+  @@index([eventId])
+}
+
+// ─────────────────────────── Notificaciones ───────────────────────────
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String?
+  href      String?
+  dedupeKey String?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, readAt, createdAt])
+}
+
+model NotificationPreference {
+  userId             String   @id
+  contentReview      Boolean  @default(true)
+  forumActivity      Boolean  @default(true)
+  eventRegistrations Boolean  @default(true)
+  mentorships        Boolean  @default(true)
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Tokens de un solo uso. Solo se persiste el SHA-256 del secreto enviado al usuario.
+model AuthActionToken {
+  id        String        @id @default(cuid())
+  userId    String
+  type      AuthTokenType
+  tokenHash String        @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime      @default(now())
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+  @@index([userId, type, usedAt])
+  @@index([expiresAt])
+}
+
+// Una fila por navegador/dispositivo. Permite varias sesiones y revocación selectiva.
+model RefreshSession {
+  id                 String    @id @db.Uuid
+  userId             String
+  securityVersion    Int
+  tokenHash          String
+  previousTokenHash  String?
+  previousValidUntil DateTime?
+  userAgent          String?
+  ipAddress          String?
+  createdAt          DateTime  @default(now())
+  lastUsedAt         DateTime  @default(now())
+  expiresAt          DateTime
+  absoluteExpiresAt  DateTime
+  revokedAt          DateTime?
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt, expiresAt])
+}
