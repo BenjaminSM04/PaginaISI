@@ -1,17 +1,21 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { ArrowRight, Lightbulb, Rocket, Users } from 'lucide-react';
+import { ArrowRight, ClipboardList, Lightbulb, Rocket } from 'lucide-react';
 import { serverGet } from '@/lib/server-api';
-import type { Paged, Project } from '@/lib/types';
-import { ProjectCard } from '@/components/cards';
+import type { IdeaProposal, Paged, Project } from '@/lib/types';
+import { IdeaCard, ProjectCard } from '@/components/cards';
 import { EmptyState } from '@/components/shared';
 import { buttonVariants } from '@/components/ui/button';
+import { IncubatorPrivateActions } from '@/components/incubator-private-actions';
 
 export const revalidate = 60;
 export const metadata: Metadata = { title: 'Incubadora de proyectos' };
 
 export default async function IncubadoraPage() {
-  const projects = await serverGet<Paged<Project>>('/projects?incubator=true&limit=24', { total: 0, items: [] });
+  const [projects, ideas] = await Promise.all([
+    serverGet<Paged<Project>>('/projects?incubator=true&limit=24', { total: 0, items: [] }),
+    serverGet<Paged<IdeaProposal>>('/ideas?limit=6', { total: 0, items: [] }),
+  ]);
   const recruiting = projects.items.filter((p) => p.recruiting);
 
   return (
@@ -30,13 +34,35 @@ export default async function IncubadoraPage() {
             reales. Estos son los proyectos actualmente incubados — varios buscan nuevos integrantes.
           </p>
           <div className="flex flex-wrap gap-3 pt-1">
-            <Link href="/proyectos/nuevo" className={buttonVariants({ className: 'bg-purple-500 text-white hover:bg-purple-600' })}><Rocket /> Postular mi proyecto</Link>
-            <Link href="/comunidades/incubadora" className={buttonVariants({ className: 'border border-white/25 bg-white/10 text-white hover:bg-white/20' })}>
-              <Users /> Comunidad de incubadora
+            <Link href="/incubadora/postular" className={buttonVariants({ className: 'bg-purple-500 text-white hover:bg-purple-600' })}>
+              <Lightbulb /> Postular idea
             </Link>
+            <Link href="/proyectos/nuevo" className={buttonVariants({ className: 'border border-white/25 bg-white/10 text-white hover:bg-white/20' })}>
+              <Rocket /> Publicar proyecto desarrollado
+            </Link>
+            <IncubatorPrivateActions inverse />
           </div>
         </div>
       </div>
+
+      <section className="space-y-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <span className="section-kicker">Convocatorias aprobadas</span>
+            <h2 className="mt-1 font-serif-heading text-xl font-bold text-primary">Ideas que buscan convertirse en soluciones</h2>
+          </div>
+          <Link href="/incubadora/ideas" className="inline-flex items-center gap-1 text-sm font-semibold text-purple-600 hover:underline dark:text-purple-400">
+            Explorar ideas <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+        {ideas.items.length === 0 ? (
+          <EmptyState title="Aún no hay ideas aprobadas" subtitle="Postula una propuesta para iniciar el proceso de acompañamiento." />
+        ) : (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {ideas.items.map((idea) => <IdeaCard key={idea.id} idea={idea} />)}
+          </div>
+        )}
+      </section>
 
       {recruiting.length > 0 && (
         <section className="space-y-4">
@@ -62,8 +88,13 @@ export default async function IncubadoraPage() {
       </section>
 
       <div className="flex flex-col items-start justify-between gap-4 rounded-xl border border-border bg-card p-5 sm:flex-row sm:items-center">
-        <p className="text-sm text-muted-foreground">¿Tienes una idea con potencial? Solicita una reunión con el equipo de la incubadora.</p>
-        <Link href="/comunidades/incubadora" className={buttonVariants({ variant: 'outline' })}>Solicitar reunión <ArrowRight /></Link>
+        <div>
+          <p className="font-semibold">¿Tienes una idea con potencial?</p>
+          <p className="mt-1 text-sm text-muted-foreground">Registra el problema, la solución y tu equipo para que un docente pueda revisarla.</p>
+        </div>
+        <Link href="/incubadora/postular" className={buttonVariants({ variant: 'outline' })}>
+          <ClipboardList /> Iniciar postulación <ArrowRight />
+        </Link>
       </div>
     </div>
   );

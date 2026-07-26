@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, ArrowRight, CalendarDays, FolderKanban, Tag, Users } from 'lucide-react';
+import { ArrowRight, CalendarDays, FolderKanban, Tag, Users } from 'lucide-react';
 import { serverGet } from '@/lib/server-api';
 import type { News } from '@/lib/types';
 import { Avatar } from '@/components/ui/avatar';
@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { CoverPlaceholder } from '@/components/shared';
 import { LikeButton } from '@/components/actions';
 import { formatDate, NEWS_CATEGORIES } from '@/lib/utils';
+import { BackButton } from '@/components/back-button';
 
 export const revalidate = 120;
 
@@ -18,9 +19,7 @@ export default async function NoticiaDetailPage({ params }: { params: Promise<{ 
 
   return (
     <article className="container max-w-4xl space-y-8 py-10">
-      <Link href="/noticias" className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
-        <ArrowLeft className="h-4 w-4" /> Volver a noticias
-      </Link>
+      <BackButton fallbackHref="/noticias" label="Volver a noticias" variant="ghost" />
 
       <header className="space-y-4">
         <Badge variant="gold">{NEWS_CATEGORIES[news.category] ?? news.category}</Badge>

@@ -20,6 +20,7 @@ import {
   JWT_ALGORITHM,
   REFRESH_TOKEN_TYPE,
 } from '../config/environment';
+import { AuthUser } from '../common/decorators';
 import { ChangePasswordDto, LoginDto, RegisterDto, ResetPasswordDto } from './auth.dto';
 
 interface RefreshTokenPayload {
@@ -39,6 +40,10 @@ interface ActionLinkResult {
   message: string;
   previewUrl?: string;
 }
+
+export type SessionInspection =
+  | { active: false }
+  | { active: true; userId: string; source: 'access' | 'refresh' };
 
 const PASSWORD_ROUNDS = 12;
 const REFRESH_TOKEN_ROUNDS = 8;
@@ -232,6 +237,85 @@ export class AuthService {
       throw new UnauthorizedException('Token de sesión inválido');
     }
     return payload;
+  }
+
+  /**
+   * Inspección de solo lectura para las pantallas de acceso. Valida la sesión
+   * completa (firma, expiración, hash, versión de seguridad y usuario activo)
+   * sin rotar tokens, actualizar lastUsedAt ni migrar la cookie legacy.
+   */
+  async inspectSession(
+    accessUser: AuthUser | null | undefined,
+    refreshToken?: string,
+  ): Promise<SessionInspection> {
+    if (accessUser) {
+      return { active: true, userId: accessUser.id, source: 'access' };
+    }
+    if (!refreshToken) return { active: false };
+
+    let payload: RefreshTokenPayload;
+    try {
+      payload = await this.verifyRefreshToken(refreshToken);
+    } catch {
+      return { active: false };
+    }
+
+    const now = new Date();
+    const session = await this.prisma.refreshSession.findUnique({
+      where: { id: payload.jti },
+      select: {
+        userId: true,
+        securityVersion: true,
+        tokenHash: true,
+        previousTokenHash: true,
+        previousValidUntil: true,
+        expiresAt: true,
+        absoluteExpiresAt: true,
+        revokedAt: true,
+        user: {
+          select: {
+            id: true,
+            isActive: true,
+            securityVersion: true,
+          },
+        },
+      },
+    });
+    if (session) {
+      const structurallyActive = session.userId === payload.sub
+        && session.user.id === payload.sub
+        && session.user.isActive
+        && session.securityVersion === session.user.securityVersion
+        && !session.revokedAt
+        && session.expiresAt > now
+        && session.absoluteExpiresAt > now;
+      if (!structurallyActive) return { active: false };
+
+      const matchesCurrent = await bcrypt.compare(refreshToken, session.tokenHash);
+      const matchesGrace = !matchesCurrent
+        && !!session.previousTokenHash
+        && !!session.previousValidUntil
+        && session.previousValidUntil > now
+        && await bcrypt.compare(refreshToken, session.previousTokenHash);
+      return matchesCurrent || matchesGrace
+        ? { active: true, userId: session.userId, source: 'refresh' }
+        : { active: false };
+    }
+
+    // Compatibilidad de solo lectura con la cookie única anterior a
+    // RefreshSession. La migración se mantiene exclusivamente en refresh().
+    const legacyUser = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: { id: true, isActive: true, refreshTokenHash: true },
+    });
+    if (
+      legacyUser?.isActive
+      && legacyUser.refreshTokenHash
+      && await bcrypt.compare(refreshToken, legacyUser.refreshTokenHash)
+    ) {
+      return { active: true, userId: legacyUser.id, source: 'refresh' };
+    }
+    return { active: false };
   }
 
   private actionPath(type: AuthTokenType) {

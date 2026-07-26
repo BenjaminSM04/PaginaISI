@@ -9,6 +9,7 @@ export interface UserLite {
   id?: string;
   username: string;
   profile?: ProfileLite | null;
+  roles?: string[];
 }
 
 export interface Me {
@@ -31,8 +32,17 @@ export interface Me {
     communityPoints: number;
     totalPoints: number;
   } | null;
-  badges?: { badge: Badge; awardedAt: string }[];
+  badges?: UserBadgeAward[];
 }
+
+export type BadgeRuleType =
+  | 'ANSWERS_COUNT'
+  | 'ACCEPTED_ANSWERS_COUNT'
+  | 'TOTAL_POINTS'
+  | 'APPROVED_PROJECTS_COUNT'
+  | 'ATTENDED_EVENTS_COUNT'
+  | 'COMPLETED_MENTORSHIPS_COUNT'
+  | 'COMMUNITY_MEMBERSHIPS_COUNT';
 
 export interface Badge {
   id: string;
@@ -41,6 +51,19 @@ export interface Badge {
   description: string;
   icon: string;
   color?: string | null;
+  ruleType?: BadgeRuleType | null;
+  targetValue?: number | null;
+  isActive?: boolean;
+  isRetroactive?: boolean;
+  createdAt?: string;
+}
+
+export interface UserBadgeAward {
+  id?: string;
+  badge: Badge;
+  awardedAt: string;
+  reasonSnapshot?: string | null;
+  progressValue?: number | null;
 }
 
 export interface News {
@@ -77,14 +100,38 @@ export interface Community {
   whatsappUrl?: string | null;
   teamsUrl?: string | null;
   discordUrl?: string | null;
+  teacherIds?: string[];
+  links?: CommunityLink[];
   teacherLead?: UserLite | null;
   studentLead?: UserLite | null;
-  members?: { role: string; user: UserLite; joinedAt: string }[];
+  members?: CommunityMember[];
   projects?: ProjectLite[];
   events?: EventItem[];
   news?: News[];
   mentorships?: Mentorship[];
   _count?: { members: number; projects?: number; events?: number; news?: number; mentorships?: number };
+}
+
+export interface CommunityLink {
+  id?: string;
+  platform: string;
+  label?: string | null;
+  url: string;
+  order?: number;
+  sortOrder?: number;
+  isActive: boolean;
+}
+
+export type CommunityMembershipRole = 'MEMBER' | 'STUDENT_LEAD' | 'TEACHER_LEAD';
+
+export interface CommunityMember {
+  id?: string;
+  userId?: string;
+  role: CommunityMembershipRole;
+  joinedAt: string;
+  user: Omit<UserLite, 'roles'> & {
+    roles?: string[] | { role: { name: string } }[];
+  };
 }
 
 export interface ProjectLite {
@@ -108,6 +155,7 @@ export interface Project extends ProjectLite {
   semester?: number | null;
   phase?: string | null;
   status: string;
+  publicStatus?: string;
   isFeatured: boolean;
   isIncubator: boolean;
   recruiting: boolean;
@@ -118,13 +166,28 @@ export interface Project extends ProjectLite {
   owner?: UserLite;
   reviewer?: UserLite | null;
   community?: { slug: string; name: string; accentColor?: string | null } | null;
-  technologies?: { id: string; name: string }[];
+  technologies?: { id: string; name: string; normalizedName?: string }[];
   members?: { roleInProject?: string | null; user: UserLite }[];
+  clients?: IncubatorClient[];
   comments?: CommentItem[];
   approvals?: Approval[];
   likedByMe?: boolean;
   gallery?: { id: string; url: string }[];
   news?: News[];
+  pendingVersion?: ProjectVersionSummary | null;
+}
+
+export interface ProjectVersionSummary {
+  id: string;
+  number: number;
+  status: 'PENDING' | 'OBSERVED' | 'REJECTED' | 'PUBLISHED' | 'SUPERSEDED';
+  submittedAt: string;
+  decidedAt?: string | null;
+  publishedAt?: string | null;
+  reviewComment?: string | null;
+  requester?: UserLite;
+  reviewer?: UserLite | null;
+  snapshot?: Record<string, unknown>;
 }
 
 export interface ProjectManagementAccess {
@@ -166,7 +229,13 @@ export interface ProjectAuditEntry {
   summary?: string | null;
   projectId?: string;
   project?: { id: string; title: string; slug?: string | null } | null;
-  actor?: (UserLite & { email?: string | null }) | null;
+  actor?: (UserLite & { email?: string | null; roles?: string[] }) | null;
+  actorId?: string | null;
+  actorIdSnapshot?: string | null;
+  actorUserId?: string | null;
+  actorRolesSnapshot?: string[];
+  actorDeleted?: boolean;
+  source?: 'PROJECT' | 'SYSTEM';
   actorEmail?: string | null;
   actorEmailSnapshot?: string | null;
   actorUsernameSnapshot?: string | null;
@@ -254,14 +323,26 @@ export interface Mentorship {
   difficulty: string;
   syllabus: string[];
   startsAt?: string | null;
+  endsAt?: string | null;
+  coverUrl?: string | null;
+  modality?: 'IN_PERSON' | 'ONLINE' | 'HYBRID';
+  location?: string | null;
+  meetingUrl?: string | null;
   teamsUrl?: string | null;
   youtubeUrl?: string | null;
   capacity?: number | null;
   mentorName?: string | null;
   mentor?: UserLite | null;
+  mentors?: { isLead: boolean; user: UserLite }[];
+  enrollments?: { user: UserLite; createdAt: string }[];
+  participants?: UserLite[];
+  gallery?: MediaAssetLite[];
   community?: { slug: string; name: string; accentColor?: string | null } | null;
   _count?: { enrollments: number };
   canManage?: boolean;
+  enrolled?: boolean;
+  status?: 'UPCOMING' | 'IN_PROGRESS' | 'COMPLETED' | 'INACTIVE';
+  isActive?: boolean;
 }
 
 export interface Question {
@@ -301,6 +382,20 @@ export interface MediaAssetLite {
   height?: number | null;
 }
 
+export interface IncubatorClient {
+  id: string;
+  name: string;
+  logoUrl?: string | null;
+  normalizedName?: string;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  _count?: {
+    projects?: number;
+  };
+  projectCount?: number;
+}
+
 export interface CommentItem {
   id: string;
   body: string;
@@ -336,6 +431,59 @@ export interface RankingRow {
 export interface Paged<T> {
   total: number;
   items: T[];
+  page?: number;
+  limit?: number;
+  pages?: number;
+  hasMore?: boolean;
+}
+
+export interface PointRule {
+  id: string;
+  reason: string;
+  category: 'DEV' | 'RESEARCH' | 'COMMUNITY';
+  points: number;
+  dailyLimit?: number | null;
+  isActive: boolean;
+  label: string;
+}
+
+export interface IdeaProposal {
+  id: string;
+  title: string;
+  description: string;
+  problem: string;
+  proposedSolution: string;
+  technologies: string[];
+  isRealClient: boolean;
+  clientName?: string | null;
+  clientContactName?: string | null;
+  clientContact?: string | null;
+  clientNeed?: string | null;
+  clientAuthorizationUrl?: string | null;
+  attachmentUrl?: string | null;
+  status: string;
+  reviewComment?: string | null;
+  owner?: UserLite;
+  members?: { user: UserLite }[];
+  reviewer?: UserLite | null;
+  media?: MediaAssetLite[];
+  createdAt: string;
+  decidedAt?: string | null;
+}
+
+export interface InstitutionalApplication {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  url: string;
+  category: string;
+  sortOrder: number;
+  visibleRoles: string[];
+  openInNewTab: boolean;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type NotificationType =

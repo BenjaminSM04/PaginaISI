@@ -3,13 +3,14 @@ import type { Metadata } from 'next';
 import { ArrowRight, CalendarDays, Download, MapPin, Video } from 'lucide-react';
 import { serverGet } from '@/lib/server-api';
 import type { EventItem } from '@/lib/types';
-import { EventCard } from '@/components/cards';
 import { Countdown, EmptyState, SectionHeader } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
 import { cn, EVENT_CATEGORIES, formatDate } from '@/lib/utils';
 import { EventManagementShortcut } from '@/components/event-management-shortcut';
 import { ExternalResourceLink } from '@/components/external-resource-link';
+import { PointReward } from '@/components/point-reward';
+import { EventRegistrationIndicator, RegisteredEventGrid } from '@/components/event-registration-list';
 
 export const revalidate = 30;
 export const metadata: Metadata = { title: 'Eventos, CTF y talleres' };
@@ -80,12 +81,13 @@ export default async function EventosPage({ searchParams }: { searchParams: Prom
                     <Download /> Bases del evento
                   </ExternalResourceLink>
                 )}
+                <EventRegistrationIndicator eventId={featured.id} category={category} />
               </div>
             </div>
             <div className="flex flex-col items-center gap-3 lg:items-end">
               <span className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-cyan-300">Cuenta regresiva</span>
               <Countdown target={featured.startsAt} />
-              <span className="text-xs text-white/60">{featured._count?.registrations ?? 0} inscritos · +5 pts por inscribirte</span>
+              <span className="text-xs text-white/60">{featured._count?.registrations ?? 0} inscritos · <PointReward reason="INSCRIPCION_EVENTO" suffix="pts por inscribirte" /></span>
             </div>
           </div>
         </div>
@@ -97,9 +99,7 @@ export default async function EventosPage({ searchParams }: { searchParams: Prom
         {rest.length === 0 && !featured ? (
           <EmptyState title="No hay eventos próximos en esta categoría" />
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {rest.map((e) => <EventCard key={e.id} event={e} />)}
-          </div>
+          <RegisteredEventGrid initialItems={rest} when="upcoming" category={category} excludeId={featured?.id} />
         )}
       </section>
 
@@ -107,9 +107,7 @@ export default async function EventosPage({ searchParams }: { searchParams: Prom
       {past.items.length > 0 && (
         <section className="space-y-5">
           <h2 className="font-serif-heading text-xl font-bold text-muted-foreground">Eventos pasados</h2>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {past.items.slice(0, 6).map((e) => <EventCard key={e.id} event={e} />)}
-          </div>
+          <RegisteredEventGrid initialItems={past.items.slice(0, 6)} when="past" category={category} maxItems={6} />
         </section>
       )}
     </div>

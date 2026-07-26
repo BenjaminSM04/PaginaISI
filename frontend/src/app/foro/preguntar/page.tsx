@@ -3,7 +3,6 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useQuery } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Info, Loader2, MessageSquarePlus } from 'lucide-react';
@@ -11,13 +10,23 @@ import { api } from '@/lib/api';
 import { RequireAuth } from '@/components/require-auth';
 import { Button } from '@/components/ui/button';
 import { Input, Label, Select, Textarea } from '@/components/ui/input';
-import { ForumImagePicker, ForumTagInput, uploadForumImages } from '@/components/forum-inputs';
+import { ForumImagePicker, uploadForumImages } from '@/components/forum-inputs';
+import { SEMESTERS } from '@/lib/academic';
+import { PointReward } from '@/components/point-reward';
+import {
+  CatalogCombobox,
+  CatalogMultiCombobox,
+  type CatalogOption,
+} from '@/components/remote-selectors';
 
 const schema = z.object({
   title: z.string().min(10, 'Sé más específico (mínimo 10 caracteres)').max(180),
   body: z.string().min(20, 'Describe tu problema con al menos 20 caracteres'),
   subject: z.string().max(80).optional().or(z.literal('')),
-  semester: z.string().optional(),
+  semester: z
+    .string()
+    .optional()
+    .refine((value) => !value || SEMESTERS.includes(Number(value)), 'Selecciona un semestre entre 1º y 8º'),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -25,12 +34,17 @@ type FormData = z.infer<typeof schema>;
 function PreguntarForm() {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
-  const [tags, setTags] = useState<string[]>([]);
+  const [tags, setTags] = useState<CatalogOption[]>([]);
+  const [subject, setSubject] = useState<CatalogOption | null>(null);
   const [images, setImages] = useState<File[]>([]);
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({ resolver: zodResolver(schema) });
-  const { data: popularTags } = useQuery({
-    queryKey: ['forum-tags'],
-    queryFn: () => api.get<{ tag: string; count: number }[]>('/forum/tags'),
+  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: { subject: '', semester: '' },
+  });
+  const pendingCatalog = (kind: CatalogOption['kind']) => async (name: string): Promise<CatalogOption> => ({
+    id: `pending:${kind}:${name.trim().toLocaleLowerCase('es').replace(/\s+/g, '-')}`,
+    kind,
+    name: name.trim().replace(/\s+/g, ' '),
   });
 
   const onSubmit = async (data: FormData) => {
@@ -40,8 +54,8 @@ function PreguntarForm() {
       const question = await api.post<{ id: string }>('/forum/questions', {
         title: data.title,
         body: data.body,
-        tags,
-        subject: data.subject || undefined,
+        tags: tags.map((tag) => tag.name),
+        subject: subject?.name || undefined,
         semester: data.semester ? Number(data.semester) : undefined,
         imageIds: uploadedImages.map((image) => image.id),
       });
@@ -61,7 +75,7 @@ function PreguntarForm() {
       <div className="flex gap-3 rounded-xl border border-accent/30 bg-accent/10 p-4 text-sm">
         <Info className="h-5 w-5 shrink-0 text-accent" />
         <div>
-          <p className="font-semibold">Consejos para una buena pregunta (+5 pts):</p>
+          <p className="font-semibold">Consejos para una buena pregunta <PointReward reason="PREGUNTA_PUBLICADA" parentheses />:</p>
           <ul className="mt-1 list-inside list-disc space-y-0.5 text-xs text-muted-foreground">
             <li>Título específico: qué intentas, qué falla.</li>
             <li>Incluye código, mensajes de error y lo que ya probaste.</li>
@@ -85,26 +99,41 @@ function PreguntarForm() {
         </div>
 
         <div className="space-y-1.5">
-          <Label>Tags (máximo 5)</Label>
-          <ForumTagInput
+          <CatalogMultiCombobox
+            kind="TAG"
+            label="Tags (máximo 5)"
             value={tags}
             onChange={setTags}
-            suggestions={(popularTags ?? []).map((item) => item.tag)}
             disabled={isSubmitting}
+            maxSelected={5}
+            allowCreate
+            onCreate={pendingCatalog('TAG')}
+            placeholder="Busca o crea un tag"
           />
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label>Materia</Label>
-            <Input placeholder="Base de Datos II" {...register('subject')} />
+            <input type="hidden" {...register('subject')} />
+            <CatalogCombobox
+              kind="SUBJECT"
+              label="Materia"
+              value={subject}
+              onChange={(value) => {
+                setSubject(value);
+                setValue('subject', value?.name ?? '');
+              }}
+              allowCreate
+              onCreate={pendingCatalog('SUBJECT')}
+              placeholder="Busca o crea una materia"
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Semestre</Label>
             <Select {...register('semester')}>
               <option value="">—</option>
-              {Array.from({ length: 10 }, (_, i) => (
-                <option key={i + 1} value={i + 1}>{i + 1}º</option>
+              {SEMESTERS.map((semester) => (
+                <option key={semester} value={semester}>{semester}º</option>
               ))}
             </Select>
           </div>

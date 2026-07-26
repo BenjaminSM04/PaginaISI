@@ -22,12 +22,21 @@ import { validateEnvironment } from './config/environment';
 import { HealthModule } from './health/health.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ProjectCollaborationModule } from './project-collaboration/project-collaboration.module';
+import { AuditModule } from './audit/audit.module';
+import { CatalogsModule } from './catalogs/catalogs.module';
+import { ApplicationsModule } from './applications/applications.module';
+import { IdeasModule } from './ideas/ideas.module';
+import { InstitutionModule } from './institution/institution.module';
+import { IncubatorClientsModule } from './incubator-clients/incubator-clients.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, cache: true, validate: validateEnvironment }),
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 120 }]),
     PrismaModule,
+    AuditModule,
+    CatalogsModule,
+    ApplicationsModule,
     HealthModule,
     NotificationsModule,
     ProjectCollaborationModule,
@@ -40,6 +49,9 @@ import { ProjectCollaborationModule } from './project-collaboration/project-coll
     ArticlesModule,
     EventsModule,
     MentorshipsModule,
+    IdeasModule,
+    InstitutionModule,
+    IncubatorClientsModule,
     ForumModule,
     ReportsModule,
     StorageModule,

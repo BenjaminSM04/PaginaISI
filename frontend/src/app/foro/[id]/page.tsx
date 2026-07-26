@@ -16,6 +16,8 @@ import { TagList } from '@/components/shared';
 import { ReportButton } from '@/components/actions';
 import { cn, timeAgo } from '@/lib/utils';
 import { ForumImagePicker, uploadForumImages } from '@/components/forum-inputs';
+import { BackButton } from '@/components/back-button';
+import { PointReward } from '@/components/point-reward';
 
 function QuestionNotFoundState() {
   return (
@@ -185,12 +187,21 @@ export default function PreguntaDetailPage() {
 
   const isAsker = user?.username === question.author?.username;
   const myVotes = question.myVotes ?? {};
+  const answers = [...(question.answers ?? [])].sort((left, right) => Number(right.isAccepted) - Number(left.isAccepted));
+
+  const markBestAnswer = (answerId: string) => {
+    const changing = Boolean(question.acceptedAnswerId && question.acceptedAnswerId !== answerId);
+    const confirmed = window.confirm(
+      changing
+        ? '¿Cambiar la mejor respuesta? La selección y la recompensa anterior se reasignarán.'
+        : '¿Marcar esta como la respuesta que más te sirvió?',
+    );
+    if (confirmed) acceptMutation.mutate(answerId);
+  };
 
   return (
     <div className="container max-w-4xl space-y-6 py-10">
-      <Link href="/foro" className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
-        <ArrowLeft className="h-4 w-4" /> Volver al foro
-      </Link>
+      <BackButton fallbackHref="/foro" label="Volver al foro" variant="ghost" />
 
       {/* Pregunta */}
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
@@ -241,7 +252,7 @@ export default function PreguntaDetailPage() {
       </h2>
 
       <div className="space-y-4">
-        {(question.answers ?? []).map((answer: Answer) => {
+        {answers.map((answer: Answer) => {
           const mine = user?.username === answer.author?.username;
           return (
             <div
@@ -253,7 +264,7 @@ export default function PreguntaDetailPage() {
             >
               {answer.isAccepted && (
                 <div className="mb-3 flex items-center gap-2 text-xs font-bold text-emerald-500">
-                  <CheckCircle2 className="h-4 w-4" /> Respuesta aceptada por quien preguntó
+                  <CheckCircle2 className="h-4 w-4" /> Mejor respuesta elegida por quien preguntó
                 </div>
               )}
               <div className="flex gap-4">
@@ -270,8 +281,8 @@ export default function PreguntaDetailPage() {
                   <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
                     <div className="flex items-center gap-3">
                       {isAsker && !answer.isAccepted && !mine && (
-                        <Button size="sm" variant="outline" onClick={() => acceptMutation.mutate(answer.id)} disabled={acceptMutation.isPending}>
-                          <Check className="text-emerald-500" /> Marcar como correcta
+                        <Button size="sm" variant="outline" onClick={() => markBestAnswer(answer.id)} disabled={acceptMutation.isPending}>
+                          <Check className="text-emerald-500" /> Marcar como mejor respuesta
                         </Button>
                       )}
                       <ReportButton targetType="ANSWER" targetId={answer.id} />
@@ -291,7 +302,7 @@ export default function PreguntaDetailPage() {
 
       {/* Responder */}
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-        <h3 className="font-serif-heading text-lg font-bold text-primary">Tu respuesta <span className="text-sm font-normal text-emerald-500">(+10 pts)</span></h3>
+        <h3 className="font-serif-heading text-lg font-bold text-primary">Tu respuesta <PointReward reason="RESPUESTA_PUBLICADA" className="text-sm font-normal text-emerald-500" parentheses /></h3>
         <form
           onSubmit={(e) => {
             e.preventDefault();

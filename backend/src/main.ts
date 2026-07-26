@@ -73,8 +73,8 @@ async function bootstrap() {
   const swaggerEnabled = nodeEnvironment !== 'production' || environment.getOrThrow('ENABLE_SWAGGER', { infer: true });
   if (swaggerEnabled) {
     const config = new DocumentBuilder()
-      .setTitle('Portal ISI API')
-      .setDescription('API del portal académico gamificado de Ingeniería de Sistemas Informáticos')
+      .setTitle('Portal de Ingeniería de Sistemas · Univalle API')
+      .setDescription('API del portal académico de Ingeniería de Sistemas de la Universidad Privada del Valle')
       .setVersion('1.0')
       .addBearerAuth()
       .build();

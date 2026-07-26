@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, ForbiddenException, Get, Param, Post, Req, Res } from '@nestjs/common';
+import { Body, ConflictException, Controller, Delete, ForbiddenException, Get, Param, Post, Req, Res } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -53,6 +53,13 @@ export class AuthController {
     return { userAgent: req.get('user-agent'), ipAddress: req.ip };
   }
 
+  private async assertAnonymous(currentUser: AuthUser | null, req: Request) {
+    const inspection = await this.auth.inspectSession(currentUser, req.cookies?.[REFRESH_COOKIE]);
+    if (inspection.active) {
+      throw new ConflictException('Ya existe una sesión activa');
+    }
+  }
+
   private assertTrustedCookieOrigin(req: Request) {
     const origin = req.get('origin');
     if (!origin) return;
@@ -74,9 +81,15 @@ export class AuthController {
   @Public()
   @Post('register')
   @Throttle({ default: { limit: 3, ttl: 10 * 60_000 } })
-  @ApiOperation({ summary: 'Registro de estudiante (+10 pts de bienvenida)' })
-  async register(@Body() dto: RegisterDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  @ApiOperation({ summary: 'Registro de estudiante con recompensa de bienvenida configurable' })
+  async register(
+    @Body() dto: RegisterDto,
+    @CurrentUser() currentUser: AuthUser | null,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     this.assertTrustedCookieOrigin(req);
+    await this.assertAnonymous(currentUser, req);
     const { refreshToken, ...rest } = await this.auth.register(dto, this.requestMetadata(req));
     this.setRefreshCookie(res, refreshToken);
     return rest;
@@ -86,8 +99,14 @@ export class AuthController {
   @Post('login')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({ summary: 'Inicio de sesión con email o username' })
-  async login(@Body() dto: LoginDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  async login(
+    @Body() dto: LoginDto,
+    @CurrentUser() currentUser: AuthUser | null,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     this.assertTrustedCookieOrigin(req);
+    await this.assertAnonymous(currentUser, req);
     const { refreshToken, ...rest } = await this.auth.login(dto, this.requestMetadata(req));
     this.setRefreshCookie(res, refreshToken);
     return rest;

@@ -27,7 +27,7 @@ function CommunityManagementContent() {
           <Link href="/comunidades?vista=comunidades" className="mb-4 inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"><ArrowLeft className="h-4 w-4" /> Volver a comunidades</Link>
           <span className="section-kicker block">Panel operativo</span>
           <h1 className="mt-1 flex items-center gap-2 font-serif-heading text-3xl font-bold text-primary"><Settings /> Gestión de comunidades</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Actualiza presentación, responsables, canales y estado desde un solo lugar.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Actualiza presentación, responsables, canales, miembros y estado desde un solo lugar.</p>
         </div>
         {isAdmin && <Link href="/comunidades/gestionar/nueva" className={buttonVariants()}><Plus /> Nueva comunidad</Link>}
       </div>
@@ -46,7 +46,7 @@ function CommunityManagementContent() {
               </div>
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Users className="h-3.5 w-3.5" /> {community._count?.members ?? 0} miembros · {community._count?.events ?? 0} eventos</div>
               <div className="flex gap-2">
-                <Link href={`/comunidades/gestionar/${community.id}`} className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'flex-1')}><Pencil /> Editar</Link>
+                <Link href={`/comunidades/gestionar/${community.id}`} className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'flex-1')}><Pencil /> Gestionar</Link>
                 {community.isActive !== false && <Link href={`/comunidades/${community.slug}`} className={buttonVariants({ variant: 'ghost', size: 'sm' })} aria-label={`Ver ${community.name}`}><ExternalLink /></Link>}
               </div>
             </div>

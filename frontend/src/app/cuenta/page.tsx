@@ -14,6 +14,7 @@ import { AccountSecurity } from '@/components/account-security';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input, Label, Select, Textarea } from '@/components/ui/input';
 import { cn, formatDate } from '@/lib/utils';
+import { isValidSemester, SEMESTERS } from '@/lib/academic';
 
 const TABS = [
   { id: 'perfil', label: 'Mi perfil', icon: User },
@@ -59,7 +60,7 @@ function PerfilTab() {
     mutation.mutate({
       fullName: data.fullName || undefined,
       bio: data.bio || undefined,
-      semester: data.semester ? Number(data.semester) : undefined,
+      semester: data.semester && isValidSemester(Number(data.semester)) ? Number(data.semester) : undefined,
       avatarUrl: data.avatarUrl || undefined,
       githubUrl: data.githubUrl || undefined,
       linkedinUrl: data.linkedinUrl || undefined,
@@ -79,8 +80,8 @@ function PerfilTab() {
           <Label>Semestre</Label>
           <Select {...register('semester')}>
             <option value="">—</option>
-            {Array.from({ length: 10 }, (_, i) => (
-              <option key={i + 1} value={i + 1}>{i + 1}º semestre</option>
+            {SEMESTERS.map((semester) => (
+              <option key={semester} value={semester}>{semester}º semestre</option>
             ))}
           </Select>
         </div>

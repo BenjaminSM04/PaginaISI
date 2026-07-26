@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, CalendarDays, CalendarPlus, Download, MapPin, Users, Video } from 'lucide-react';
+import { CalendarDays, CalendarPlus, Download, MapPin, Users, Video } from 'lucide-react';
 import { serverGet } from '@/lib/server-api';
 import type { EventItem } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,7 @@ import { EventAttendees } from '@/components/event-attendees';
 import { EventMeetingLink } from '@/components/event-meeting-link';
 import { cn, EVENT_CATEGORIES, formatDate } from '@/lib/utils';
 import { ExternalResourceLink } from '@/components/external-resource-link';
+import { BackButton } from '@/components/back-button';
 
 export const revalidate = 30;
 
@@ -36,9 +37,7 @@ export default async function EventoDetailPage({ params }: { params: Promise<{ s
 
   return (
     <div className="container max-w-5xl space-y-8 py-10">
-      <Link href="/eventos" className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
-        <ArrowLeft className="h-4 w-4" /> Volver a eventos
-      </Link>
+      <BackButton fallbackHref="/eventos" label="Volver a eventos" variant="ghost" />
 
       <div className="overflow-hidden rounded-2xl border border-border">
         <div className="relative h-56 md:h-72">

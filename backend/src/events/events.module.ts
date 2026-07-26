@@ -2,7 +2,7 @@ import {
   BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Injectable, Module, NotFoundException, Param, Patch, Post, Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags, PartialType } from '@nestjs/swagger';
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsDateString, IsEnum, IsInt, IsOptional, IsString, IsUrl, MaxLength, Min, MinLength } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsDateString, IsEnum, IsIn, IsInt, IsOptional, IsString, IsUrl, MaxLength, Min, MinLength } from 'class-validator';
 import { EventCategory, MembershipRole, Prisma, RegistrationStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { GamificationService } from '../gamification/gamification.service';
@@ -10,6 +10,7 @@ import { CurrentUser, Public, Roles, AuthUser } from '../common/decorators';
 import { uniqueSlug } from '../common/utils';
 import { StorageModule, StorageService } from '../storage/storage.module';
 import { NotificationsService } from '../notifications/notifications.module';
+import { AuditService } from '../audit/audit.service';
 
 const WEB_URL_OPTIONS = { protocols: ['http', 'https'], require_protocol: true, require_tld: false };
 
@@ -45,8 +46,8 @@ export class EventGalleryDto {
 }
 
 export class UpdateAttendanceDto {
-  @ApiProperty({ enum: RegistrationStatus })
-  @IsEnum(RegistrationStatus)
+  @ApiProperty({ enum: [RegistrationStatus.REGISTERED, RegistrationStatus.ATTENDED] })
+  @IsIn([RegistrationStatus.REGISTERED, RegistrationStatus.ATTENDED])
   status: RegistrationStatus;
 }
 
@@ -68,6 +69,7 @@ export class EventsService {
     private gamification: GamificationService,
     private storage: StorageService,
     private notifications: NotificationsService,
+    private audit: AuditService,
   ) {}
 
   async list(q: any, viewer?: AuthUser | null) {
@@ -83,18 +85,23 @@ export class EventsService {
       include: EVENT_INCLUDE,
     });
     let myRegistrations: string[] = [];
-    if (viewer) {
+    if (viewer && items.length) {
       const regs = await this.prisma.eventRegistration.findMany({
-        where: { userId: viewer.id, status: { in: ACTIVE_REGISTRATION_STATUSES } },
+        where: {
+          userId: viewer.id,
+          eventId: { in: items.map((event) => event.id) },
+          status: { in: ACTIVE_REGISTRATION_STATUSES },
+        },
         select: { eventId: true },
       });
       myRegistrations = regs.map((r) => r.eventId);
     }
+    const registrationSet = new Set(myRegistrations);
     return {
       items: items.map((event) => ({
         ...event,
         isPast: event.startsAt.getTime() <= Date.now(),
-        meetingUrl: viewer && (myRegistrations.includes(event.id) || event.organizerId === viewer.id || viewer.roles.includes('ADMIN'))
+        meetingUrl: viewer && (registrationSet.has(event.id) || event.organizerId === viewer.id || viewer.roles.includes('ADMIN'))
           ? event.meetingUrl
           : null,
       })),
@@ -131,72 +138,180 @@ export class EventsService {
   }
 
   async register(user: AuthUser, slug: string) {
-    let awardPoints = false;
-    const result = await this.prisma.$transaction(async (tx) => {
+    const result = await this.serializable(async (tx) => {
       const event = await tx.event.findUnique({
         where: { slug },
-        include: { _count: { select: { registrations: { where: { status: { in: ACTIVE_REGISTRATION_STATUSES } } } } } },
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          organizerId: true,
+          status: true,
+          startsAt: true,
+          capacity: true,
+          registrations: {
+            where: { userId: user.id },
+            take: 1,
+            select: { id: true, status: true, createdAt: true },
+          },
+          _count: {
+            select: {
+              registrations: { where: { status: { in: ACTIVE_REGISTRATION_STATUSES } } },
+            },
+          },
+        },
       });
       if (!event) throw new NotFoundException('Evento no encontrado');
       if (event.status !== 'APPROVED') throw new BadRequestException('El evento no está disponible para inscripciones');
       if (event.startsAt.getTime() <= Date.now()) throw new BadRequestException('El evento ya comenzó o finalizó');
-      const existing = await tx.eventRegistration.findUnique({
-        where: { eventId_userId: { eventId: event.id, userId: user.id } },
-      });
+      const existing = event.registrations[0];
       if (existing && ACTIVE_REGISTRATION_STATUSES.includes(existing.status)) {
-        return { registered: true, alreadyRegistered: true };
+        return {
+          registered: true as const,
+          status: existing.status,
+          alreadyRegistered: true as const,
+          pointsAwarded: 0,
+          changed: false as const,
+        };
       }
-      if (event.capacity && event._count.registrations >= event.capacity) {
+      if (event.capacity !== null && event._count.registrations >= event.capacity) {
         throw new ForbiddenException('El evento ya alcanzó su capacidad máxima');
       }
-      if (existing) {
-        await tx.eventRegistration.update({ where: { id: existing.id }, data: { status: 'REGISTERED' } });
-        return { registered: true };
-      }
-      await tx.eventRegistration.create({ data: { eventId: event.id, userId: user.id } });
-      awardPoints = true;
-      return { registered: true, pointsAwarded: 5, eventId: event.id };
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
-    if (awardPoints && 'eventId' in result) {
-      const event = await this.prisma.event.findUnique({
-        where: { id: result.eventId },
-        select: { id: true, slug: true, title: true, organizerId: true },
-      });
-      if (event) {
-        await this.notifications.send({
-          userId: user.id,
-          type: 'EVENT_REGISTRATION',
-          title: 'Inscripción confirmada',
-          body: `Tu lugar en “${event.title}” quedó registrado.`,
-          href: `/eventos/${event.slug}`,
-          dedupeKey: `event-registration:${event.id}:${user.id}`,
-        });
-        if (event.organizerId !== user.id) {
-          await this.notifications.send({
-            userId: event.organizerId,
-            type: 'EVENT_REGISTRATION',
-            title: 'Nueva inscripción en tu evento',
-            body: `@${user.username} se inscribió en “${event.title}”.`,
-            href: `/eventos/${event.slug}`,
-            dedupeKey: `event-organizer-registration:${event.id}:${user.id}`,
+      const registration = existing
+        ? await tx.eventRegistration.update({
+            where: { id: existing.id },
+            data: { status: RegistrationStatus.REGISTERED },
+            select: { id: true, status: true, createdAt: true },
+          })
+        : await tx.eventRegistration.create({
+            data: { eventId: event.id, userId: user.id },
+            select: { id: true, status: true, createdAt: true },
           });
-        }
-      }
-      await this.gamification.award(user.id, 'INSCRIPCION_EVENTO', 'EVENT', result.eventId);
-      const { eventId, ...response } = result;
-      return response;
+      const points = await this.gamification.awardInTransaction(
+        tx,
+        user.id,
+        'INSCRIPCION_EVENTO',
+        'EVENT',
+        event.id,
+      );
+      await this.audit.record(tx, {
+        actor: user,
+        action: 'EVENT_REGISTRATION_CREATED',
+        entityType: 'EVENT_REGISTRATION',
+        entityId: registration.id,
+        before: existing ? { status: existing.status } : null,
+        after: { status: registration.status },
+        metadata: {
+          eventId: event.id,
+          eventSlug: event.slug,
+          reactivated: !!existing,
+          pointsAwarded: points.points,
+        },
+      });
+      return {
+        registered: true as const,
+        status: registration.status,
+        alreadyRegistered: false as const,
+        pointsAwarded: points.points,
+        changed: true as const,
+        event: {
+          id: event.id,
+          slug: event.slug,
+          title: event.title,
+          organizerId: event.organizerId,
+        },
+      };
+    });
+
+    if (!result.changed) return result;
+    await this.gamification.evaluateBadgesForUser(user.id);
+    await this.notifications.send({
+      userId: user.id,
+      type: 'EVENT_REGISTRATION',
+      title: 'Inscripción confirmada',
+      body: `Tu lugar en “${result.event.title}” quedó registrado.`,
+      href: `/eventos/${result.event.slug}`,
+      dedupeKey: `event-registration:${result.event.id}:${user.id}`,
+    });
+    if (result.event.organizerId !== user.id) {
+      await this.notifications.send({
+        userId: result.event.organizerId,
+        type: 'EVENT_REGISTRATION',
+        title: 'Nueva inscripción en tu evento',
+        body: `@${user.username} se inscribió en “${result.event.title}”.`,
+        href: `/eventos/${result.event.slug}`,
+        dedupeKey: `event-organizer-registration:${result.event.id}:${user.id}`,
+      });
     }
-    return result;
+    return {
+      registered: result.registered,
+      status: result.status,
+      alreadyRegistered: result.alreadyRegistered,
+      pointsAwarded: result.pointsAwarded,
+    };
   }
 
   async unregister(user: AuthUser, slug: string) {
-    const event = await this.prisma.event.findUnique({ where: { slug } });
-    if (!event) throw new NotFoundException('Evento no encontrado');
-    await this.prisma.eventRegistration.updateMany({
-      where: { eventId: event.id, userId: user.id },
-      data: { status: 'CANCELLED' },
+    return this.serializable(async (tx) => {
+      const event = await tx.event.findUnique({
+        where: { slug },
+        select: {
+          id: true,
+          slug: true,
+          startsAt: true,
+          registrations: {
+            where: { userId: user.id },
+            take: 1,
+            select: { id: true, status: true },
+          },
+        },
+      });
+      if (!event) throw new NotFoundException('Evento no encontrado');
+      if (event.startsAt.getTime() <= Date.now()) {
+        throw new BadRequestException('No puedes cancelar una inscripción después del inicio del evento');
+      }
+      const registration = event.registrations[0];
+      if (!registration || !ACTIVE_REGISTRATION_STATUSES.includes(registration.status)) {
+        throw new NotFoundException('No tienes una inscripción activa en este evento');
+      }
+      const updated = await tx.eventRegistration.update({
+        where: { id: registration.id },
+        data: { status: RegistrationStatus.CANCELLED },
+        select: { id: true, status: true },
+      });
+      await this.audit.record(tx, {
+        actor: user,
+        action: 'EVENT_REGISTRATION_CANCELLED',
+        entityType: 'EVENT_REGISTRATION',
+        entityId: updated.id,
+        before: { status: registration.status },
+        after: { status: updated.status },
+        metadata: { eventId: event.id, eventSlug: event.slug },
+      });
+      return {
+        registered: false as const,
+        status: updated.status,
+        pointsAwarded: 0,
+      };
     });
-    return { registered: false };
+  }
+
+  private async serializable<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(operation, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
+      } catch (error) {
+        if (
+          attempt >= 2
+          || !(error instanceof Prisma.PrismaClientKnownRequestError)
+          || !['P2002', 'P2034'].includes(error.code)
+        ) {
+          throw error;
+        }
+      }
+    }
   }
 
   async attendees(user: AuthUser, slug: string) {
@@ -218,9 +333,32 @@ export class EventsService {
     const canManage = user.roles.includes('ADMIN') || event.organizerId === user.id
       || await this.canManageCommunity(user, event.communityId);
     if (!canManage) throw new ForbiddenException('No puedes gestionar la asistencia de este evento');
-    const registration = await this.prisma.eventRegistration.findUnique({ where: { id: registrationId } });
-    if (!registration || registration.eventId !== event.id) throw new NotFoundException('Inscripción no encontrada');
-    return this.prisma.eventRegistration.update({ where: { id: registrationId }, data: { status: dto.status } });
+    if (dto.status === RegistrationStatus.ATTENDED && event.startsAt > new Date()) {
+      throw new BadRequestException('La asistencia solo puede acreditarse una vez iniciado el evento');
+    }
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const registration = await tx.eventRegistration.findUnique({ where: { id: registrationId } });
+      if (!registration || registration.eventId !== event.id) throw new NotFoundException('Inscripción no encontrada');
+      if (!ACTIVE_REGISTRATION_STATUSES.includes(registration.status)) {
+        throw new BadRequestException('Una inscripción cancelada no puede reactivarse desde el control de asistencia');
+      }
+      if (registration.status === dto.status) return registration;
+      const next = await tx.eventRegistration.update({ where: { id: registrationId }, data: { status: dto.status } });
+      await this.audit.record(tx, {
+        actor: user,
+        action: 'EVENT_ATTENDANCE_UPDATED',
+        entityType: 'EVENT_REGISTRATION',
+        entityId: registration.id,
+        before: { status: registration.status },
+        after: { status: next.status },
+        metadata: { eventId: event.id, eventSlug: event.slug, attendeeId: registration.userId },
+      });
+      return next;
+    });
+    if (dto.status === RegistrationStatus.ATTENDED) {
+      await this.gamification.evaluateBadgesForUser(updated.userId);
+    }
+    return updated;
   }
 
   async addGalleryImages(user: AuthUser, id: string, dto: EventGalleryDto) {
@@ -386,7 +524,7 @@ export class EventsController {
 
   @Post(':slug/register')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Inscribirse (+5 pts la primera vez)' })
+  @ApiOperation({ summary: 'Inscribirse (puntos según la regla vigente, una sola vez)' })
   register(@CurrentUser() user: AuthUser, @Param('slug') slug: string) {
     return this.events.register(user, slug);
   }

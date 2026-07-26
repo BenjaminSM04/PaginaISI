@@ -3,14 +3,15 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, Crown, Loader2, Medal, RefreshCw } from 'lucide-react';
+import { AlertTriangle, CircleHelp, Crown, Loader2, Medal, RefreshCw, Sparkles } from 'lucide-react';
 import { api } from '@/lib/api';
-import type { Badge as BadgeType, RankingRow } from '@/lib/types';
+import type { Badge as BadgeType, PointRule, RankingRow } from '@/lib/types';
 import { Avatar } from '@/components/ui/avatar';
 import { BadgeIcon } from '@/components/badge-icon';
 import { SectionHeader } from '@/components/shared';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { badgeRuleExplanation } from '@/lib/badge-rules';
 
 const CATEGORIES = [
   { id: 'general', label: 'General', color: 'text-primary' },
@@ -35,6 +36,11 @@ export default function RankingPage() {
     retry: false,
   });
   const badges = badgesQuery.data;
+  const rulesQuery = useQuery({
+    queryKey: ['point-rules-public'],
+    queryFn: () => api.get<PointRule[]>('/points/rules'),
+    retry: false,
+  });
 
   const podium = (rows ?? []).slice(0, 3);
   const rest = (rows ?? []).slice(3);
@@ -87,6 +93,42 @@ export default function RankingPage() {
           ))}
         </div>
       </div>
+
+      <details className="group mx-auto max-w-3xl rounded-2xl border border-accent/30 bg-accent/5 shadow-sm">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-5 py-4 text-sm font-bold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+          <span className="flex items-center gap-2"><CircleHelp className="h-5 w-5 text-accent" aria-hidden="true" /> ¿Cómo se ganan puntos?</span>
+          <span className="text-xs font-semibold text-muted-foreground transition group-open:rotate-180" aria-hidden="true">⌄</span>
+        </summary>
+        <div className="border-t border-accent/20 px-5 py-4">
+          <p className="mb-4 text-xs text-muted-foreground">
+            Estas son las reglas activas configuradas por administración. Los valores se leen directamente del sistema.
+          </p>
+          {rulesQuery.isLoading ? (
+            <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Cargando reglas…</p>
+          ) : rulesQuery.isError ? (
+            <p role="alert" className="text-sm text-red-500">No se pudieron consultar las reglas de puntuación.</p>
+          ) : (rulesQuery.data?.length ?? 0) === 0 ? (
+            <p className="text-sm text-muted-foreground">No hay reglas de puntuación activas.</p>
+          ) : (
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {rulesQuery.data?.map((rule) => (
+                <li key={rule.reason} className="flex items-start justify-between gap-3 rounded-xl border border-border bg-card px-3 py-2.5">
+                  <span className="flex min-w-0 items-start gap-2 text-sm">
+                    <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+                    <span>
+                      <span className="block font-semibold">{rule.label}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{rule.category}</span>
+                    </span>
+                  </span>
+                  <span className={cn('shrink-0 text-sm font-extrabold', rule.points >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500')}>
+                    {rule.points >= 0 ? '+' : ''}{rule.points} pts
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </details>
 
       {isLoading ? (
         <div role="status" className="flex justify-center py-16"><Loader2 aria-hidden="true" className="h-6 w-6 animate-spin text-primary" /><span className="sr-only">Cargando ranking</span></div>
@@ -185,6 +227,9 @@ export default function RankingPage() {
               </div>
               <div className="text-sm font-bold">{b.name}</div>
               <div className="mt-1 text-[11px] leading-snug text-muted-foreground">{b.description}</div>
+              <div className="mt-2 rounded-lg bg-secondary/60 px-2 py-1.5 text-[10px] leading-relaxed text-muted-foreground">
+                {badgeRuleExplanation(b)}
+              </div>
               <div className="mt-2 text-[10px] font-bold uppercase tracking-widest text-accent">{b._count?.users ?? 0} otorgadas</div>
             </div>
           ))}

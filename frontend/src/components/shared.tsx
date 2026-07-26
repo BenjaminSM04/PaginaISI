@@ -72,7 +72,7 @@ export function CoverPlaceholder({ label, accent, className }: { label?: string;
       style={{ backgroundColor: accent ? `${accent}14` : undefined }}
     >
       <span className="font-serif-heading text-4xl font-bold opacity-25" style={{ color: accent ?? 'hsl(var(--primary))' }}>
-        {label ?? 'Σ'}
+        {label ?? 'ISI'}
       </span>
     </div>
   );

@@ -84,7 +84,11 @@ export class GamificationController {
   @Get('badges')
   @ApiOperation({ summary: 'Catálogo de insignias' })
   badges() {
-    return this.prisma.badge.findMany({ include: { _count: { select: { users: true } } } });
+    return this.prisma.badge.findMany({
+      where: { isActive: true },
+      orderBy: [{ createdAt: 'asc' }, { name: 'asc' }],
+      include: { _count: { select: { users: true } } },
+    });
   }
 
   @Public()

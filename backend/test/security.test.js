@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 
 const { validateEnvironment } = require('../dist/config/environment');
 const { clean, paginate, slugify } = require('../dist/common/utils');
-const { hasValidFileSignature } = require('../dist/storage/storage.module');
+const { hasValidFileSignature, StorageService } = require('../dist/storage/storage.module');
 const { optimizeImage, OUTPUT_IMAGE_DIMENSION } = require('../dist/storage/image-optimizer');
 const { normalizeForumTags, parseForumTagFilter } = require('../dist/forum/forum.module');
 const { hashAuthActionToken } = require('../dist/auth/auth.service');
@@ -119,6 +119,56 @@ test('el upload valida la firma real y no solo el MIME declarado', () => {
   assert.equal(hasValidFileSignature(pdf, 'application/pdf'), true);
   assert.equal(hasValidFileSignature(Buffer.from('<script>'), 'image/png'), false);
   assert.equal(hasValidFileSignature(png, 'application/pdf'), false);
+});
+
+test('una portada usada solo por una versión pendiente no se trata como archivo huérfano', async () => {
+  const countZero = { count: async () => 0 };
+  const projectVersionFilters = [];
+  const prisma = {
+    mediaAsset: {
+      findUnique: async () => ({
+        id: 'asset-pending-cover',
+        url: 'https://api.example.test/uploads/pending.webp',
+        uploaderId: 'owner',
+        projectId: null,
+        forumQuestionId: null,
+        forumAnswerId: null,
+        eventId: null,
+        mentorshipId: null,
+        ideaProposalId: null,
+      }),
+    },
+    profile: countZero,
+    community: countZero,
+    institutionalSettings: countZero,
+    incubatorClient: countZero,
+    news: countZero,
+    project: countZero,
+    projectVersion: {
+      count: async ({ where }) => {
+        projectVersionFilters.push(where);
+        return 1;
+      },
+    },
+    article: countZero,
+    event: countZero,
+    mentorship: countZero,
+    ideaProposal: countZero,
+  };
+  const service = new StorageService(prisma, {}, {}, {}, {});
+
+  await assert.rejects(
+    () => service.deleteOwnedUnlinked({ id: 'owner', roles: [] }, 'asset-pending-cover'),
+    /está en uso/,
+  );
+  assert.equal(projectVersionFilters.some((where) =>
+    where.snapshot.path?.[0] === 'coverUrl'
+    && where.snapshot.equals === 'https://api.example.test/uploads/pending.webp'
+  ), true);
+  assert.equal(projectVersionFilters.some((where) =>
+    where.snapshot.path?.[0] === 'clients'
+    && where.snapshot.array_contains?.[0]?.logoUrl === 'https://api.example.test/uploads/pending.webp'
+  ), true);
 });
 
 test('los tags del foro son libres, estables y no pueden superar cinco', () => {

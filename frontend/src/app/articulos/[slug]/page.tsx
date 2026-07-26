@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, GraduationCap } from 'lucide-react';
+import { GraduationCap } from 'lucide-react';
 import { serverGet } from '@/lib/server-api';
 import type { Article } from '@/lib/types';
 import { Avatar } from '@/components/ui/avatar';
@@ -9,6 +9,7 @@ import { StatusBadge, TagList } from '@/components/shared';
 import { CommentSection, LikeButton, ReportButton } from '@/components/actions';
 import { ArticleContentTabs } from '@/components/article-content-tabs';
 import { formatDate } from '@/lib/utils';
+import { BackButton } from '@/components/back-button';
 
 export const revalidate = 30;
 
@@ -25,9 +26,7 @@ export default async function ArticuloDetailPage({ params }: { params: Promise<{
 
   return (
     <div className="container max-w-5xl space-y-8 py-10">
-      <Link href="/articulos" className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
-        <ArrowLeft className="h-4 w-4" /> Volver a artículos
-      </Link>
+      <BackButton fallbackHref="/articulos" label="Volver a artículos" variant="ghost" />
 
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">

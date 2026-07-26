@@ -1,11 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, Loader2, MessageSquarePlus, RefreshCw } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, Loader2, MessageSquarePlus, RefreshCw, Search, X } from 'lucide-react';
 import { api } from '@/lib/api';
-import type { Paged, Question } from '@/lib/types';
+import type { Paged, PointRule, Question } from '@/lib/types';
 import { QuestionCard } from '@/components/cards';
 import { EmptyState, SectionHeader } from '@/components/shared';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -27,14 +27,23 @@ export default function ForoPage() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [submitted, setSubmitted] = useState('');
+  const [page, setPage] = useState(1);
 
   const sort = mode === 'votes' ? 'votes' : 'recent';
   const filter = mode === 'unanswered' || mode === 'solved' ? mode : '';
 
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setSubmitted(search.trim());
+      setPage(1);
+    }, 350);
+    return () => window.clearTimeout(timeout);
+  }, [search]);
+
   const questionsQuery = useQuery({
-    queryKey: ['forum', mode, selectedTags.join(','), submitted],
+    queryKey: ['forum', mode, selectedTags.join(','), submitted, page],
     queryFn: () => {
-      const qs = new URLSearchParams({ sort, limit: '30' });
+      const qs = new URLSearchParams({ sort, page: String(page), limit: '10' });
       if (filter) qs.set('filter', filter);
       if (selectedTags.length) qs.set('tags', selectedTags.join(','));
       if (submitted) qs.set('search', submitted);
@@ -47,6 +56,12 @@ export default function ForoPage() {
     queryKey: ['forum-tags'],
     queryFn: () => api.get<{ tag: string; count: number }[]>('/forum/tags'),
   });
+  const { data: pointRules } = useQuery({
+    queryKey: ['point-rules-public'],
+    queryFn: () => api.get<PointRule[]>('/points/rules'),
+  });
+  const currentPage = data?.page ?? page;
+  const totalPages = data?.pages ?? Math.max(1, Math.ceil((data?.total ?? 0) / (data?.limit ?? 10)));
 
   return (
     <div className="container space-y-8 py-10">
@@ -61,31 +76,46 @@ export default function ForoPage() {
             <SegmentedTabs
               items={SORTS}
               value={mode}
-              onValueChange={setMode}
+              onValueChange={(value) => {
+                setMode(value);
+                setPage(1);
+              }}
               ariaLabel="Orden y estado de las preguntas"
               idPrefix="forum-sort"
               className="w-full xl:w-auto"
               tabClassName="px-3.5 py-2 text-xs"
             />
             <form
-              className="w-full sm:w-auto"
+              className="relative w-full sm:w-auto"
               onSubmit={(e) => {
                 e.preventDefault();
                 setSubmitted(search.trim());
+                setPage(1);
               }}
             >
               <label htmlFor="forum-search" className="sr-only">Buscar preguntas en el foro</label>
+              <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" aria-hidden="true" />
               <input
                 id="forum-search"
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar preguntas…"
-                className="h-9 w-full rounded-lg border border-border bg-card px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring sm:w-56"
+                placeholder="Título, contenido, autor, materia o tag…"
+                className="h-9 w-full rounded-lg border border-border bg-card py-2 pl-9 pr-9 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring sm:w-80"
               />
+              {search && (
+                <button
+                  type="button"
+                  aria-label="Limpiar búsqueda"
+                  className="absolute right-2 top-1.5 rounded p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => setSearch('')}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </form>
             {selectedTags.length > 0 && (
-              <button type="button" aria-label="Quitar todos los filtros por tag" onClick={() => setSelectedTags([])} className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <button type="button" aria-label="Quitar todos los filtros por tag" onClick={() => { setSelectedTags([]); setPage(1); }} className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 Limpiar {selectedTags.length} tag{selectedTags.length === 1 ? '' : 's'} ✕
               </button>
             )}
@@ -112,10 +142,41 @@ export default function ForoPage() {
                 </div>
               </div>
             ) : (data?.items.length ?? 0) === 0 ? (
-              <EmptyState title="No hay preguntas aquí todavía" subtitle="Sé quien rompa el hielo: pregunta y gana +5 puntos." />
+              <EmptyState
+                title={submitted ? 'No encontramos preguntas' : 'No hay preguntas aquí todavía'}
+                subtitle={submitted ? `No hay resultados para “${submitted}”. Prueba otros términos.` : 'Sé quien rompa el hielo y publica una pregunta.'}
+              />
             ) : (
-              <div className="space-y-3">
-                {data!.items.map((q) => <QuestionCard key={q.id} question={q} />)}
+              <div className="space-y-4">
+                {questionsQuery.isFetching && !questionsQuery.isLoading && (
+                  <p role="status" className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Actualizando resultados…</p>
+                )}
+                <div className="space-y-3">
+                  {data!.items.map((q) => <QuestionCard key={q.id} question={q} />)}
+                </div>
+                {totalPages > 1 && (
+                  <nav aria-label="Paginación del foro" className="flex items-center justify-between rounded-xl border border-border bg-card p-3">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={currentPage <= 1 || questionsQuery.isFetching}
+                      onClick={() => setPage((value) => Math.max(1, value - 1))}
+                    >
+                      <ChevronLeft /> Anterior
+                    </Button>
+                    <span className="text-xs font-semibold text-muted-foreground">Página {currentPage} de {totalPages}</span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={currentPage >= totalPages || questionsQuery.isFetching}
+                      onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
+                    >
+                      Siguiente <ChevronRight />
+                    </Button>
+                  </nav>
+                )}
               </div>
             )}
           </section>
@@ -126,7 +187,10 @@ export default function ForoPage() {
             <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Filtrar por tags</h3>
             <ForumTagInput
               value={selectedTags}
-              onChange={setSelectedTags}
+              onChange={(value) => {
+                setSelectedTags(value);
+                setPage(1);
+              }}
               suggestions={(tags ?? []).map((item) => item.tag)}
             />
             {selectedTags.length > 1 && <p className="mt-2 text-xs text-muted-foreground">Se muestran preguntas que contienen todos los tags elegidos.</p>}
@@ -141,6 +205,7 @@ export default function ForoPage() {
                   onClick={() => {
                     if (selectedTags.includes(t.tag)) setSelectedTags(selectedTags.filter((tag) => tag !== t.tag));
                     else if (selectedTags.length < MAX_FORUM_TAGS) setSelectedTags([...selectedTags, t.tag]);
+                    setPage(1);
                   }}
                   className={cn(
                     'rounded-md border px-2 py-1 font-mono text-[11px] font-semibold transition',
@@ -155,10 +220,15 @@ export default function ForoPage() {
           <div className="rounded-xl border border-border bg-card p-5 text-sm shadow-sm">
             <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Cómo ganar puntos</h3>
             <ul className="space-y-2 text-xs text-muted-foreground">
-              <li className="flex justify-between"><span>Publicar pregunta válida</span><strong className="text-emerald-500">+5</strong></li>
-              <li className="flex justify-between"><span>Responder una pregunta</span><strong className="text-emerald-500">+10</strong></li>
-              <li className="flex justify-between"><span>Respuesta aceptada</span><strong className="text-emerald-500">+30</strong></li>
-              <li className="flex justify-between"><span>Reporte válido</span><strong className="text-emerald-500">+5</strong></li>
+              {(pointRules ?? [])
+                .filter((rule) => ['PREGUNTA_PUBLICADA', 'RESPUESTA_PUBLICADA', 'RESPUESTA_ACEPTADA', 'REPORTE_VALIDO'].includes(rule.reason))
+                .map((rule) => (
+                  <li key={rule.reason} className="flex justify-between gap-3">
+                    <span>{rule.label}</span>
+                    <strong className={rule.points >= 0 ? 'text-emerald-500' : 'text-red-500'}>{rule.points >= 0 ? '+' : ''}{rule.points}</strong>
+                  </li>
+                ))}
+              {(pointRules?.length ?? 0) === 0 && <li>Las reglas activas no están disponibles.</li>}
             </ul>
           </div>
         </aside>

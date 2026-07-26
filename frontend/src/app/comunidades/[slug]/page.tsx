@@ -1,16 +1,84 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, GraduationCap, MessageCircle, Users, Video } from 'lucide-react';
+import {
+  ArrowLeft,
+  Github,
+  Globe2,
+  GraduationCap,
+  Instagram,
+  Link2,
+  Linkedin,
+  MessageCircle,
+  Send,
+  Users,
+  Video,
+  Youtube,
+  type LucideIcon,
+} from 'lucide-react';
 import { serverGet } from '@/lib/server-api';
-import type { Community } from '@/lib/types';
+import type { Community, CommunityLink, UserLite } from '@/lib/types';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { CoverPlaceholder } from '@/components/shared';
 import { EventCard, MentorshipCard, NewsCard, ProjectCard } from '@/components/cards';
-import { JoinCommunityButton } from '@/components/actions';
+import { CommunityJoinButton } from '@/components/community-join-button';
 import { ExternalResourceLink } from '@/components/external-resource-link';
 
 export const revalidate = 30;
+
+const LINK_ICONS: Array<{ keys: string[]; icon: LucideIcon }> = [
+  { keys: ['whatsapp', 'discord'], icon: MessageCircle },
+  { keys: ['teams', 'microsoft teams'], icon: Video },
+  { keys: ['telegram'], icon: Send },
+  { keys: ['github'], icon: Github },
+  { keys: ['linkedin'], icon: Linkedin },
+  { keys: ['instagram'], icon: Instagram },
+  { keys: ['youtube'], icon: Youtube },
+  { keys: ['web', 'sitio web', 'website'], icon: Globe2 },
+];
+
+function iconForPlatform(platform: string) {
+  const normalized = platform.trim().toLocaleLowerCase('es');
+  return LINK_ICONS.find((entry) => entry.keys.some((key) => normalized.includes(key)))?.icon ?? Link2;
+}
+
+function isPublicWebUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    return ['http:', 'https:'].includes(parsed.protocol) && !parsed.username && !parsed.password;
+  } catch {
+    return false;
+  }
+}
+
+function visibleLinks(community: Community): CommunityLink[] {
+  if (community.links?.length) {
+    return [...community.links]
+      .filter((link) => link.isActive && isPublicWebUrl(link.url))
+      .sort((a, b) => (a.order ?? a.sortOrder ?? 0) - (b.order ?? b.sortOrder ?? 0));
+  }
+  const legacy: CommunityLink[] = [];
+  if (community.whatsappUrl && isPublicWebUrl(community.whatsappUrl)) legacy.push({ platform: 'WhatsApp', label: 'Grupo de WhatsApp', url: community.whatsappUrl, order: 0, isActive: true });
+  if (community.teamsUrl && isPublicWebUrl(community.teamsUrl)) legacy.push({ platform: 'Microsoft Teams', label: 'Equipo en Teams', url: community.teamsUrl, order: 1, isActive: true });
+  if (community.discordUrl && isPublicWebUrl(community.discordUrl)) legacy.push({ platform: 'Discord', label: 'Servidor de Discord', url: community.discordUrl, order: 2, isActive: true });
+  return legacy;
+}
+
+function responsibleUsers(community: Community, role: 'TEACHER_LEAD' | 'STUDENT_LEAD') {
+  const byUsername = new Map<string, UserLite>();
+  for (const member of community.members ?? []) {
+    if (member.role === role) {
+      byUsername.set(member.user.username, {
+        id: member.user.id,
+        username: member.user.username,
+        profile: member.user.profile,
+      });
+    }
+  }
+  const legacy = role === 'TEACHER_LEAD' ? community.teacherLead : community.studentLead;
+  if (legacy) byUsername.set(legacy.username, legacy);
+  return [...byUsername.values()];
+}
 
 export default async function ComunidadDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -19,12 +87,18 @@ export default async function ComunidadDetailPage({ params }: { params: Promise<
 
   const accent = community.accentColor ?? '#06B6D4';
   const memberUsernames = (community.members ?? []).map((m) => m.user.username);
+  const memberIds = (community.members ?? []).map((m) => m.user.id).filter((id): id is string => !!id);
+  const links = visibleLinks(community);
+  const teachers = responsibleUsers(community, 'TEACHER_LEAD');
+  const studentLeads = responsibleUsers(community, 'STUDENT_LEAD');
 
   return (
     <div className="pb-12">
       {/* Cabecera */}
       <div className="relative h-52 overflow-hidden border-b border-border md:h-64">
         {community.coverUrl ? (
+          // La portada admite orígenes administrables que no pueden declararse estáticamente en Next Image.
+          // eslint-disable-next-line @next/next/no-img-element
           <img src={community.coverUrl} alt={community.name} className="h-full w-full object-cover" />
         ) : (
           <CoverPlaceholder label={community.name[0]} accent={accent} />
@@ -59,7 +133,7 @@ export default async function ComunidadDetailPage({ params }: { params: Promise<
             <section className="space-y-4">
               <h2 className="font-serif-heading text-xl font-bold text-primary">Proyectos de la comunidad</h2>
               <div className="grid gap-5 sm:grid-cols-2">
-                {community.projects!.map((p: any) => <ProjectCard key={p.id} project={p} />)}
+                {community.projects!.map((project) => <ProjectCard key={project.id} project={project} />)}
               </div>
             </section>
           )}
@@ -94,53 +168,57 @@ export default async function ComunidadDetailPage({ params }: { params: Promise<
 
         <aside className="space-y-5">
           <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-            <JoinCommunityButton slug={community.slug} memberUsernames={memberUsernames} />
-            <div className="mt-4 space-y-2">
-              {community.whatsappUrl && (
-                <ExternalResourceLink href={community.whatsappUrl} className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5 text-sm font-semibold text-emerald-600 transition hover:bg-emerald-500/20 dark:text-emerald-400">
-                  <MessageCircle className="h-4 w-4" /> Grupo de WhatsApp
-                </ExternalResourceLink>
-              )}
-              {community.teamsUrl && (
-                <ExternalResourceLink href={community.teamsUrl} className="flex items-center gap-2 rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-2.5 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-500/20 dark:text-indigo-400">
-                  <Video className="h-4 w-4" /> Equipo en Teams
-                </ExternalResourceLink>
-              )}
-              {community.discordUrl && (
-                <ExternalResourceLink href={community.discordUrl} className="flex items-center gap-2 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-2.5 text-sm font-semibold text-violet-600 transition hover:bg-violet-500/20 dark:text-violet-400">
-                  <MessageCircle className="h-4 w-4" /> Servidor de Discord
-                </ExternalResourceLink>
-              )}
-            </div>
+            <CommunityJoinButton slug={community.slug} memberIds={memberIds} memberUsernames={memberUsernames} />
+            {links.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {links.map((resource, index) => {
+                  const Icon = iconForPlatform(resource.platform);
+                  return (
+                    <ExternalResourceLink
+                      key={resource.id ?? `${resource.platform}:${resource.url}:${index}`}
+                      href={resource.url}
+                      aria-label={`${resource.label || resource.platform} (abre en una pestaña nueva)`}
+                      className="flex items-center gap-2 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/10"
+                    >
+                      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span className="min-w-0 flex-1 truncate">{resource.label || resource.platform}</span>
+                    </ExternalResourceLink>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
             <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-muted-foreground">Responsables</h3>
             <div className="space-y-3">
-              {community.teacherLead && (
-                <Link href={`/perfil/${community.teacherLead.username}`} className="flex items-center gap-3 rounded-lg p-2 transition hover:bg-secondary">
-                  <Avatar src={community.teacherLead.profile?.avatarUrl} name={community.teacherLead.profile?.fullName} />
+              {teachers.map((teacher) => (
+                <Link key={`teacher:${teacher.username}`} href={`/perfil/${teacher.username}`} className="flex items-center gap-3 rounded-lg p-2 transition hover:bg-secondary">
+                  <Avatar src={teacher.profile?.avatarUrl} name={teacher.profile?.fullName} />
                   <div>
-                    <div className="text-sm font-bold">{community.teacherLead.profile?.fullName}</div>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground"><GraduationCap className="h-3 w-3" /> Docente asesor</div>
+                    <div className="text-sm font-bold">{teacher.profile?.fullName ?? `@${teacher.username}`}</div>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground"><GraduationCap className="h-3 w-3" /> Docente responsable</div>
                   </div>
                 </Link>
-              )}
-              {community.studentLead && (
-                <Link href={`/perfil/${community.studentLead.username}`} className="flex items-center gap-3 rounded-lg p-2 transition hover:bg-secondary">
-                  <Avatar src={community.studentLead.profile?.avatarUrl} name={community.studentLead.profile?.fullName} />
+              ))}
+              {studentLeads.map((leader) => (
+                <Link key={`student:${leader.username}`} href={`/perfil/${leader.username}`} className="flex items-center gap-3 rounded-lg p-2 transition hover:bg-secondary">
+                  <Avatar src={leader.profile?.avatarUrl} name={leader.profile?.fullName} />
                   <div>
-                    <div className="text-sm font-bold">{community.studentLead.profile?.fullName}</div>
+                    <div className="text-sm font-bold">{leader.profile?.fullName ?? `@${leader.username}`}</div>
                     <div className="text-xs text-muted-foreground">Líder estudiantil</div>
                   </div>
                 </Link>
+              ))}
+              {teachers.length === 0 && studentLeads.length === 0 && (
+                <p className="text-xs text-muted-foreground">No hay responsables visibles.</p>
               )}
             </div>
           </div>
 
           <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
             <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-muted-foreground">
-              Miembros ({community.members?.length ?? 0})
+              Miembros ({community._count?.members ?? community.members?.length ?? 0})
             </h3>
             <div className="space-y-2">
               {(community.members ?? []).slice(0, 12).map((m) => (

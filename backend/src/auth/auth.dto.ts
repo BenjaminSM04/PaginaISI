@@ -41,7 +41,7 @@ export class RegisterDto {
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(12)
+  @Max(8)
   semester?: number;
 }
 

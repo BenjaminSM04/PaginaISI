@@ -14,7 +14,7 @@ interface EventAccess {
 export function EventMeetingLink({ slug, initialUrl }: { slug: string; initialUrl?: string | null }) {
   const { user } = useAuth();
   const { data, isLoading } = useQuery({
-    queryKey: ['event-access', slug],
+    queryKey: ['event-access', slug, user?.id ?? 'guest'],
     queryFn: () => api.get<EventAccess>(`/events/${slug}`),
     enabled: !!user,
     retry: false,

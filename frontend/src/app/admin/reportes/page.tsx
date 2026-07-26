@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn, formatDate } from '@/lib/utils';
+import { PointReward } from '@/components/point-reward';
 
 export default function AdminReportesPage() {
   const queryClient = useQueryClient();
@@ -30,7 +31,8 @@ export default function AdminReportesPage() {
       <div>
         <h1 className="font-serif-heading text-2xl font-bold text-primary">Moderación de reportes</h1>
         <p className="text-sm text-muted-foreground">
-          Reporte válido: +5 pts al reportante (con opción de penalizar al autor con -15). Descartado: sin efectos.
+          Reporte válido: <PointReward reason="REPORTE_VALIDO" suffix="pts al reportante" /> (con opción de penalizar al autor con{' '}
+          <PointReward reason="PENALIZACION_SPAM" suffix="pts" />). Descartado: sin efectos.
         </p>
       </div>
 
@@ -76,10 +78,10 @@ export default function AdminReportesPage() {
               {r.status === 'PENDING' && (
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" onClick={() => resolve.mutate({ id: r.id, decision: 'VALID' })} disabled={resolve.isPending} className="bg-emerald-600 text-white hover:bg-emerald-700">
-                    <Check /> Válido (+5 al reportante)
+                    <Check /> Válido <PointReward reason="REPORTE_VALIDO" suffix="al reportante" parentheses />
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => resolve.mutate({ id: r.id, decision: 'VALID', penalize: true })} disabled={resolve.isPending} className="border-red-500/50 text-red-500 hover:bg-red-500/10">
-                    Válido + penalizar autor (-15)
+                    Válido + penalizar autor <PointReward reason="PENALIZACION_SPAM" parentheses />
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => resolve.mutate({ id: r.id, decision: 'DISMISSED' })} disabled={resolve.isPending}>
                     <X /> Descartar

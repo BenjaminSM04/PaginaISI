@@ -1,7 +1,7 @@
-import { Body, Controller, Get, Param, Patch } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { UpdateProfileDto } from './users.dto';
+import { DirectoryQueryDto, DirectorySearchDto, UpdateProfileDto } from './users.dto';
 import { AllowUnverified, CurrentUser, Public, AuthUser } from '../common/decorators';
 
 @ApiTags('users')
@@ -26,9 +26,20 @@ export class UsersController {
 
   @Public()
   @Get('directory/teachers')
-  @ApiOperation({ summary: 'Docentes disponibles como revisores' })
-  teachers() {
-    return this.users.teachers();
+  @ApiOperation({ summary: 'Docentes disponibles como revisores, con paginación opcional' })
+  async teachers(@Query() query: DirectoryQueryDto) {
+    const paginated = query.q !== undefined || query.page !== undefined || query.limit !== undefined;
+    // Sin parámetros se conserva el array histórico para los clientes
+    // desplegados, pero limitado a una primera ventana segura.
+    const result = await this.users.teachers(paginated ? query : { page: 1, limit: 50 });
+    return paginated ? result : result.items;
+  }
+
+  @Get('directory/search')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Búsqueda privada y paginada de usuarios para selectores' })
+  searchDirectory(@Query() query: DirectorySearchDto) {
+    return this.users.searchDirectory(query);
   }
 
   @Public()

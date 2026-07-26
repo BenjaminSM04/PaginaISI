@@ -1,7 +1,7 @@
 {
   "name": "isi-portal-api",
   "version": "1.0.0",
-  "description": "API del Portal Académico de Ingeniería de Sistemas Informáticos",
+  "description": "API del Portal Académico de Ingeniería de Sistemas de la Universidad Privada del Valle",
   "private": true,
   "scripts": {
     "build": "nest build",

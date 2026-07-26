@@ -7,13 +7,20 @@ import { useTheme } from 'next-themes';
 import {
   Award, Bell, BookOpen, Calendar, CalendarCog, ChevronDown, FlaskConical, Grip, LogOut, Menu, MessageSquare,
   Moon, Rocket, Search, Shield, Sun, Trophy, User, Users, X, GraduationCap, Lightbulb, Newspaper, LayoutDashboard,
+  Grid3X3,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
+import { visibleApplicationsQueryKey } from '@/lib/application-query';
+import type { InstitutionalApplication } from '@/lib/types';
 import { Avatar } from '@/components/ui/avatar';
+import { ApplicationIcon } from '@/components/application-icon';
+import { ApplicationLink } from '@/components/application-link';
+import { InstitutionalLogo } from '@/components/institutional-logo';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useInstitutionalSettings } from '@/lib/use-institutional-settings';
 
 const APPS = [
   { href: '/comunidades', label: 'Sociedad Científica', icon: FlaskConical, color: 'text-cyan-500' },
@@ -63,6 +70,7 @@ export function Navbar() {
   const router = useRouter();
   const { user, logout, hasRole } = useAuth();
   const { resolvedTheme, setTheme } = useTheme();
+  const { settings: institution } = useInstitutionalSettings();
   const mounted = useHydrated();
   const [launcherOpen, setLauncherOpen] = useRouteScopedBoolean(pathname);
   const [userOpen, setUserOpen] = useRouteScopedBoolean(pathname);
@@ -77,6 +85,13 @@ export function Navbar() {
     staleTime: 20_000,
     retry: false,
   });
+  const institutionalApplications = useQuery({
+    queryKey: visibleApplicationsQueryKey(user?.roles),
+    queryFn: () => api.get<InstitutionalApplication[]>('/applications'),
+    staleTime: 60_000,
+    retry: false,
+  });
+  const launcherApplications = (institutionalApplications.data ?? []).slice(0, 6);
   const canManageAcademicSpaces = hasRole('ADMIN', 'COMMUNITY_LEADER', 'TEACHER');
   const roleLabel = user?.roles?.includes('ADMIN')
     ? 'Administrador'
@@ -137,8 +152,8 @@ export function Navbar() {
               <Grip aria-hidden="true" className="h-5 w-5" />
             </button>
             {launcherOpen && (
-              <div id="portal-app-launcher" className="absolute left-0 top-11 z-50 w-[min(300px,calc(100vw-1rem))] rounded-xl border border-border bg-popover p-3 shadow-2xl animate-fade-in">
-                <p className="px-1 pb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Aplicaciones ISI</p>
+              <div id="portal-app-launcher" className="absolute left-0 top-11 z-50 max-h-[min(680px,calc(100vh-5rem))] w-[min(360px,calc(100vw-1rem))] overflow-y-auto rounded-xl border border-border bg-popover p-3 shadow-2xl animate-fade-in">
+                <p className="px-1 pb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Portal {institution.shortName}</p>
                 <div className="grid grid-cols-3 gap-1">
                   {APPS.map((app) => (
                     <Link
@@ -152,17 +167,56 @@ export function Navbar() {
                     </Link>
                   ))}
                 </div>
+                <div className="mt-3 border-t border-border pt-3">
+                  <div className="flex items-center justify-between gap-3 px-1 pb-2">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Institucionales</p>
+                    <Link
+                      href="/aplicaciones"
+                      onClick={() => setLauncherOpen(false)}
+                      className="text-[11px] font-bold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      Ver todas
+                    </Link>
+                  </div>
+                  {institutionalApplications.isLoading && (
+                    <div role="status" aria-label="Cargando aplicaciones institucionales" className="grid grid-cols-3 gap-1">
+                      {[0, 1, 2].map((item) => <span key={item} className="h-20 animate-pulse rounded-lg bg-secondary" />)}
+                    </div>
+                  )}
+                  {institutionalApplications.isSuccess && launcherApplications.length === 0 && (
+                    <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-xs text-muted-foreground">
+                      No hay enlaces disponibles para tu perfil.
+                    </p>
+                  )}
+                  {launcherApplications.length > 0 && (
+                    <div className="grid grid-cols-3 gap-1">
+                      {launcherApplications.map((application) => (
+                        <ApplicationLink
+                          key={application.id}
+                          url={application.url}
+                          openInNewTab={application.openInNewTab}
+                          onClick={() => setLauncherOpen(false)}
+                          title={`Abrir ${application.name}${application.openInNewTab ? ' en una pestaña nueva' : ''}`}
+                          className="flex min-w-0 flex-col items-center gap-1.5 rounded-lg p-3 text-center transition hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <ApplicationIcon icon={application.icon} className="h-6 w-6 text-primary" />
+                          <span className="line-clamp-2 text-[11px] font-medium leading-tight">{application.name}</span>
+                        </ApplicationLink>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
 
-          <Link href="/" aria-label="Ir al inicio del Portal ISI" className="flex items-center gap-2.5 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm group-hover:scale-105 transition-transform">
-              <span className="font-serif-heading text-lg font-bold">Σ</span>
+          <Link href="/" aria-label={`Ir al inicio de ${institution.institutionName}`} className="flex items-center gap-2.5 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg">
+            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-border bg-white p-0.5 shadow-sm transition-transform group-hover:scale-105">
+              <InstitutionalLogo className="h-full w-full" />
             </div>
             <div className="hidden sm:block">
-              <div className="font-serif-heading text-base font-bold leading-tight text-primary">Sistemas Informáticos</div>
-              <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Portal académico</div>
+              <div className="font-serif-heading text-base font-bold leading-tight text-primary">{institution.shortName}</div>
+              <div className="max-w-44 truncate text-[10px] font-semibold uppercase tracking-wider text-muted-foreground" title={institution.careerName}>{institution.careerName}</div>
             </div>
           </Link>
         </div>
@@ -268,6 +322,9 @@ export function Navbar() {
                     <Link href="/notificaciones" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-secondary transition">
                       <Bell className="h-4 w-4 text-orange-500" /> Notificaciones
                     </Link>
+                    <Link href="/incubadora/mis-ideas" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-secondary transition">
+                      <Lightbulb className="h-4 w-4 text-purple-500" /> Mis ideas
+                    </Link>
                     {canManageAcademicSpaces && (
                       <div className="my-1 border-y border-border py-1">
                         <p className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Gestión académica</p>
@@ -283,9 +340,14 @@ export function Navbar() {
                       </div>
                     )}
                     {hasRole('TEACHER', 'ADMIN') && (
-                      <Link href="/revision" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-secondary transition">
-                        <Shield className="h-4 w-4 text-emerald-500" /> Revisión de contenidos
-                      </Link>
+                      <>
+                        <Link href="/revision" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-secondary transition">
+                          <Shield className="h-4 w-4 text-emerald-500" /> Revisión de contenidos
+                        </Link>
+                        <Link href="/incubadora/revision" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-secondary transition">
+                          <Lightbulb className="h-4 w-4 text-purple-500" /> Revisión de ideas
+                        </Link>
+                      </>
                     )}
                     {hasRole('ADMIN') && (
                       <Link href="/admin" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-secondary transition">
@@ -346,7 +408,33 @@ export function Navbar() {
                 <app.icon className={cn('h-4 w-4', app.color)} /> {app.label}
               </Link>
             ))}
+            <Link
+              href="/aplicaciones"
+              aria-current={pathname.startsWith('/aplicaciones') ? 'page' : undefined}
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-secondary"
+            >
+              <Grid3X3 className="h-4 w-4 text-primary" /> Aplicaciones
+            </Link>
           </div>
+          {launcherApplications.length > 0 && (
+            <div className="mt-3 border-t border-border pt-3">
+              <p className="mb-1 px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Enlaces institucionales</p>
+              <div className="grid gap-1 sm:grid-cols-2">
+                {launcherApplications.map((application) => (
+                  <ApplicationLink
+                    key={application.id}
+                    url={application.url}
+                    openInNewTab={application.openInNewTab}
+                    onClick={() => setMobileOpen(false)}
+                    className="flex min-w-0 items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <ApplicationIcon icon={application.icon} className="h-4 w-4 shrink-0 text-primary" />
+                    <span className="truncate">{application.name}</span>
+                  </ApplicationLink>
+                ))}
+              </div>
+            </div>
+          )}
           {user && canManageAcademicSpaces && (
             <div className="mt-3 border-t border-border pt-3">
               <p className="mb-1 px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Gestión académica</p>

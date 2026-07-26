@@ -2,17 +2,28 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery } from '@tanstack/react-query';
 import { Info, Loader2, Rocket } from 'lucide-react';
 import { api } from '@/lib/api';
-import type { Community, UserLite } from '@/lib/types';
+import type { Community, IncubatorClient } from '@/lib/types';
 import { RequireAuth } from '@/components/require-auth';
 import { Button } from '@/components/ui/button';
 import { Input, Label, Select, Textarea } from '@/components/ui/input';
 import { MediaUploadButton } from '@/components/media-upload-button';
+import {
+  CatalogCombobox,
+  CatalogMultiCombobox,
+  type CatalogOption,
+  type DirectoryUserOption,
+  UserDirectoryCombobox,
+  UserDirectoryMultiCombobox,
+} from '@/components/remote-selectors';
+import { SEMESTERS } from '@/lib/academic';
+import { PointReward } from '@/components/point-reward';
+import { IncubatorClientSelector } from '@/components/incubator-client-selector';
 
 const schema = z.object({
   title: z.string().min(5, 'Mínimo 5 caracteres').max(140),
@@ -38,11 +49,34 @@ type FormData = z.infer<typeof schema>;
 function NuevoProyectoForm() {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
-  const { data: teachers } = useQuery({ queryKey: ['teachers'], queryFn: () => api.get<UserLite[]>('/users/directory/teachers') });
+  const [technologies, setTechnologies] = useState<CatalogOption[]>([]);
+  const [tags, setTags] = useState<CatalogOption[]>([]);
+  const [subject, setSubject] = useState<CatalogOption | null>(null);
+  const [reviewer, setReviewer] = useState<DirectoryUserOption | null>(null);
+  const [members, setMembers] = useState<DirectoryUserOption[]>([]);
+  const [clients, setClients] = useState<IncubatorClient[]>([]);
   const { data: communities } = useQuery({ queryKey: ['communities'], queryFn: () => api.get<Community[]>('/communities') });
 
-  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, setValue, control, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
+    defaultValues: {
+      technologies: '',
+      reviewerUsername: '',
+      memberUsernames: '',
+      tags: '',
+      subject: '',
+      semester: '',
+      coverUrl: '',
+      isIncubator: false,
+      recruiting: false,
+    },
+  });
+  const coverUrl = useWatch({ control, name: 'coverUrl' });
+  const isIncubator = useWatch({ control, name: 'isIncubator' });
+  const pendingCatalog = (kind: CatalogOption['kind']) => async (name: string): Promise<CatalogOption> => ({
+    id: `pending:${kind}:${name.trim().toLocaleLowerCase('es').replace(/\s+/g, '-')}`,
+    kind,
+    name: name.trim().replace(/\s+/g, ' '),
   });
 
   const onSubmit = async (data: FormData) => {
@@ -52,19 +86,20 @@ function NuevoProyectoForm() {
         title: data.title,
         summary: data.summary,
         description: data.description,
-        technologies: data.technologies.split(',').map((t) => t.trim()).filter(Boolean),
-        memberUsernames: data.memberUsernames ? data.memberUsernames.split(',').map((m) => m.trim()).filter(Boolean) : [],
-        tags: data.tags ? data.tags.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean) : [],
+        technologies: technologies.map((item) => item.name),
+        memberUsernames: members.map((member) => member.username),
+        tags: tags.map((item) => item.name),
         repoUrl: data.repoUrl || undefined,
         demoUrl: data.demoUrl || undefined,
         videoUrl: data.videoUrl || undefined,
         coverUrl: data.coverUrl || undefined,
-        subject: data.subject || undefined,
+        subject: subject?.name || undefined,
         semester: data.semester ? Number(data.semester) : undefined,
-        reviewerUsername: data.reviewerUsername,
+        reviewerUsername: reviewer?.username ?? data.reviewerUsername,
         communitySlug: data.communitySlug || undefined,
         isIncubator: !!data.isIncubator,
         recruiting: !!data.recruiting,
+        clientIds: data.isIncubator ? clients.map((client) => client.id) : [],
       });
       router.push('/cuenta?tab=proyectos&enviado=1');
     } catch (e: any) {
@@ -83,8 +118,7 @@ function NuevoProyectoForm() {
         <Info className="h-5 w-5 shrink-0 text-accent" />
         <p>
           Tu proyecto quedará <strong>pendiente de aprobación</strong> y no será visible públicamente hasta que el docente
-          revisor lo apruebe. Al aprobarse ganas <strong className="text-emerald-500">+40 Dev Points</strong> y la insignia
-          «Primer Proyecto» si es el primero.
+          revisor lo apruebe. Al aprobarse ganas <PointReward reason="PROYECTO_APROBADO" suffix="Dev Points" className="text-emerald-500" /> y podrás cumplir reglas de insignias activas.
         </p>
       </div>
 
@@ -109,13 +143,36 @@ function NuevoProyectoForm() {
 
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label>Tecnologías * (separadas por coma)</Label>
-            <Input placeholder="React, NestJS, PostgreSQL" {...register('technologies')} />
+            <input type="hidden" {...register('technologies')} />
+            <CatalogMultiCombobox
+              kind="TECHNOLOGY"
+              label="Tecnologías"
+              required
+              value={technologies}
+              onChange={(value) => {
+                setTechnologies(value);
+                setValue('technologies', value.map((item) => item.name).join(', '), { shouldValidate: true });
+              }}
+              allowCreate
+              onCreate={pendingCatalog('TECHNOLOGY')}
+              placeholder="Busca o crea una tecnología"
+            />
             {errors.technologies && <p className="text-xs text-red-500">{errors.technologies.message}</p>}
           </div>
           <div className="space-y-1.5">
-            <Label>Tags (separados por coma)</Label>
-            <Input placeholder="web, iot, salud" {...register('tags')} />
+            <input type="hidden" {...register('tags')} />
+            <CatalogMultiCombobox
+              kind="TAG"
+              label="Tags"
+              value={tags}
+              onChange={(value) => {
+                setTags(value);
+                setValue('tags', value.map((item) => item.name).join(', '));
+              }}
+              allowCreate
+              onCreate={pendingCatalog('TAG')}
+              placeholder="Busca o crea un tag"
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Repositorio (GitHub)</Label>
@@ -135,29 +192,52 @@ function NuevoProyectoForm() {
             <Label>Imagen de portada (URL)</Label>
             <Input placeholder="https://…/captura.png" {...register('coverUrl')} />
             {errors.coverUrl && <p className="text-xs text-red-500">{errors.coverUrl.message}</p>}
-            <MediaUploadButton kind="image" disabled={isSubmitting} onUploaded={(asset) => setValue('coverUrl', asset.url, { shouldDirty: true, shouldValidate: true })} />
+            <MediaUploadButton
+              kind="image"
+              disabled={isSubmitting}
+              previewUrl={coverUrl}
+              previewAlt="Vista previa de la portada del proyecto"
+              onUploaded={(asset) => setValue('coverUrl', asset.url, { shouldDirty: true, shouldValidate: true })}
+              onRemove={() => setValue('coverUrl', '', { shouldDirty: true, shouldValidate: true })}
+            />
           </div>
           <div className="space-y-1.5">
-            <Label>Materia</Label>
-            <Input placeholder="Ingeniería de Software II" {...register('subject')} />
+            <input type="hidden" {...register('subject')} />
+            <CatalogCombobox
+              kind="SUBJECT"
+              label="Materia"
+              value={subject}
+              onChange={(value) => {
+                setSubject(value);
+                setValue('subject', value?.name ?? '');
+              }}
+              allowCreate
+              onCreate={pendingCatalog('SUBJECT')}
+              placeholder="Busca o crea una materia"
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Semestre</Label>
             <Select {...register('semester')}>
               <option value="">Sin especificar</option>
-              {Array.from({ length: 10 }, (_, i) => (
-                <option key={i + 1} value={i + 1}>{i + 1}º semestre</option>
+              {SEMESTERS.map((semester) => (
+                <option key={semester} value={semester}>{semester}º semestre</option>
               ))}
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Docente revisor *</Label>
-            <Select {...register('reviewerUsername')}>
-              <option value="">Selecciona un docente</option>
-              {(teachers ?? []).map((t) => (
-                <option key={t.username} value={t.username}>{t.profile?.fullName ?? t.username}</option>
-              ))}
-            </Select>
+            <input type="hidden" {...register('reviewerUsername')} />
+            <UserDirectoryCombobox
+              role="TEACHER"
+              label="Docente revisor"
+              required
+              value={reviewer}
+              onChange={(value) => {
+                setReviewer(value);
+                setValue('reviewerUsername', value?.username ?? '', { shouldValidate: true });
+              }}
+              placeholder="Escribe al menos 2 caracteres"
+            />
             {errors.reviewerUsername && <p className="text-xs text-red-500">{errors.reviewerUsername.message}</p>}
           </div>
           <div className="space-y-1.5">
@@ -172,8 +252,16 @@ function NuevoProyectoForm() {
         </div>
 
         <div className="space-y-1.5">
-          <Label>Integrantes (usernames separados por coma)</Label>
-          <Input placeholder="jmamani, cflores (tú ya estás incluido como líder)" {...register('memberUsernames')} />
+          <input type="hidden" {...register('memberUsernames')} />
+          <UserDirectoryMultiCombobox
+            label="Integrantes"
+            value={members}
+            onChange={(value) => {
+              setMembers(value);
+              setValue('memberUsernames', value.map((member) => member.username).join(', '));
+            }}
+            placeholder="Busca por nombre o usuario; tú ya estás incluido"
+          />
         </div>
 
         <div className="flex flex-wrap gap-6 pt-1">
@@ -184,6 +272,22 @@ function NuevoProyectoForm() {
             <input type="checkbox" className="h-4 w-4 accent-[#06B6D4]" {...register('recruiting')} /> Buscamos integrantes
           </label>
         </div>
+
+        {isIncubator && (
+          <section className="space-y-3 rounded-xl border border-purple-500/25 bg-purple-500/5 p-4">
+            <div>
+              <h2 className="font-serif-heading text-lg font-bold text-primary">Nuestros clientes</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Vincula empresas registradas o agrega una nueva con su logo para reutilizarla en otros proyectos.
+              </p>
+            </div>
+            <IncubatorClientSelector
+              value={clients}
+              onChange={setClients}
+              disabled={isSubmitting}
+            />
+          </section>
+        )}
 
         {serverError && <p className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">{serverError}</p>}
 

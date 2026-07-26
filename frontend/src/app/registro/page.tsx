@@ -8,8 +8,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Sparkles, UserPlus } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { GuestOnly } from '@/components/guest-only';
 import { Button } from '@/components/ui/button';
 import { Input, Label, Select } from '@/components/ui/input';
+import { SEMESTERS } from '@/lib/academic';
+import { PointReward } from '@/components/point-reward';
 
 const schema = z
   .object({
@@ -20,7 +23,10 @@ const schema = z
       .min(3, 'Mínimo 3 caracteres')
       .max(30)
       .regex(/^[a-z0-9_.-]+$/, 'Solo minúsculas, números, punto, guion y guion bajo'),
-    semester: z.string().optional(),
+    semester: z
+      .string()
+      .optional()
+      .refine((value) => !value || SEMESTERS.includes(Number(value)), 'Selecciona un semestre entre 1º y 8º'),
     password: z.string().min(8, 'Mínimo 8 caracteres'),
     confirm: z.string(),
   })
@@ -59,6 +65,7 @@ export default function RegistroPage() {
   };
 
   return (
+    <GuestOnly>
     <div className="container flex min-h-[70vh] items-center justify-center py-10">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
@@ -66,7 +73,7 @@ export default function RegistroPage() {
             <Sparkles className="h-5 w-5" />
           </div>
           <h1 className="font-serif-heading text-2xl font-bold text-primary">Únete a la comunidad ISI</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Crea tu cuenta, verifica tu correo y gana <strong className="text-emerald-500">+10 puntos</strong> de bienvenida.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Crea tu cuenta, verifica tu correo y gana <PointReward reason="REGISTRO_COMPLETO" suffix="puntos" className="text-emerald-500" /> de bienvenida.</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
@@ -85,8 +92,8 @@ export default function RegistroPage() {
               <Label>Semestre</Label>
               <Select {...register('semester')}>
                 <option value="">—</option>
-                {Array.from({ length: 10 }, (_, i) => (
-                  <option key={i + 1} value={i + 1}>{i + 1}º semestre</option>
+                {SEMESTERS.map((semester) => (
+                  <option key={semester} value={semester}>{semester}º semestre</option>
                 ))}
               </Select>
             </div>
@@ -118,5 +125,6 @@ export default function RegistroPage() {
         </p>
       </div>
     </div>
+    </GuestOnly>
   );
 }

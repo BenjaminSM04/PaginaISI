@@ -8,8 +8,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, LogIn } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { GuestOnly } from '@/components/guest-only';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
+import { callbackFromLocation } from '@/lib/navigation';
+import { PointReward } from '@/components/point-reward';
+import { InstitutionalLogo, InstitutionalText } from '@/components/institutional-logo';
 
 const schema = z.object({
   identifier: z.string().min(3, 'Ingresa tu email o usuario'),
@@ -29,21 +33,22 @@ export default function LoginPage() {
     setServerError(null);
     try {
       await login(data.identifier, data.password);
-      router.push('/');
+      router.replace(callbackFromLocation('/cuenta'));
     } catch (e: any) {
       setServerError(e.message);
     }
   };
 
   return (
+    <GuestOnly>
     <div className="container flex min-h-[70vh] items-center justify-center py-10">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md">
-            <span className="font-serif-heading text-xl font-bold">Σ</span>
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-border bg-white p-1 shadow-md">
+            <InstitutionalLogo className="h-full w-full" />
           </div>
           <h1 className="font-serif-heading text-2xl font-bold text-primary">Bienvenido de vuelta</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Entra para publicar, votar y sumar puntos.</p>
+          <p className="mt-1 text-sm text-muted-foreground"><InstitutionalText field="careerName" /> · <InstitutionalText field="institutionName" /></p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
@@ -68,7 +73,7 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-muted-foreground">
           ¿Aún no tienes cuenta?{' '}
-          <Link href="/registro" className="font-semibold text-primary hover:underline">Regístrate (+10 pts)</Link>
+          <Link href="/registro" className="font-semibold text-primary hover:underline">Regístrate <PointReward reason="REGISTRO_COMPLETO" parentheses /></Link>
         </p>
         <div className="rounded-xl border border-border bg-secondary/40 p-4 text-center text-xs text-muted-foreground">
           <p className="font-semibold">Cuentas demo (seed):</p>
@@ -77,5 +82,6 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+    </GuestOnly>
   );
 }

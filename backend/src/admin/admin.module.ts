@@ -1,18 +1,20 @@
 import {
-  BadRequestException, Body, Controller, Get, Injectable, Module, NotFoundException, Param, ParseEnumPipe, Patch, Post, Query,
+  BadRequestException, Body, Controller, Delete, Get, Injectable, Module, NotFoundException, Param, ParseEnumPipe, Patch, Post, Query,
   UploadedFile, UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ArrayMaxSize, ArrayNotEmpty, ArrayUnique, IsArray, IsBoolean, IsEnum, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
-import { PointReason, Prisma, RoleName } from '@prisma/client';
+import { BadgeRuleType, PointReason, Prisma, RoleName } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthUser, CurrentUser, Roles } from '../common/decorators';
 import { paginate } from '../common/utils';
 import {
   convertRasterToBadgeIcon, isSafeBadgeIcon, MAX_BADGE_ICON_LENGTH, MAX_BADGE_SOURCE_SIZE, UnsafeBadgeIconError,
 } from './badge-icon-converter';
+import { AuditService } from '../audit/audit.service';
+import { BadgeRulesService } from '../gamification/badge-rules.service';
 
 const BADGE_RASTER_MIMES = ['image/png', 'image/jpeg', 'image/webp'];
 
@@ -46,11 +48,36 @@ export class UpsertBadgeDto {
   @IsOptional() @IsString() @MaxLength(MAX_BADGE_ICON_LENGTH) icon?: string;
   @ApiPropertyOptional({ example: '#0C447C' })
   @IsOptional() @IsString() @MaxLength(7) @Matches(/^#[0-9A-Fa-f]{6}$/) color?: string;
+  @ApiPropertyOptional({ enum: BadgeRuleType, nullable: true })
+  @IsOptional() @IsEnum(BadgeRuleType) ruleType?: BadgeRuleType | null;
+  @ApiPropertyOptional({ minimum: 1, maximum: 1_000_000, nullable: true })
+  @IsOptional() @IsInt() @Min(1) @Max(1_000_000) targetValue?: number | null;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() isActive?: boolean;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() isRetroactive?: boolean;
+}
+
+export class UpdateBadgeDto {
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(60) @Matches(/\S/) name?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(200) @Matches(/\S/) description?: string;
+  @ApiPropertyOptional({ description: 'Clave Lucide permitida o SVG generado por /admin/badges/convert-icon' })
+  @IsOptional() @IsString() @MaxLength(MAX_BADGE_ICON_LENGTH) icon?: string;
+  @ApiPropertyOptional({ example: '#0C447C', nullable: true })
+  @IsOptional() @IsString() @MaxLength(7) @Matches(/^#[0-9A-Fa-f]{6}$/) color?: string | null;
+  @ApiPropertyOptional({ enum: BadgeRuleType, nullable: true })
+  @IsOptional() @IsEnum(BadgeRuleType) ruleType?: BadgeRuleType | null;
+  @ApiPropertyOptional({ minimum: 1, maximum: 1_000_000, nullable: true })
+  @IsOptional() @IsInt() @Min(1) @Max(1_000_000) targetValue?: number | null;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() isActive?: boolean;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() isRetroactive?: boolean;
 }
 
 @Injectable()
 export class AdminService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly audit: AuditService,
+    private readonly badgeRules: BadgeRulesService,
+  ) {}
 
   async dashboard() {
     const [users, projects, pendingProjects, articles, pendingArticles, questions, events, communities, pendingReports, news] =
@@ -160,19 +187,198 @@ export class AdminService {
     });
   }
 
-  updatePointRule(reason: PointReason, dto: UpdatePointRuleDto) {
-    return this.prisma.pointRule.update({ where: { reason }, data: dto });
+  updatePointRule(actor: AuthUser, reason: PointReason, dto: UpdatePointRuleDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const before = await tx.pointRule.findUnique({ where: { reason } });
+      if (!before) throw new NotFoundException('Regla de puntos no encontrada');
+      const after = await tx.pointRule.update({ where: { reason }, data: dto });
+      await this.audit.record(tx, {
+        actor,
+        action: 'POINT_RULE_UPDATED',
+        entityType: 'POINT_RULE',
+        entityId: after.id,
+        before,
+        after,
+      });
+      return after;
+    });
   }
 
-  upsertBadge(dto: UpsertBadgeDto) {
+  private assertBadgeConfiguration(ruleType: BadgeRuleType | null, targetValue: number | null) {
+    if ((ruleType === null) !== (targetValue === null)) {
+      throw new BadRequestException('El tipo de regla y el valor objetivo deben definirse o eliminarse juntos');
+    }
+    if (targetValue !== null && targetValue < 1) {
+      throw new BadRequestException('El valor objetivo debe ser mayor que cero');
+    }
+  }
+
+  async listBadges(search?: string, page?: number, limit?: number) {
+    const { take, skip } = paginate(page, limit);
+    const term = search?.trim().slice(0, 100);
+    const where: Prisma.BadgeWhereInput = term
+      ? {
+          OR: [
+            { code: { contains: term, mode: 'insensitive' } },
+            { name: { contains: term, mode: 'insensitive' } },
+            { description: { contains: term, mode: 'insensitive' } },
+          ],
+        }
+      : {};
+    const [total, items] = await this.prisma.$transaction([
+      this.prisma.badge.count({ where }),
+      this.prisma.badge.findMany({
+        where,
+        take,
+        skip,
+        orderBy: [{ createdAt: 'desc' }, { code: 'asc' }],
+        include: { _count: { select: { users: true } } },
+      }),
+    ]);
+    return {
+      items,
+      total,
+      page: Math.max(1, Number(page) || 1),
+      limit: take,
+      pages: Math.max(1, Math.ceil(total / take)),
+    };
+  }
+
+  async upsertBadge(actor: AuthUser, dto: UpsertBadgeDto) {
     if (dto.icon !== undefined && !isSafeBadgeIcon(dto.icon)) {
       throw new BadRequestException('Icono no permitido. Usa el catálogo o el conversor seguro');
     }
-    return this.prisma.badge.upsert({
-      where: { code: dto.code },
-      create: { ...dto, icon: dto.icon ?? 'award' },
-      update: { name: dto.name, description: dto.description, icon: dto.icon, color: dto.color },
+    const before = await this.prisma.badge.findUnique({ where: { code: dto.code } });
+    const ruleType = dto.ruleType === undefined ? before?.ruleType ?? null : dto.ruleType;
+    const targetValue = dto.targetValue === undefined ? before?.targetValue ?? null : dto.targetValue;
+    this.assertBadgeConfiguration(ruleType, targetValue);
+
+    const after = await this.prisma.$transaction(async (tx) => {
+      const saved = await tx.badge.upsert({
+        where: { code: dto.code },
+        create: {
+          code: dto.code,
+          name: dto.name,
+          description: dto.description,
+          icon: dto.icon ?? 'award',
+          color: dto.color,
+          ruleType,
+          targetValue,
+          isActive: dto.isActive ?? true,
+          isRetroactive: dto.isRetroactive ?? false,
+        },
+        update: {
+          name: dto.name,
+          description: dto.description,
+          icon: dto.icon,
+          color: dto.color,
+          ruleType,
+          targetValue,
+          isActive: dto.isActive,
+          isRetroactive: dto.isRetroactive,
+        },
+      });
+      await this.audit.record(tx, {
+        actor,
+        action: before ? 'BADGE_UPDATED' : 'BADGE_CREATED',
+        entityType: 'BADGE',
+        entityId: saved.id,
+        before: before ?? undefined,
+        after: saved,
+      });
+      return saved;
     });
+
+    const ruleChanged = !before
+      || before.ruleType !== after.ruleType
+      || before.targetValue !== after.targetValue
+      || before.isActive !== after.isActive
+      || before.isRetroactive !== after.isRetroactive;
+    const retroactiveEvaluation = ruleChanged
+      && after.isActive
+      && after.isRetroactive
+      && after.ruleType
+      ? await this.badgeRules.evaluateForAllUsers(after.id)
+      : undefined;
+    return { ...after, ...(retroactiveEvaluation ? { retroactiveEvaluation } : {}) };
+  }
+
+  async updateBadge(actor: AuthUser, id: string, dto: UpdateBadgeDto) {
+    const before = await this.prisma.badge.findUnique({ where: { id } });
+    if (!before) throw new NotFoundException('Insignia no encontrada');
+    if (dto.icon !== undefined && !isSafeBadgeIcon(dto.icon)) {
+      throw new BadRequestException('Icono no permitido. Usa el catálogo o el conversor seguro');
+    }
+    const ruleType = dto.ruleType === undefined ? before.ruleType : dto.ruleType;
+    const targetValue = dto.targetValue === undefined ? before.targetValue : dto.targetValue;
+    this.assertBadgeConfiguration(ruleType, targetValue);
+
+    const after = await this.prisma.$transaction(async (tx) => {
+      const saved = await tx.badge.update({
+        where: { id },
+        data: { ...dto, ruleType, targetValue },
+      });
+      await this.audit.record(tx, {
+        actor,
+        action: 'BADGE_UPDATED',
+        entityType: 'BADGE',
+        entityId: id,
+        before,
+        after: saved,
+      });
+      return saved;
+    });
+
+    const ruleChanged = before.ruleType !== after.ruleType
+      || before.targetValue !== after.targetValue
+      || before.isActive !== after.isActive
+      || before.isRetroactive !== after.isRetroactive;
+    const retroactiveEvaluation = ruleChanged
+      && after.isActive
+      && after.isRetroactive
+      && after.ruleType
+      ? await this.badgeRules.evaluateForAllUsers(after.id)
+      : undefined;
+    return { ...after, ...(retroactiveEvaluation ? { retroactiveEvaluation } : {}) };
+  }
+
+  async deleteBadge(actor: AuthUser, id: string) {
+    const badge = await this.prisma.badge.findUnique({
+      where: { id },
+      include: { _count: { select: { users: true } } },
+    });
+    if (!badge) throw new NotFoundException('Insignia no encontrada');
+    if (badge._count.users > 0) {
+      throw new BadRequestException('La insignia ya fue otorgada; desactívala para conservar el historial');
+    }
+    await this.prisma.$transaction(async (tx) => {
+      await tx.badge.delete({ where: { id } });
+      await this.audit.record(tx, {
+        actor,
+        action: 'BADGE_DELETED',
+        entityType: 'BADGE',
+        entityId: id,
+        before: badge,
+      });
+    });
+    return { deleted: true };
+  }
+
+  async evaluateBadge(actor: AuthUser, id: string) {
+    const badge = await this.prisma.badge.findUnique({ where: { id } });
+    if (!badge) throw new NotFoundException('Insignia no encontrada');
+    if (!badge.isActive || !badge.ruleType || !badge.targetValue) {
+      throw new BadRequestException('La insignia debe tener una regla activa para evaluarse');
+    }
+    const result = await this.badgeRules.evaluateForAllUsers(id);
+    await this.audit.recordDirect({
+      actor,
+      action: 'BADGE_RULE_REEVALUATED',
+      entityType: 'BADGE',
+      entityId: id,
+      metadata: result,
+    });
+    return result;
   }
 
   async convertBadgeIcon(file?: Express.Multer.File) {
@@ -185,19 +391,16 @@ export class AdminService {
     }
   }
 
-  async grantBadge(username: string, code: string) {
+  async grantBadge(actor: AuthUser, username: string, code: string) {
     const user = await this.prisma.user.findUnique({ where: { username } });
     const badge = await this.prisma.badge.findUnique({ where: { code } });
     if (!user || !badge) throw new NotFoundException('Usuario o insignia no encontrada');
-    try {
-      await this.prisma.userBadge.create({ data: { userId: user.id, badgeId: badge.id } });
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        return { granted: true, already: true };
-      }
-      throw error;
-    }
-    return { granted: true };
+    return this.badgeRules.grantByCode(
+      user.id,
+      code,
+      `Insignia “${badge.name}” asignada manualmente por @${actor.username}`,
+      actor,
+    );
   }
 }
 
@@ -206,12 +409,18 @@ export class AdminService {
 @ApiBearerAuth()
 @Controller('admin')
 export class AdminController {
-  constructor(private admin: AdminService) {}
+  constructor(private admin: AdminService, private audit: AuditService) {}
 
   @Get('dashboard')
   @ApiOperation({ summary: '[Admin] Métricas generales y actividad reciente' })
   dashboard() {
     return this.admin.dashboard();
+  }
+
+  @Get('audit')
+  @ApiOperation({ summary: '[Admin] Auditoría unificada del sistema y de proyectos' })
+  auditLog(@Query() query: any) {
+    return this.audit.list(query);
   }
 
   @Get('users')
@@ -234,14 +443,42 @@ export class AdminController {
 
   @Patch('points/rules/:reason')
   @ApiOperation({ summary: '[Admin] Editar regla de puntos' })
-  updateRule(@Param('reason', new ParseEnumPipe(PointReason)) reason: PointReason, @Body() dto: UpdatePointRuleDto) {
-    return this.admin.updatePointRule(reason, dto);
+  updateRule(
+    @CurrentUser() actor: AuthUser,
+    @Param('reason', new ParseEnumPipe(PointReason)) reason: PointReason,
+    @Body() dto: UpdatePointRuleDto,
+  ) {
+    return this.admin.updatePointRule(actor, reason, dto);
+  }
+
+  @Get('badges')
+  @ApiOperation({ summary: '[Admin] Listar y configurar insignias' })
+  badges(@Query('search') search?: string, @Query('page') page?: number, @Query('limit') limit?: number) {
+    return this.admin.listBadges(search, page, limit);
   }
 
   @Post('badges')
   @ApiOperation({ summary: '[Admin] Crear/editar insignia' })
-  upsertBadge(@Body() dto: UpsertBadgeDto) {
-    return this.admin.upsertBadge(dto);
+  upsertBadge(@CurrentUser() actor: AuthUser, @Body() dto: UpsertBadgeDto) {
+    return this.admin.upsertBadge(actor, dto);
+  }
+
+  @Patch('badges/:id')
+  @ApiOperation({ summary: '[Admin] Editar configuración de una insignia' })
+  updateBadge(@CurrentUser() actor: AuthUser, @Param('id') id: string, @Body() dto: UpdateBadgeDto) {
+    return this.admin.updateBadge(actor, id, dto);
+  }
+
+  @Delete('badges/:id')
+  @ApiOperation({ summary: '[Admin] Eliminar una insignia nunca otorgada' })
+  deleteBadge(@CurrentUser() actor: AuthUser, @Param('id') id: string) {
+    return this.admin.deleteBadge(actor, id);
+  }
+
+  @Post('badges/:id/evaluate')
+  @ApiOperation({ summary: '[Admin] Reevaluar una regla de insignia para usuarios activos' })
+  evaluateBadge(@CurrentUser() actor: AuthUser, @Param('id') id: string) {
+    return this.admin.evaluateBadge(actor, id);
   }
 
   @Post('badges/convert-icon')
@@ -265,8 +502,8 @@ export class AdminController {
 
   @Post('badges/:code/grant/:username')
   @ApiOperation({ summary: '[Admin] Otorgar insignia manualmente' })
-  grant(@Param('code') code: string, @Param('username') username: string) {
-    return this.admin.grantBadge(username, code);
+  grant(@CurrentUser() actor: AuthUser, @Param('code') code: string, @Param('username') username: string) {
+    return this.admin.grantBadge(actor, username, code);
   }
 }
 

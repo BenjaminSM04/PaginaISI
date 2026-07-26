@@ -2,8 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Flag, Heart, Loader2, Send, UserPlus } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { CheckCircle2, Flag, Heart, Loader2, Send, UserPlus, XCircle } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
@@ -97,36 +97,24 @@ export function EventRegisterButton({ slug, initialRegistered, isPast }: { slug:
   const queryClient = useQueryClient();
   const registeredFromProps = !!initialRegistered;
   const registrationScope = `${slug}:${user?.id ?? 'anonymous'}:${isPast ? 'past' : 'active'}:${registeredFromProps}`;
-  const [registered, setRegistered] = useScopedState(registrationScope, registeredFromProps);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useScopedState<string | null>(registrationScope, null);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!user || isPast) return;
-
-    void api
-      .get<{ registered: boolean }>(`/events/${slug}`)
-      .then((event) => {
-        if (!cancelled) {
-          setRegistered(!!event.registered);
-          setError(null);
-        }
-      })
-      .catch((cause: unknown) => {
-        if (!cancelled) setError(messageFrom(cause));
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isPast, setError, setRegistered, slug, user]);
+  const eventAccessKey = ['event-access', slug, user?.id ?? 'guest'] as const;
+  const eventAccess = useQuery({
+    queryKey: eventAccessKey,
+    queryFn: () => api.get<{ registered?: boolean; meetingUrl?: string | null }>(`/events/${slug}`),
+    enabled: !!user && !isPast,
+    retry: false,
+  });
+  const registered = eventAccess.data?.registered ?? registeredFromProps;
+  const visibleError = error ?? (eventAccess.error ? messageFrom(eventAccess.error) : null);
 
   if (isPast) return <Button variant="secondary" disabled>Evento finalizado</Button>;
 
   const toggle = async () => {
     if (!user) return router.push('/login');
+    if (registered && !window.confirm('¿Cancelar tu inscripción a este evento? Tu cupo quedará disponible para otra persona.')) return;
     setBusy(true);
     setMsg(null);
     setError(null);
@@ -134,14 +122,27 @@ export function EventRegisterButton({ slug, initialRegistered, isPast }: { slug:
       if (registered) {
         await api.post(`/events/${slug}/unregister`);
         if (!mounted.current) return;
-        setRegistered(false);
+        queryClient.setQueryData(
+          eventAccessKey,
+          (current: { registered?: boolean; meetingUrl?: string | null } | undefined) => ({
+            ...current,
+            registered: false,
+          }),
+        );
       } else {
         const res = await api.post<{ pointsAwarded?: number }>(`/events/${slug}/register`);
         if (!mounted.current) return;
-        setRegistered(true);
+        queryClient.setQueryData(
+          eventAccessKey,
+          (current: { registered?: boolean; meetingUrl?: string | null } | undefined) => ({
+            ...current,
+            registered: true,
+          }),
+        );
         if (res.pointsAwarded) setMsg(`+${res.pointsAwarded} puntos por inscribirte`);
       }
-      void queryClient.invalidateQueries({ queryKey: ['event-access', slug] });
+      void queryClient.invalidateQueries({ queryKey: eventAccessKey });
+      void queryClient.invalidateQueries({ queryKey: ['events', 'registration-status'] });
       router.refresh();
     } catch (cause: unknown) {
       if (mounted.current) setError(messageFrom(cause));
@@ -151,20 +152,36 @@ export function EventRegisterButton({ slug, initialRegistered, isPast }: { slug:
   };
 
   return (
-    <div className="flex flex-col items-start gap-1.5">
-      <Button onClick={toggle} disabled={busy} variant={registered ? 'outline' : 'accent'} size="lg">
-        {busy ? <Loader2 className="animate-spin" /> : registered ? <CheckCircle2 /> : null}
-        {registered ? 'Inscrito — cancelar inscripción' : 'Inscribirme al evento'}
+    <div className="flex w-full flex-col items-stretch gap-2">
+      {registered && (
+        <div role="status" className="flex items-center gap-2 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-3 py-2 text-sm font-bold text-emerald-600 dark:text-emerald-400">
+          <CheckCircle2 className="h-5 w-5" aria-hidden="true" /> Inscrito
+        </div>
+      )}
+      <Button onClick={toggle} disabled={busy} variant={registered ? 'outline' : 'accent'} size="lg" className="w-full">
+        {busy ? <Loader2 className="animate-spin" /> : registered ? <XCircle className="text-red-500" /> : null}
+        {registered ? 'Cancelar inscripción' : 'Inscribirme al evento'}
       </Button>
       {msg && <span role="status" className="text-xs font-semibold text-emerald-500">{msg}</span>}
-      {error && <span role="alert" className="text-xs font-semibold text-red-500">{error}</span>}
+      {visibleError && <span role="alert" className="text-xs font-semibold text-red-500">{visibleError}</span>}
     </div>
   );
 }
 
-export function EnrollMentorshipButton({ slug, initialEnrolled }: { slug: string; initialEnrolled?: boolean }) {
+export function EnrollMentorshipButton({
+  slug,
+  title,
+  initialEnrolled,
+  disabledReason,
+}: {
+  slug: string;
+  title?: string;
+  initialEnrolled?: boolean;
+  disabledReason?: string | null;
+}) {
   const { user } = useAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const mounted = useMountedRef();
   const enrolledFromProps = !!initialEnrolled;
   const enrollmentScope = `${slug}:${user?.id ?? 'anonymous'}:${enrolledFromProps}`;
@@ -193,13 +210,29 @@ export function EnrollMentorshipButton({ slug, initialEnrolled }: { slug: string
     };
   }, [setEnrolled, setError, slug, user]);
 
-  const enroll = async () => {
+  const toggle = async () => {
     if (!user) return router.push('/login');
+    if (!enrolled && disabledReason) {
+      setError(disabledReason);
+      return;
+    }
+    const action = enrolled ? 'cancelar tu inscripción' : 'confirmar tu inscripción';
+    if (!window.confirm(`¿Deseas ${action}${title ? ` en “${title}”` : ''}?`)) return;
     setBusy(true);
     setError(null);
     try {
-      await api.post(`/mentorships/${slug}/enroll`);
-      if (mounted.current) setEnrolled(true);
+      if (enrolled) {
+        await api.delete(`/mentorships/${slug}/enroll`);
+        if (mounted.current) setEnrolled(false);
+      } else {
+        await api.post(`/mentorships/${slug}/enroll`);
+        if (mounted.current) setEnrolled(true);
+      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['mentorships'] }),
+        queryClient.invalidateQueries({ queryKey: ['mentorship', slug] }),
+      ]);
+      router.refresh();
     } catch (cause: unknown) {
       if (mounted.current) setError(messageFrom(cause));
     } finally {
@@ -208,11 +241,17 @@ export function EnrollMentorshipButton({ slug, initialEnrolled }: { slug: string
   };
 
   return (
-    <div className="flex flex-col items-start gap-1.5">
-      <Button onClick={enroll} disabled={busy || enrolled} variant={enrolled ? 'outline' : 'accent'}>
-        {busy ? <Loader2 className="animate-spin" /> : enrolled ? <CheckCircle2 /> : null}
-        {enrolled ? 'Ya estás inscrito' : 'Inscribirme'}
+    <div className="flex w-full flex-col items-stretch gap-1.5">
+      {enrolled && (
+        <div role="status" className="flex items-center gap-2 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-3 py-2 text-sm font-bold text-emerald-600 dark:text-emerald-400">
+          <CheckCircle2 className="h-5 w-5" /> Inscripción confirmada
+        </div>
+      )}
+      <Button onClick={toggle} disabled={busy || (!enrolled && Boolean(disabledReason))} variant={enrolled ? 'outline' : 'accent'} className="w-full">
+        {busy ? <Loader2 className="animate-spin" /> : enrolled ? <XCircle className="text-red-500" /> : null}
+        {enrolled ? 'Cancelar inscripción' : 'Inscribirme'}
       </Button>
+      {!enrolled && disabledReason && <span className="text-xs text-muted-foreground">{disabledReason}</span>}
       {error && <span role="alert" className="text-xs font-semibold text-red-500">{error}</span>}
     </div>
   );

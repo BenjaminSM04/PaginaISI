@@ -110,6 +110,20 @@ const NEWS_INCLUDE = {
   project: { select: { id: true, slug: true, title: true, version: true } },
 } as const;
 
+const NEWS_PUBLIC_LIST_SELECT = {
+  id: true,
+  slug: true,
+  title: true,
+  summary: true,
+  category: true,
+  coverUrl: true,
+  tags: true,
+  likesCount: true,
+  status: true,
+  publishedAt: true,
+  ...NEWS_INCLUDE,
+} satisfies Prisma.NewsSelect;
+
 function newsAuditSnapshot(news: any) {
   return {
     id: news.id,
@@ -169,15 +183,24 @@ export class NewsService {
     const orderBy: any = sort === 'top'
       ? [{ likesCount: 'desc' }, { publishedAt: 'desc' }]
       : { publishedAt: 'desc' };
+    const items = includeAll
+      ? this.prisma.news.findMany({
+          where,
+          orderBy,
+          take,
+          skip,
+          include: NEWS_INCLUDE,
+        })
+      : this.prisma.news.findMany({
+          where,
+          orderBy,
+          take,
+          skip,
+          select: NEWS_PUBLIC_LIST_SELECT,
+        });
     return this.prisma.$transaction([
       this.prisma.news.count({ where }),
-      this.prisma.news.findMany({
-        where,
-        orderBy,
-        take,
-        skip,
-        include: NEWS_INCLUDE,
-      }),
+      items,
     ]).then(([total, items]) => ({ total, items }));
   }
 

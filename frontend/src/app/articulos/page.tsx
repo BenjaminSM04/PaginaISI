@@ -7,6 +7,7 @@ import { ArticleCard } from '@/components/cards';
 import { EmptyState, SectionHeader } from '@/components/shared';
 import { FiltersBar } from '@/components/filters-bar';
 import { buttonVariants } from '@/components/ui/button';
+import { PointReward } from '@/components/point-reward';
 
 export const revalidate = 60;
 export const metadata: Metadata = { title: 'Artículos científicos' };
@@ -29,8 +30,8 @@ export default async function ArticulosPage({ searchParams }: { searchParams: Pr
         <Link href="/articulos/nuevo" className={buttonVariants({ variant: 'accent' })}><Plus /> Enviar artículo</Link>
       </div>
       <p className="max-w-2xl text-sm text-muted-foreground">
-        Trabajos de investigación revisados por docentes. Publicar un artículo aprobado otorga
-        <strong className="text-purple-500"> +35 Research Points</strong>.
+        Trabajos de investigación revisados por docentes. Publicar un artículo aprobado otorga{' '}
+        <PointReward reason="ARTICULO_APROBADO" suffix="Research Points" className="text-purple-500" />.
       </p>
 
       <FiltersBar

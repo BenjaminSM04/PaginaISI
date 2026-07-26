@@ -33,6 +33,19 @@ const ACTION_LABELS: Record<string, string> = {
   NEWS_UPDATED: 'Noticia actualizada',
   NEWS_ARCHIVED: 'Noticia archivada',
   ROLLBACK: 'Rollback realizado',
+  PROJECT_VERSION_SUBMITTED: 'Versión enviada a revisión',
+  PROJECT_VERSION_OBSERVED: 'Versión observada',
+  PROJECT_VERSION_REJECTED: 'Versión rechazada',
+  PROJECT_VERSION_PUBLISHED: 'Versión publicada',
+  COMMUNITY_CREATED: 'Comunidad creada',
+  COMMUNITY_UPDATED: 'Comunidad actualizada',
+  COMMUNITY_MEMBER_ADDED: 'Miembro agregado',
+  COMMUNITY_MEMBER_UPDATED: 'Rol de miembro actualizado',
+  COMMUNITY_MEMBER_REMOVED: 'Miembro retirado',
+  EVENT_REGISTERED: 'Inscripción a evento',
+  EVENT_UNREGISTERED: 'Cancelación de inscripción',
+  FORUM_BEST_ANSWER_CHANGED: 'Mejor respuesta actualizada',
+  BADGE_AWARDED: 'Insignia otorgada',
 };
 
 const actionLabel = (action: string) => ACTION_LABELS[action] ?? action.toLowerCase().replaceAll('_', ' ');
@@ -63,8 +76,8 @@ export default function AdminProjectAuditPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['projects', 'audit', 'recent', search, page],
-    queryFn: () => api.get<AuditPage>(`/projects/audit/recent?page=${page}&limit=20${search ? `&search=${encodeURIComponent(search)}` : ''}`),
+    queryKey: ['admin', 'audit', search, page],
+    queryFn: () => api.get<AuditPage>(`/admin/audit?page=${page}&limit=20${search ? `&search=${encodeURIComponent(search)}` : ''}`),
     retry: false,
   });
 
@@ -78,8 +91,8 @@ export default function AdminProjectAuditPage() {
     <div className="space-y-6">
       <header>
         <span className="section-kicker">Seguridad y trazabilidad</span>
-        <h1 className="mt-1 flex items-center gap-2 font-serif-heading text-2xl font-bold text-primary"><ShieldCheck className="h-6 w-6 text-orange-500" /> Auditoría de proyectos</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Registro privado de ediciones, identidades y señales de riesgo. El rollback se realiza desde el historial de cada proyecto.</p>
+        <h1 className="mt-1 flex items-center gap-2 font-serif-heading text-2xl font-bold text-primary"><ShieldCheck className="h-6 w-6 text-orange-500" /> Auditoría del sistema</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Registro privado de acciones, identidades históricas y señales de riesgo. Los actores se resuelven en bloque y conservan sus snapshots.</p>
       </header>
 
       <form onSubmit={submitSearch} role="search" className="flex gap-2 rounded-xl border border-border bg-card p-3 shadow-sm">
@@ -106,6 +119,8 @@ export default function AdminProjectAuditPage() {
           {data!.items.map((entry) => {
             const email = entry.actorEmailSnapshot ?? entry.actorEmail ?? entry.actor?.email;
             const actor = entry.actorNameSnapshot ?? entry.actor?.profile?.fullName ?? entry.actorUsernameSnapshot ?? entry.actor?.username ?? 'Usuario eliminado';
+            const actorId = entry.actorIdSnapshot ?? entry.actorId ?? entry.actorUserId ?? entry.actor?.id;
+            const roles = entry.actorRolesSnapshot ?? entry.actor?.roles ?? [];
             const risks = entry.metadata?.security?.riskSignals ?? [];
             const ip = entry.metadata?.request?.ip ?? entry.ipAddress;
             const projectId = entry.project?.id ?? entry.projectId;
@@ -113,12 +128,20 @@ export default function AdminProjectAuditPage() {
               <article key={entry.id} className="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-border bg-card p-4 shadow-sm">
                 <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="font-bold">{entry.project?.title ?? 'Proyecto'}</h2>
+                    <h2 className="font-bold">{entry.project?.title ?? entry.entityType ?? 'Sistema'}</h2>
                     <span className="rounded-full border border-border bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase">{actionLabel(entry.action)}</span>
                     {risks.length > 0 && <span className="inline-flex items-center gap-1 rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400"><AlertTriangle className="h-3 w-3" /> {risks.join(', ')}</span>}
                     <DeliveryBadge delivery={entry.delivery} />
                   </div>
-                  <p className="text-sm"><span className="font-semibold">{actor}</span>{email && <> · <a href={`mailto:${email}`} className="text-primary hover:underline">{email}</a></>}</p>
+                  <p className="text-sm">
+                    <span className="font-semibold">{actor}</span>
+                    {entry.actorDeleted && <span className="ml-2 rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">cuenta eliminada</span>}
+                    {email && <> · <a href={`mailto:${email}`} className="text-primary hover:underline">{email}</a></>}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {actorId ? `ID ${actorId}` : 'Actor del sistema'}
+                    {roles.length ? ` · ${roles.join(', ')}` : ''}
+                  </p>
                   <p className="text-xs text-muted-foreground">{formatDate(entry.createdAt, true)}{ip ? ` · IP ${ip}` : ''}{entry.entityType ? ` · ${entry.entityType}` : ''}</p>
                   {entry.summary && <p className="pt-1 text-sm text-foreground/80">{entry.summary}</p>}
                 </div>

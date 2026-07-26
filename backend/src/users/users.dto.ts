@@ -1,5 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { RoleName } from '@prisma/client';
 import { ArrayMaxSize, IsArray, IsInt, IsOptional, IsString, IsUrl, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { IsEnum } from 'class-validator';
 
 const WEB_URL_OPTIONS = { protocols: ['http', 'https'], require_protocol: true, require_tld: false };
 
@@ -21,7 +23,7 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(12)
+  @Max(8)
   semester?: number;
 
   @ApiPropertyOptional()
@@ -55,4 +57,32 @@ export class UpdateProfileDto {
   @IsString({ each: true })
   @MaxLength(50, { each: true })
   skills?: string[];
+}
+
+export class DirectoryQueryDto {
+  @ApiPropertyOptional({ description: 'Nombre completo o username' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  q?: string;
+
+  @ApiPropertyOptional({ minimum: 1, default: 1 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 50, default: 20 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  limit?: number;
+}
+
+export class DirectorySearchDto extends DirectoryQueryDto {
+  @ApiPropertyOptional({ enum: RoleName })
+  @IsOptional()
+  @IsEnum(RoleName)
+  role?: RoleName;
 }

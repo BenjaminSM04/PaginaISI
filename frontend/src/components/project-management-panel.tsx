@@ -5,14 +5,14 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { type ChangeEvent, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import {
   Archive, ArrowLeft, CalendarDays, CheckCircle2, Clock3, ExternalLink, FileClock, History, ImagePlus, Images,
   Loader2, MapPin, Newspaper, Pencil, Plus, RefreshCcw, RotateCcw, Save, Settings2, ShieldCheck, Trash2, X,
 } from 'lucide-react';
 import { ApiError, api } from '@/lib/api';
 import type {
-  MediaAssetLite, News, ProjectAuditEntry, ProjectManagementDetail, ProjectMilestone,
+  IncubatorClient, MediaAssetLite, News, ProjectAuditEntry, ProjectManagementDetail, ProjectMilestone,
 } from '@/lib/types';
 import { cn, formatDate, NEWS_CATEGORIES, PROJECT_STAGES } from '@/lib/utils';
 import { buildGoogleCalendarUrl } from '@/lib/google-calendar';
@@ -21,6 +21,13 @@ import { StatusBadge } from '@/components/shared';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input, Label, Select, Textarea } from '@/components/ui/input';
 import { SegmentedTabs } from '@/components/ui/segmented-tabs';
+import {
+  CatalogMultiCombobox,
+  type CatalogOption,
+  type DirectoryUserOption,
+  UserDirectoryMultiCombobox,
+} from '@/components/remote-selectors';
+import { IncubatorClientSelector } from '@/components/incubator-client-selector';
 
 const TABS = [
   { id: 'data' as const, label: 'Datos', icon: Settings2, panelId: 'project-manage-panel' },
@@ -84,9 +91,43 @@ type ProjectDataForm = {
 function DataTab({ detail, refresh }: { detail: ProjectManagementDetail; refresh: () => Promise<unknown> }) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { register, handleSubmit, reset, setValue, formState: { isSubmitting } } = useForm<ProjectDataForm>();
+  const [technologies, setTechnologies] = useState<CatalogOption[]>([]);
+  const [tags, setTags] = useState<CatalogOption[]>([]);
+  const [members, setMembers] = useState<DirectoryUserOption[]>([]);
+  const [clients, setClients] = useState<IncubatorClient[]>([]);
+  const { register, handleSubmit, reset, setValue, control, formState: { isSubmitting } } = useForm<ProjectDataForm>();
+  const coverUrl = useWatch({ control, name: 'coverUrl' });
+  const isIncubator = useWatch({ control, name: 'isIncubator' });
+  const pendingCatalog = (kind: CatalogOption['kind']) => async (name: string): Promise<CatalogOption> => ({
+    id: `pending:${kind}:${name.trim().toLocaleLowerCase('es').replace(/\s+/g, '-')}`,
+    kind,
+    name: name.trim().replace(/\s+/g, ' '),
+  });
 
   useEffect(() => {
+    const technologyOptions: CatalogOption[] = (detail.technologies ?? []).map((technology) => ({
+      id: technology.id ?? `existing:technology:${technology.name}`,
+      kind: 'TECHNOLOGY',
+      name: technology.name,
+    }));
+    const tagOptions: CatalogOption[] = detail.tags.map((name) => ({
+      id: `existing:tag:${name}`,
+      kind: 'TAG',
+      name,
+    }));
+    const memberOptions: DirectoryUserOption[] = (detail.members ?? [])
+      .map((member) => member.user)
+      .filter((member) => member.username !== detail.owner?.username)
+      .map((member) => ({
+        id: member.id,
+        username: member.username,
+        profile: member.profile,
+        roles: member.roles,
+      }));
+    setTechnologies(technologyOptions);
+    setTags(tagOptions);
+    setMembers(memberOptions);
+    setClients(detail.clients ?? []);
     reset({
       title: detail.title,
       summary: detail.summary,
@@ -97,12 +138,9 @@ function DataTab({ detail, refresh }: { detail: ProjectManagementDetail; refresh
       videoUrl: detail.videoUrl ?? '',
       phase: detail.phase ?? '',
       stage: detail.stage,
-      tags: detail.tags.join(', '),
-      technologies: (detail.technologies ?? []).map((technology) => technology.name).join(', '),
-      memberUsernames: (detail.members ?? [])
-        .map((member) => member.user.username)
-        .filter((username) => username !== detail.owner?.username)
-        .join(', '),
+      tags: tagOptions.map((tag) => tag.name).join(', '),
+      technologies: technologyOptions.map((technology) => technology.name).join(', '),
+      memberUsernames: memberOptions.map((member) => member.username).join(', '),
       recruiting: detail.recruiting,
       isIncubator: detail.isIncubator,
     });
@@ -111,7 +149,9 @@ function DataTab({ detail, refresh }: { detail: ProjectManagementDetail; refresh
   const submit = async (form: ProjectDataForm) => {
     setError(null);
     setMessage(null);
-    const split = (value: string) => value.split(',').map((item) => item.trim()).filter(Boolean);
+    const selectedClientIds = clients.map((client) => client.id);
+    const previousClientIds = (detail.clients ?? []).map((client) => client.id);
+    const clientsChanged = [...selectedClientIds].sort().join('|') !== [...previousClientIds].sort().join('|');
     const body: Record<string, unknown> = {
       expectedVersion: detail.version,
       title: form.title,
@@ -123,14 +163,17 @@ function DataTab({ detail, refresh }: { detail: ProjectManagementDetail; refresh
       videoUrl: form.videoUrl || null,
       phase: form.phase || null,
       stage: form.stage,
-      tags: split(form.tags).map((tag) => tag.toLowerCase()),
-      technologies: split(form.technologies),
+      tags: tags.map((tag) => tag.name),
+      technologies: technologies.map((technology) => technology.name),
       recruiting: form.recruiting,
       isIncubator: form.isIncubator,
       resubmit: ['OBSERVED', 'REJECTED', 'DRAFT'].includes(detail.status),
     };
+    if (clientsChanged || form.isIncubator !== detail.isIncubator) {
+      body.clientIds = form.isIncubator ? selectedClientIds : [];
+    }
     if (detail.access.canManageMembers) {
-      body.memberUsernames = split(form.memberUsernames).map((username) => username.toLowerCase());
+      body.memberUsernames = members.map((member) => member.username);
     }
     try {
       await api.patch(`/projects/${detail.id}`, body);
@@ -144,9 +187,9 @@ function DataTab({ detail, refresh }: { detail: ProjectManagementDetail; refresh
 
   return (
     <form onSubmit={handleSubmit(submit)} className="space-y-5 rounded-2xl border border-border bg-card p-5 shadow-sm md:p-7">
-      {detail.status === 'APPROVED' && !detail.access.isAdmin && (
+      {detail.publicStatus === 'APPROVED' && (
         <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
-          Los cambios editoriales de una publicación aprobada pueden requerir una nueva revisión.
+          La publicación actual seguirá visible. Estos cambios crearán una versión separada que requiere aprobación.
         </p>
       )}
       <div className="grid gap-5 sm:grid-cols-2">
@@ -164,21 +207,80 @@ function DataTab({ detail, refresh }: { detail: ProjectManagementDetail; refresh
         <Field label="Video"><Input type="url" placeholder="https://…" {...register('videoUrl')} /></Field>
         <Field label="Portada">
           <Input type="url" placeholder="https://…/portada.webp" {...register('coverUrl')} />
-          <MediaUploadButton kind="image" disabled={isSubmitting} onUploaded={(asset) => setValue('coverUrl', asset.url, { shouldDirty: true })} />
+          <MediaUploadButton
+            kind="image"
+            disabled={isSubmitting}
+            previewUrl={coverUrl}
+            previewAlt="Vista previa de la portada del proyecto"
+            onUploaded={(asset) => setValue('coverUrl', asset.url, { shouldDirty: true })}
+            onRemove={() => setValue('coverUrl', '', { shouldDirty: true })}
+          />
         </Field>
-        <Field className="sm:col-span-2" label="Tecnologías (separadas por coma)"><Input {...register('technologies')} /></Field>
-        <Field className="sm:col-span-2" label="Tags (separados por coma)"><Input {...register('tags')} /></Field>
+        <div className="space-y-1.5 sm:col-span-2">
+          <input type="hidden" {...register('technologies')} />
+          <CatalogMultiCombobox
+            kind="TECHNOLOGY"
+            label="Tecnologías"
+            value={technologies}
+            onChange={(value) => {
+              setTechnologies(value);
+              setValue('technologies', value.map((item) => item.name).join(', '));
+            }}
+            allowCreate
+            onCreate={pendingCatalog('TECHNOLOGY')}
+            placeholder="Busca o crea tecnologías"
+          />
+        </div>
+        <div className="space-y-1.5 sm:col-span-2">
+          <input type="hidden" {...register('tags')} />
+          <CatalogMultiCombobox
+            kind="TAG"
+            label="Tags"
+            value={tags}
+            onChange={(value) => {
+              setTags(value);
+              setValue('tags', value.map((item) => item.name).join(', '));
+            }}
+            allowCreate
+            onCreate={pendingCatalog('TAG')}
+            placeholder="Busca o crea tags"
+          />
+        </div>
         {detail.access.canManageMembers && (
-          <Field className="sm:col-span-2" label="Integrantes por username (sin incluir al líder)">
-            <Input placeholder="usuario1, usuario2" {...register('memberUsernames')} />
+          <div className="space-y-1.5 sm:col-span-2">
+            <input type="hidden" {...register('memberUsernames')} />
+            <UserDirectoryMultiCombobox
+              label="Integrantes (sin incluir al líder)"
+              value={members}
+              onChange={(value) => {
+                setMembers(value);
+                setValue('memberUsernames', value.map((member) => member.username).join(', '));
+              }}
+              placeholder="Busca por nombre o usuario"
+            />
             <p className="text-[11px] text-muted-foreground">Solo el líder y el administrador pueden cambiar el equipo.</p>
-          </Field>
+          </div>
         )}
       </div>
       <div className="flex flex-wrap gap-5 text-sm">
         <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4 accent-[#06B6D4]" {...register('recruiting')} /> Busca integrantes</label>
         <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4 accent-[#06B6D4]" {...register('isIncubator')} /> Proyecto de incubadora</label>
       </div>
+      {isIncubator && (
+        <section className="space-y-3 rounded-xl border border-purple-500/25 bg-purple-500/5 p-4">
+          <div>
+            <h3 className="font-serif-heading text-lg font-bold text-primary">Nuestros clientes</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Asocia empresas existentes o registra una nueva para incorporarla a la cartera.
+            </p>
+          </div>
+          <IncubatorClientSelector
+            value={clients}
+            onChange={setClients}
+            disabled={isSubmitting}
+          />
+        </section>
+      )}
       <OperationResult message={message} error={error} />
       <Button type="submit" disabled={isSubmitting}>{isSubmitting ? <Loader2 className="animate-spin" /> : <Save />} Guardar datos</Button>
     </form>
@@ -629,7 +731,11 @@ function HistoryTab({ detail, refreshProject, highlightedAuditId }: { detail: Pr
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="flex flex-wrap items-center gap-2"><span className="font-bold">{entry.summary || entry.action}</span>{(entry.entityType || entry.section) && <span className="rounded-full border border-border bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase">{entry.entityType || entry.section}</span>}{risks.length > 0 && <span className="rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400">Riesgo: {risks.join(', ')}</span>}<AuditDeliveryBadge delivery={entry.delivery} /></div>
-                    <p className="mt-1 text-sm"><span className="font-semibold">{actorName}</span>{email && <> · <a className="text-primary hover:underline" href={`mailto:${email}`}>{email}</a></>}</p>
+                    <p className="mt-1 text-sm">
+                      <span className="font-semibold">{actorName}</span>
+                      {entry.actorDeleted && <span className="ml-2 rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">cuenta eliminada</span>}
+                      {email && <> · <a className="text-primary hover:underline" href={`mailto:${email}`}>{email}</a></>}
+                    </p>
                     <p className="mt-1 text-xs text-muted-foreground">{formatDate(entry.createdAt, true)}{ip ? ` · IP ${ip}` : ''}</p>
                     {userAgent && <p className="mt-0.5 max-w-3xl truncate text-[11px] text-muted-foreground" title={userAgent}>Dispositivo: {userAgent}</p>}
                     {changedKeys.length > 0 && <p className="mt-2 text-xs text-muted-foreground">Campos: {changedKeys.join(', ')}</p>}

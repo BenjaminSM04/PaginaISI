@@ -8,6 +8,8 @@ import { EmptyState, SectionHeader } from '@/components/shared';
 import { FiltersBar } from '@/components/filters-bar';
 import { buttonVariants } from '@/components/ui/button';
 import { PROJECT_STAGES } from '@/lib/utils';
+import { SEMESTERS } from '@/lib/academic';
+import { PointReward } from '@/components/point-reward';
 
 export const revalidate = 30;
 export const metadata: Metadata = { title: 'Proyectos destacados' };
@@ -16,7 +18,10 @@ export default async function ProyectosPage({ searchParams }: { searchParams: Pr
   const query = await searchParams;
   const qs = new URLSearchParams();
   for (const key of ['search', 'stage', 'semester', 'community', 'tech', 'tag']) {
-    if (query[key]) qs.set(key, query[key]!);
+    const value = query[key];
+    if (!value) continue;
+    if (key === 'semester' && !SEMESTERS.includes(Number(value))) continue;
+    qs.set(key, value);
   }
   qs.set('limit', '24');
 
@@ -32,15 +37,15 @@ export default async function ProyectosPage({ searchParams }: { searchParams: Pr
         <Link href="/proyectos/nuevo" className={buttonVariants({ variant: 'accent' })}><Plus /> Publicar mi proyecto</Link>
       </div>
       <p className="max-w-2xl text-sm text-muted-foreground">
-        Todos los proyectos pasaron por revisión docente. Publica el tuyo: al ser aprobado ganas
-        <strong className="text-emerald-500"> +40 Dev Points</strong> y entra a la vitrina pública.
+        Todos los proyectos pasaron por revisión docente. Publica el tuyo: al ser aprobado ganas{' '}
+        <PointReward reason="PROYECTO_APROBADO" suffix="Dev Points" className="text-emerald-500" /> y entra a la vitrina pública.
       </p>
 
       <FiltersBar
         searchPlaceholder="Buscar por título o resumen…"
         filters={[
           { param: 'stage', label: 'Estado', options: Object.entries(PROJECT_STAGES).map(([value, label]) => ({ value, label })) },
-          { param: 'semester', label: 'Semestre', options: Array.from({ length: 10 }, (_, i) => ({ value: String(i + 1), label: `${i + 1}º semestre` })) },
+          { param: 'semester', label: 'Semestre', options: SEMESTERS.map((semester) => ({ value: String(semester), label: `${semester}º semestre` })) },
           { param: 'community', label: 'Comunidad', options: communities.map((c) => ({ value: c.slug, label: c.name })) },
         ]}
       />

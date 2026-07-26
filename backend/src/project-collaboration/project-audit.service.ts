@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import type { Request } from 'express';
 import { AuthUser } from '../common/decorators';
 import { PrismaService } from '../prisma/prisma.service';
+import { resolveAuditActor } from '../audit/audit.service';
 
 export interface ProjectAuditRequestContext {
   ip: string | null;
@@ -55,6 +56,7 @@ export class ProjectAuditService {
 
   /** Inserta la evidencia dentro de la misma transacción que hizo el cambio. */
   async record(db: AuditDatabase, input: RecordProjectAuditInput) {
+    const actor = await resolveAuditActor(db, input.actor);
     const recentEdits = await db.projectAuditLog.count({
       where: {
         projectId: input.projectId,
@@ -70,7 +72,11 @@ export class ProjectAuditService {
       data: {
         projectId: input.projectId,
         actorId: input.actor.id,
-        actorEmailSnapshot: input.actor.email,
+        actorUserId: actor.actorUserId,
+        actorNameSnapshot: actor.actorNameSnapshot,
+        actorUsernameSnapshot: actor.actorUsernameSnapshot,
+        actorEmailSnapshot: actor.actorEmailSnapshot ?? input.actor.email,
+        actorRolesSnapshot: actor.actorRolesSnapshot,
         action: input.action,
         entityType: input.entityType,
         entityId: input.entityId ?? null,
@@ -81,7 +87,7 @@ export class ProjectAuditService {
         metadata: projectAuditSnapshot({
           ...(input.metadata ?? {}),
           request: input.request ?? { ip: null, userAgent: null },
-          actorRoles: input.actor.roles,
+          actorRoles: actor.actorRolesSnapshot,
           security: { editsInLastFiveMinutes: recentEdits + 1, riskSignals },
         }),
       },

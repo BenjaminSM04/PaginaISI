@@ -11,6 +11,8 @@ import { EmptyState, SectionHeader } from '@/components/shared';
 import { CommunityCard } from '@/components/cards';
 import { HomeTabs } from '@/components/home-tabs';
 import { cn, formatDate } from '@/lib/utils';
+import { PointReward } from '@/components/point-reward';
+import { InstitutionalLogo, InstitutionalText } from '@/components/institutional-logo';
 
 export const revalidate = 60;
 
@@ -48,13 +50,13 @@ export default async function HomePage() {
           <div className="relative grid grid-cols-1 items-center gap-10 px-6 py-12 md:py-16 lg:grid-cols-12 lg:px-10">
             <div className="space-y-6 lg:col-span-7">
               <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-cyan-300 backdrop-blur-sm">
-                <Sparkles className="h-4 w-4" /> Portal académico gamificado
+                <Sparkles className="h-4 w-4" /> <InstitutionalText field="institutionName" />
               </div>
               <h1 className="font-serif-heading text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
-                Innovación, cómputo y <span className="text-cyan-400">comunidad científica</span>.
+                <InstitutionalText field="careerName" compact />: <span className="block text-cyan-400 sm:inline">innovación y comunidad</span>.
               </h1>
               <p className="max-w-2xl text-base leading-relaxed text-white/85 sm:text-lg">
-                Bienvenido al portal de la carrera de <strong className="text-white">Ingeniería de Sistemas Informáticos</strong>:
+                Bienvenido al portal de la <strong className="text-white"><InstitutionalText field="careerName" /></strong> de <InstitutionalText field="shortName" />:
                 publica tus proyectos, únete a comunidades de ciberseguridad y programación, comparte investigación,
                 resuelve dudas en el foro y escala en el ranking.
               </p>
@@ -77,17 +79,19 @@ export default async function HomePage() {
                 <div className="pointer-events-none absolute -bottom-10 -left-10 h-40 w-40 -rotate-6 rounded-2xl border-2 border-amber-300/20" />
                 <div className="relative flex items-center justify-between border-b border-white/10 pb-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-500 font-serif-heading text-sm font-bold">Σ</div>
+                    <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-white p-0.5">
+                      <InstitutionalLogo className="h-full w-full" />
+                    </div>
                     <div>
-                      <div className="text-sm font-bold">Estado del ecosistema</div>
-                      <div className="text-xs text-cyan-300">Semestre académico 2026</div>
+                      <div className="text-sm font-bold">Ecosistema <InstitutionalText field="shortName" /></div>
+                      <div className="text-xs text-cyan-300">Datos publicados en el portal</div>
                     </div>
                   </div>
                   <span className="rounded-full border border-emerald-400/30 bg-emerald-500/20 px-2.5 py-1 text-xs font-semibold text-emerald-300">● En vivo</span>
                 </div>
                 <div className="relative grid grid-cols-2 gap-3 text-center">
                   <div className="rounded-xl border border-white/10 bg-white/5 p-3.5">
-                    <div className="text-2xl font-bold text-cyan-400">{totalMembers}+</div>
+                    <div className="text-2xl font-bold text-cyan-400">{totalMembers}</div>
                     <div className="text-[11px] uppercase tracking-wider text-white/75">Miembros en comunidades</div>
                   </div>
                   <div className="rounded-xl border border-white/10 bg-white/5 p-3.5">
@@ -101,12 +105,24 @@ export default async function HomePage() {
                       <span className="line-clamp-1">{featuredEvent.title}</span>
                       <span className="shrink-0 text-cyan-300">{formatDate(featuredEvent.startsAt)}</span>
                     </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-white/20">
-                      <div className="h-full w-4/5 animate-pulse-soft bg-gradient-to-r from-cyan-400 to-amber-300" />
-                    </div>
+                    {featuredEvent.capacity && (
+                      <div
+                        className="h-2 w-full overflow-hidden rounded-full bg-white/20"
+                        role="progressbar"
+                        aria-label="Cupos ocupados"
+                        aria-valuemin={0}
+                        aria-valuemax={featuredEvent.capacity}
+                        aria-valuenow={featuredEvent._count?.registrations ?? 0}
+                      >
+                        <div
+                          className="h-full bg-gradient-to-r from-cyan-400 to-amber-300"
+                          style={{ width: `${Math.min(100, ((featuredEvent._count?.registrations ?? 0) / featuredEvent.capacity) * 100)}%` }}
+                        />
+                      </div>
+                    )}
                     <div className="flex justify-between text-[11px] text-white/70">
                       <span>{featuredEvent._count?.registrations ?? 0} inscritos</span>
-                      <span>+5 pts por inscribirte</span>
+                      <PointReward reason="INSCRIPCION_EVENTO" suffix="pts por inscribirte" />
                     </div>
                   </Link>
                 )}
@@ -124,7 +140,7 @@ export default async function HomePage() {
       <section className="container">
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {[
-            { icon: Users, value: `${totalMembers}+`, label: 'Estudiantes en comunidades', color: 'text-primary' },
+            { icon: Users, value: `${totalMembers}`, label: 'Membresías en comunidades', color: 'text-primary' },
             { icon: Rocket, value: `${projects.total}`, label: 'Proyectos y demos', color: 'text-gold' },
             { icon: ShieldCheck, value: `${communities.length}`, label: 'Comunidades activas', color: 'text-accent' },
             { icon: Trophy, value: `${ranking.length > 0 ? ranking[0].points : 0}`, label: 'Puntos del líder actual', color: 'text-emerald-500' },
@@ -166,7 +182,7 @@ export default async function HomePage() {
             <span className="section-kicker">Sobre la carrera</span>
             <h2 className="font-serif-heading text-2xl font-bold text-primary sm:text-3xl">Formamos ingenieros que construyen, investigan y comparten</h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              La carrera de Ingeniería de Sistemas Informáticos forma profesionales capaces de diseñar, desarrollar y
+              En <InstitutionalText field="institutionName" />, la <InstitutionalText field="careerName" /> forma profesionales capaces de diseñar, desarrollar y
               operar soluciones de software con impacto real. Este portal es la vitrina de lo que hacen sus estudiantes:
               proyectos de materia y de incubadora, artículos científicos, comunidades técnicas y competencias.
             </p>

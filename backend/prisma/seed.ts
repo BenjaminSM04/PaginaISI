@@ -56,8 +56,10 @@ async function acquireFirstRunLock() {
 async function wipe() {
   // La bitácora está protegida por un trigger append-only. Solo este flujo de
   // reset demo, ya autorizado por las validaciones superiores, puede vaciarla.
-  await prisma.$executeRawUnsafe('TRUNCATE TABLE "ProjectAuditLog" CASCADE');
+  await prisma.$executeRawUnsafe('TRUNCATE TABLE "ProjectAuditLog", "SystemAuditLog" CASCADE');
   await prisma.$transaction([
+    prisma.institutionalApplication.deleteMany(),
+    prisma.catalogValue.deleteMany(),
     prisma.authActionToken.deleteMany(),
     prisma.refreshSession.deleteMany(),
     prisma.notificationPreference.deleteMany(),
@@ -72,17 +74,23 @@ async function wipe() {
     prisma.forumQuestion.updateMany({ data: { acceptedAnswerId: null } }),
     prisma.forumAnswer.deleteMany(),
     prisma.forumQuestion.deleteMany(),
+    prisma.ideaMember.deleteMany(),
+    prisma.ideaProposal.deleteMany(),
     prisma.mentorshipEnrollment.deleteMany(),
+    prisma.mentorshipMentor.deleteMany(),
     prisma.mentorship.deleteMany(),
     prisma.eventRegistration.deleteMany(),
     prisma.event.deleteMany(),
     prisma.articleAuthor.deleteMany(),
     prisma.article.deleteMany(),
     prisma.mediaAsset.deleteMany(),
+    prisma.project.updateMany({ data: { pendingVersionId: null } }),
+    prisma.projectVersion.deleteMany(),
     prisma.projectTechnology.deleteMany(),
     prisma.projectMember.deleteMany(),
     prisma.project.deleteMany(),
     prisma.news.deleteMany(),
+    prisma.communityLink.deleteMany(),
     prisma.communityMember.deleteMany(),
     prisma.community.deleteMany(),
     prisma.userSkill.deleteMany(),
@@ -212,7 +220,7 @@ async function main() {
   const lgutierrez = await createUser('lgutierrez@isi.edu.bo', 'lgutierrez', 'Laura Gutiérrez', ['TEACHER'], { bio: 'Docente de Redes y Seguridad. Asesora de la Sociedad Científica.', linkedin: 'https://www.linkedin.com/in/laura-gutierrez-demo' });
   const avargas = await createUser('avargas@est.isi.edu.bo', 'avargas', 'Andrea Vargas', ['STUDENT', 'COMMUNITY_LEADER'], { bio: 'Apasionada por la ciberseguridad y los CTF. Líder de HackLab ISI.', semester: 8, github: 'https://github.com/avargas-demo', linkedin: 'https://www.linkedin.com/in/avargas-demo' });
   const jmamani = await createUser('jmamani@est.isi.edu.bo', 'jmamani', 'José Mamani', ['STUDENT'], { bio: 'Desarrollador full stack enfocado en productos académicos con impacto real.', semester: 7, github: 'https://github.com/jmamani-demo', website: 'https://jmamani-demo.example.com' });
-  const cflores = await createUser('cflores@est.isi.edu.bo', 'cflores', 'Camila Flores', ['STUDENT'], { bio: 'Investigadora junior en IA aplicada a la salud.', semester: 9 });
+  const cflores = await createUser('cflores@est.isi.edu.bo', 'cflores', 'Camila Flores', ['STUDENT'], { bio: 'Investigadora junior en IA aplicada a la salud.', semester: 8 });
   const dquispe = await createUser('dquispe@est.isi.edu.bo', 'dquispe', 'Diego Quispe', ['STUDENT', 'COMMUNITY_LEADER'], { bio: 'Cloud enthusiast. AWS Community Builder en formación.', semester: 6 });
   const mrojas = await createUser('mrojas@est.isi.edu.bo', 'mrojas', 'María Rojas', ['STUDENT'], { bio: 'Programación competitiva y algoritmos. Codeforces specialist.', semester: 5 });
   const pcondori = await createUser('pcondori@est.isi.edu.bo', 'pcondori', 'Pablo Condori', ['STUDENT'], { bio: 'Backend y bases de datos. Aprendiendo NestJS.', semester: 4 });
@@ -463,7 +471,12 @@ async function main() {
       tags: ['web', 'gestión', 'producción'], likesCount: 3, viewsCount: 214,
       ownerId: jmamani.id, reviewerId: rmendoza.id, communityId: incubadora.id,
       createdAt: days(-160), publishedAt: days(-40), startedAt: days(-160),
-      technologies: { create: [{ name: 'React' }, { name: 'NestJS' }, { name: 'PostgreSQL' }, { name: 'Docker' }] },
+      technologies: { create: [
+        { name: 'React', normalizedName: 'react' },
+        { name: 'NestJS', normalizedName: 'nestjs' },
+        { name: 'PostgreSQL', normalizedName: 'postgresql' },
+        { name: 'Docker', normalizedName: 'docker' },
+      ] },
       members: {
         create: [
           { userId: jmamani.id, roleInProject: 'Tech Lead' },
@@ -485,7 +498,11 @@ async function main() {
       tags: ['ml', 'seguridad', 'extensión'], likesCount: 2, viewsCount: 158,
       ownerId: avargas.id, reviewerId: lgutierrez.id, communityId: hacklab.id,
       createdAt: days(-120), publishedAt: days(-25), startedAt: days(-120),
-      technologies: { create: [{ name: 'Python' }, { name: 'TensorFlow' }, { name: 'JavaScript' }] },
+      technologies: { create: [
+        { name: 'Python', normalizedName: 'python' },
+        { name: 'TensorFlow', normalizedName: 'tensorflow' },
+        { name: 'JavaScript', normalizedName: 'javascript' },
+      ] },
       members: { create: [{ userId: avargas.id, roleInProject: 'ML & Lead' }, { userId: mrojas.id, roleInProject: 'Data' }] },
     },
   });
@@ -501,7 +518,12 @@ async function main() {
       tags: ['iot', 'agro', 'impacto-social'], likesCount: 1, viewsCount: 96,
       ownerId: dquispe.id, reviewerId: rmendoza.id, communityId: incubadora.id,
       createdAt: days(-70), publishedAt: days(-15), startedAt: days(-70),
-      technologies: { create: [{ name: 'ESP32' }, { name: 'Node.js' }, { name: 'AWS IoT' }, { name: 'React' }] },
+      technologies: { create: [
+        { name: 'ESP32', normalizedName: 'esp32' },
+        { name: 'Node.js', normalizedName: 'node.js' },
+        { name: 'AWS IoT', normalizedName: 'aws iot' },
+        { name: 'React', normalizedName: 'react' },
+      ] },
       members: { create: [{ userId: dquispe.id, roleInProject: 'IoT & Cloud' }, { userId: jmamani.id, roleInProject: 'Backend' }] },
     },
   });
@@ -517,7 +539,10 @@ async function main() {
       tags: ['educación', 'algoritmos'], viewsCount: 12,
       ownerId: mrojas.id, reviewerId: rmendoza.id, communityId: codewars.id,
       createdAt: days(-30), startedAt: days(-30),
-      technologies: { create: [{ name: 'Next.js' }, { name: 'Python' }] },
+      technologies: { create: [
+        { name: 'Next.js', normalizedName: 'next.js' },
+        { name: 'Python', normalizedName: 'python' },
+      ] },
       members: { create: [{ userId: mrojas.id, roleInProject: 'Lead' }] },
     },
   });
@@ -532,7 +557,10 @@ async function main() {
       tags: ['blockchain', 'votación'], viewsCount: 8,
       ownerId: pcondori.id, reviewerId: lgutierrez.id, communityId: hacklab.id,
       createdAt: days(-18), startedAt: days(-18),
-      technologies: { create: [{ name: 'Solidity' }, { name: 'Node.js' }] },
+      technologies: { create: [
+        { name: 'Solidity', normalizedName: 'solidity' },
+        { name: 'Node.js', normalizedName: 'node.js' },
+      ] },
       members: { create: [{ userId: pcondori.id, roleInProject: 'Lead' }] },
     },
   });
@@ -548,7 +576,11 @@ async function main() {
       tags: ['móvil', 'ciudad', 'open-data'], likesCount: 2, viewsCount: 174,
       ownerId: cflores.id, reviewerId: rmendoza.id,
       createdAt: days(-140), publishedAt: days(-55), startedAt: days(-140),
-      technologies: { create: [{ name: 'Flutter' }, { name: 'Firebase' }, { name: 'Google Maps API' }] },
+      technologies: { create: [
+        { name: 'Flutter', normalizedName: 'flutter' },
+        { name: 'Firebase', normalizedName: 'firebase' },
+        { name: 'Google Maps API', normalizedName: 'google maps api' },
+      ] },
       members: { create: [{ userId: cflores.id, roleInProject: 'Móvil' }, { userId: dquispe.id, roleInProject: 'Backend' }] },
     },
   });
@@ -642,7 +674,11 @@ async function main() {
       data: {
         projectId: project.id,
         actorId: actor.id,
+        actorUserId: actor.id,
+        actorNameSnapshot: actor.username,
+        actorUsernameSnapshot: actor.username,
         actorEmailSnapshot: actor.email,
+        actorRolesSnapshot: [],
         action: 'PROJECT_CREATED',
         entityType: 'PROJECT',
         entityId: project.id,
@@ -658,7 +694,11 @@ async function main() {
       data: {
         projectId: milestone.projectId,
         actorId: actor.id,
+        actorUserId: actor.id,
+        actorNameSnapshot: actor.username,
+        actorUsernameSnapshot: actor.username,
         actorEmailSnapshot: actor.email,
+        actorRolesSnapshot: [],
         action: 'MILESTONE_CREATED',
         entityType: 'MILESTONE',
         entityId: milestone.id,
@@ -686,7 +726,11 @@ async function main() {
       data: {
         projectId: news.projectId!,
         actorId: actor.id,
+        actorUserId: actor.id,
+        actorNameSnapshot: actor.username,
+        actorUsernameSnapshot: actor.username,
         actorEmailSnapshot: actor.email,
+        actorRolesSnapshot: [],
         action: 'NEWS_CREATED',
         entityType: 'NEWS',
         entityId: news.id,
@@ -722,7 +766,11 @@ async function main() {
       data: {
         projectId: asset.projectId!,
         actorId: actor.id,
+        actorUserId: actor.id,
+        actorNameSnapshot: actor.username,
+        actorUsernameSnapshot: actor.username,
         actorEmailSnapshot: actor.email,
+        actorRolesSnapshot: [],
         action: 'GALLERY_ATTACHED',
         entityType: 'MEDIA',
         entityId: asset.id,
@@ -761,10 +809,67 @@ async function main() {
     [projTutor.id, mrojas.id, null, null, null],
   ];
   for (const [targetId, requesterId, reviewerId, decision, comment] of projApprovals) {
+    const current = await prisma.project.findUniqueOrThrow({
+      where: { id: targetId },
+      include: {
+        technologies: true,
+        members: { include: { user: { select: { username: true, profile: { select: { fullName: true } } } } } },
+      },
+    });
+    const versionStatus = decision === 'APPROVED'
+      ? 'PUBLISHED'
+      : decision === 'OBSERVED'
+        ? 'OBSERVED'
+        : decision === 'REJECTED'
+          ? 'REJECTED'
+          : 'PENDING';
+    const projectVersion = await prisma.projectVersion.create({
+      data: {
+        projectId: targetId,
+        number: current.version,
+        status: versionStatus,
+        requesterId,
+        reviewerId: reviewerId ?? undefined,
+        reviewComment: comment ?? undefined,
+        decidedAt: decision ? days(-10) : undefined,
+        publishedAt: decision === 'APPROVED' ? current.publishedAt : undefined,
+        snapshot: {
+          title: current.title,
+          summary: current.summary,
+          description: current.description,
+          coverUrl: current.coverUrl,
+          videoUrl: current.videoUrl,
+          repoUrl: current.repoUrl,
+          demoUrl: current.demoUrl,
+          subject: current.subject,
+          semester: current.semester,
+          phase: current.phase,
+          stage: current.stage,
+          isFeatured: current.isFeatured,
+          isIncubator: current.isIncubator,
+          recruiting: current.recruiting,
+          tags: current.tags,
+          startedAt: current.startedAt?.toISOString() ?? null,
+          reviewerId: current.reviewerId,
+          communityId: current.communityId,
+          technologies: current.technologies.map((technology) => technology.name),
+          members: current.members.map((member) => ({
+            userId: member.userId,
+            username: member.user.username,
+            fullName: member.user.profile?.fullName ?? null,
+            roleInProject: member.roleInProject,
+          })),
+        },
+      },
+    });
+    if (versionStatus !== 'PUBLISHED') {
+      await prisma.project.update({ where: { id: targetId }, data: { pendingVersionId: projectVersion.id } });
+    }
     await prisma.approvalRequest.create({
       data: {
         targetType: 'PROJECT', targetId, requesterId,
         reviewerId: reviewerId ?? undefined,
+        projectVersionId: projectVersion.id,
         decision: decision ?? undefined,
         comment: comment ?? undefined,
         decidedAt: decision ? days(-10) : undefined,
@@ -1026,8 +1131,9 @@ async function main() {
       description: 'Refuerzo semanal de lógica y programación en Python para estudiantes de primer y segundo semestre.',
       area: 'Programación', difficulty: 'BASICO', startsAt: days(4),
       syllabus: ['Variables y tipos', 'Condicionales y bucles', 'Funciones', 'Listas y diccionarios', 'Mini proyecto final'],
-      mentorId: mrojas.id, communityId: mentorias.id, capacity: 25,
+      mentorId: rmendoza.id, communityId: mentorias.id, capacity: 25,
       teamsUrl: 'https://teams.microsoft.com/l/team/demo-nivelacion',
+      mentors: { create: { userId: rmendoza.id, isLead: true } },
     },
   });
   const mentAws = await prisma.mentorship.create({
@@ -1036,7 +1142,8 @@ async function main() {
       description: 'Ruta de 6 semanas para rendir la certificación CLF-C02 con laboratorios en free tier.',
       area: 'Cloud', difficulty: 'INTERMEDIO', startsAt: days(10),
       syllabus: ['Conceptos de nube', 'IAM y seguridad', 'Cómputo y almacenamiento', 'Redes', 'Facturación', 'Simulacros de examen'],
-      mentorId: dquispe.id, communityId: cloud.id, capacity: 20,
+      mentorId: lgutierrez.id, communityId: cloud.id, capacity: 20,
+      mentors: { create: { userId: lgutierrez.id, isLead: true } },
     },
   });
   const mentPentest = await prisma.mentorship.create({
@@ -1045,7 +1152,8 @@ async function main() {
       description: 'OWASP Top 10 en laboratorio controlado: de la teoría a explotar y reportar vulnerabilidades.',
       area: 'Ciberseguridad', difficulty: 'AVANZADO', startsAt: days(15),
       syllabus: ['Reconocimiento', 'Inyecciones', 'XSS y CSRF', 'Broken auth', 'Reporte profesional'],
-      mentorId: avargas.id, communityId: hacklab.id, capacity: 15,
+      mentorId: lgutierrez.id, communityId: hacklab.id, capacity: 15,
+      mentors: { create: { userId: lgutierrez.id, isLead: true } },
     },
   });
   for (const [mid, uid] of [[mentNivel.id, pcondori.id], [mentAws.id, jmamani.id], [mentPentest.id, mrojas.id]] as [string, string][]) {
@@ -1073,7 +1181,7 @@ async function main() {
   const q3 = await question(jmamani.id, '¿JWT en localStorage o en cookie httpOnly?', 'Para el proyecto final quiero manejar sesiones con JWT. ¿Qué es más seguro y qué usa la industria?', ['jwt', 'seguridad', 'web'], 'Seguridad de Sistemas', 7, 132);
   const a3a = await answer(q3.id, avargas.id, 'Cookie httpOnly + SameSite para el refresh token (inmune a XSS de lectura) y access token corto en memoria. localStorage es vulnerable a XSS: cualquier script inyectado puede leerlo. Si usas cookies, considera protección CSRF.');
   const a3b = await answer(q3.id, pcondori.id, 'En clase vimos que también depende del despliegue: si front y API están en dominios distintos hay que configurar CORS con credentials.');
-  const q4 = await question(cflores.id, '¿Cómo balancear un dataset médico pequeño para CNN?', 'Tengo 1.200 imágenes con clases muy desbalanceadas (90/10). ¿Data augmentation, class weights o ambos?', ['ml', 'cnn', 'datasets'], 'Inteligencia Artificial', 9, 45);
+  const q4 = await question(cflores.id, '¿Cómo balancear un dataset médico pequeño para CNN?', 'Tengo 1.200 imágenes con clases muy desbalanceadas (90/10). ¿Data augmentation, class weights o ambos?', ['ml', 'cnn', 'datasets'], 'Inteligencia Artificial', 8, 45);
   const q5 = await question(dquispe.id, '¿Diferencia real entre ECS Fargate y EC2 para un proyecto pequeño?', 'Para desplegar el backend del proyecto integrador, ¿vale la pena Fargate o con una t3.micro alcanza?', ['aws', 'docker', 'despliegue'], 'Proyecto Integrador', 6, 51);
   const a5a = await answer(q5.id, jmamani.id, 'Para un proyecto de materia: EC2 t3.micro (free tier) con Docker Compose es más barato y suficiente. Fargate brilla cuando no quieres administrar el host o necesitas escalar por demanda.');
   const q6 = await question(pcondori.id, '¿Por qué mi migración de Prisma borra datos en producción?', 'Al correr migrate dev en el servidor me pidió resetear la base. ¿Cuál es el flujo correcto para producción?', ['prisma', 'migraciones', 'devops'], 'Base de Datos II', 4, 29);

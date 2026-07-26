@@ -13,6 +13,7 @@ import { RequireAuth } from '@/components/require-auth';
 import { Button } from '@/components/ui/button';
 import { Input, Label, Select, Textarea } from '@/components/ui/input';
 import { MediaUploadButton } from '@/components/media-upload-button';
+import { PointReward } from '@/components/point-reward';
 
 const schema = z.object({
   title: z.string().min(5).max(200),
@@ -73,8 +74,8 @@ function NuevoArticuloForm() {
       <div className="flex gap-3 rounded-xl border border-accent/30 bg-accent/10 p-4 text-sm">
         <Info className="h-5 w-5 shrink-0 text-accent" />
         <p>
-          El artículo pasa por revisión docente antes de publicarse. Al aprobarse ganas
-          <strong className="text-purple-500"> +35 Research Points</strong> y la insignia «Primer Artículo».
+          El artículo pasa por revisión docente antes de publicarse. Al aprobarse ganas{' '}
+          <PointReward reason="ARTICULO_APROBADO" suffix="Research Points" className="text-purple-500" /> y podrás cumplir reglas de insignias activas.
         </p>
       </div>
 

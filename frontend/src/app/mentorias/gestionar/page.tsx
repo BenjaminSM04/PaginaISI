@@ -4,19 +4,18 @@ import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarDays, Eye, GraduationCap, Loader2, Pencil, Plus, Trash2, Users } from 'lucide-react';
 import { api } from '@/lib/api';
-import { useAuth } from '@/lib/auth-context';
 import type { Mentorship } from '@/lib/types';
 import { cn, DIFFICULTY_LABELS, formatDate } from '@/lib/utils';
 import { RequireAuth } from '@/components/require-auth';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { BackButton } from '@/components/back-button';
 
 function GestionMentoriasContent() {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery({
     queryKey: ['mentorships', 'management'],
-    queryFn: () => api.get<{ items: Mentorship[]; myEnrollments: string[] }>('/mentorships'),
+    queryFn: () => api.get<{ items: Mentorship[]; total: number; pages: number }>('/mentorships/management?limit=50'),
   });
   const remove = useMutation({
     mutationFn: (id: string) => api.delete(`/mentorships/${id}`),
@@ -25,8 +24,7 @@ function GestionMentoriasContent() {
     },
   });
 
-  const manageable = (data?.items ?? []).filter((item) => item.canManage);
-  const isAdmin = user?.roles.includes('ADMIN');
+  const manageable = data?.items ?? [];
 
   const deactivate = (mentorship: Mentorship) => {
     if (!window.confirm(`¿Desactivar la mentoría “${mentorship.title}”? Dejará de mostrarse y recibir inscripciones.`)) return;
@@ -35,6 +33,7 @@ function GestionMentoriasContent() {
 
   return (
     <div className="container space-y-8 py-10">
+      <BackButton fallbackHref="/mentorias" label="Volver a mentorías" variant="ghost" />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <span className="section-kicker">Panel de formación</span>
@@ -72,6 +71,7 @@ function GestionMentoriasContent() {
                   <div className="mb-2 flex flex-wrap gap-2">
                     <Badge variant="accent">{mentorship.area}</Badge>
                     <Badge variant="secondary">{DIFFICULTY_LABELS[mentorship.difficulty] ?? mentorship.difficulty}</Badge>
+                    <Badge variant="outline">{mentorship.status === 'IN_PROGRESS' ? 'En curso' : mentorship.status === 'COMPLETED' ? 'Finalizada' : mentorship.status === 'INACTIVE' ? 'Inactiva' : 'Próxima'}</Badge>
                     {mentorship.community && <Badge variant="outline">{mentorship.community.name}</Badge>}
                   </div>
                   <h2 className="font-serif-heading text-xl font-bold text-primary">{mentorship.title}</h2>
@@ -82,7 +82,9 @@ function GestionMentoriasContent() {
               <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <GraduationCap className="h-4 w-4 text-accent" />
-                  {mentorship.mentor?.profile?.fullName ?? mentorship.mentorName ?? 'Sin mentor asignado'}
+                  {mentorship.mentors?.map((entry) => entry.user.profile?.fullName ?? entry.user.username).join(', ')
+                    || mentorship.mentor?.profile?.fullName
+                    || 'Sin docente asignado'}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Users className="h-4 w-4 text-accent" />
@@ -94,24 +96,24 @@ function GestionMentoriasContent() {
               </div>
 
               <div className="flex flex-wrap gap-2 border-t border-border pt-4">
-                <Link href={`/mentorias/${mentorship.slug}`} className={cn(buttonVariants({ size: 'sm', variant: 'outline' }))}>
-                  <Eye /> Ver
-                </Link>
+                {mentorship.status !== 'INACTIVE' && (
+                  <Link href={`/mentorias/${mentorship.slug}`} className={cn(buttonVariants({ size: 'sm', variant: 'outline' }))}>
+                    <Eye /> Ver
+                  </Link>
+                )}
                 <Link href={`/mentorias/gestionar/${mentorship.id}`} className={cn(buttonVariants({ size: 'sm' }))}>
                   <Pencil /> Editar
                 </Link>
-                {isAdmin && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="ml-auto text-red-500 hover:bg-red-500/10"
-                    disabled={remove.isPending}
-                    onClick={() => deactivate(mentorship)}
-                  >
-                    {remove.isPending && remove.variables === mentorship.id ? <Loader2 className="animate-spin" /> : <Trash2 />}
-                    Desactivar
-                  </Button>
-                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="ml-auto text-red-500 hover:bg-red-500/10"
+                  disabled={remove.isPending || mentorship.status === 'INACTIVE'}
+                  onClick={() => deactivate(mentorship)}
+                >
+                  {remove.isPending && remove.variables === mentorship.id ? <Loader2 className="animate-spin" /> : <Trash2 />}
+                  {mentorship.status === 'INACTIVE' ? 'Inactiva' : 'Desactivar'}
+                </Button>
               </div>
             </article>
           ))}

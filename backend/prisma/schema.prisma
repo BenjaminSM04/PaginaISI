@@ -32,6 +32,14 @@ enum ProjectStage {
   FEATURED
 }
 
+enum ProjectVersionStatus {
+  PENDING
+  OBSERVED
+  REJECTED
+  PUBLISHED
+  SUPERSEDED
+}
+
 enum ProjectMilestoneStatus {
   PLANNED
   IN_PROGRESS
@@ -152,6 +160,29 @@ enum Difficulty {
   AVANZADO
 }
 
+enum MentorshipModality {
+  IN_PERSON
+  ONLINE
+  HYBRID
+}
+
+enum BadgeRuleType {
+  ANSWERS_COUNT
+  ACCEPTED_ANSWERS_COUNT
+  TOTAL_POINTS
+  APPROVED_PROJECTS_COUNT
+  ATTENDED_EVENTS_COUNT
+  COMPLETED_MENTORSHIPS_COUNT
+  COMMUNITY_MEMBERSHIPS_COUNT
+}
+
+enum CatalogKind {
+  TECHNOLOGY
+  TAG
+  CATEGORY
+  SUBJECT
+}
+
 enum NotificationType {
   CONTENT_REVIEW
   FORUM_ANSWER
@@ -180,39 +211,47 @@ model User {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  roles                  UserRole[]
-  profile                Profile?
-  skills                 UserSkill[]
-  badges                 UserBadge[]
-  pointsTransactions     PointsTransaction[]
-  communityMemberships   CommunityMember[]
-  teacherLeadOf          Community[]             @relation("CommunityTeacherLead")
-  studentLeadOf          Community[]             @relation("CommunityStudentLead")
-  newsAuthored           News[]
-  projectsOwned          Project[]               @relation("ProjectOwner")
-  projectsReviewed       Project[]               @relation("ProjectReviewer")
-  projectMemberships     ProjectMember[]
-  articlesOwned          Article[]               @relation("ArticleOwner")
-  articlesReviewed       Article[]               @relation("ArticleReviewer")
-  articleAuthorships     ArticleAuthor[]
-  eventsOrganized        Event[]
-  eventRegistrations     EventRegistration[]
-  mentorshipsMentored    Mentorship[]
-  mentorshipEnrollments  MentorshipEnrollment[]
-  questions              ForumQuestion[]
-  answers                ForumAnswer[]
-  votes                  Vote[]
-  likes                  Like[]
-  comments               Comment[]
-  reportsMade            Report[]                @relation("ReportReporter")
-  reportsResolved        Report[]                @relation("ReportResolver")
-  approvalsRequested     ApprovalRequest[]       @relation("ApprovalRequester")
-  approvalsReviewed      ApprovalRequest[]       @relation("ApprovalReviewer")
-  mediaUploaded          MediaAsset[]
-  notifications          Notification[]
-  notificationPreference NotificationPreference?
-  authActionTokens       AuthActionToken[]
-  refreshSessions        RefreshSession[]
+  roles                    UserRole[]
+  profile                  Profile?
+  skills                   UserSkill[]
+  badges                   UserBadge[]
+  pointsTransactions       PointsTransaction[]
+  communityMemberships     CommunityMember[]
+  teacherLeadOf            Community[]             @relation("CommunityTeacherLead")
+  studentLeadOf            Community[]             @relation("CommunityStudentLead")
+  newsAuthored             News[]
+  projectsOwned            Project[]               @relation("ProjectOwner")
+  projectsReviewed         Project[]               @relation("ProjectReviewer")
+  projectVersionsRequested ProjectVersion[]        @relation("ProjectVersionRequester")
+  projectVersionsReviewed  ProjectVersion[]        @relation("ProjectVersionReviewer")
+  projectAuditEntries      ProjectAuditLog[]       @relation("ProjectAuditActor")
+  systemAuditEntries       SystemAuditLog[]        @relation("SystemAuditActor")
+  projectMemberships       ProjectMember[]
+  articlesOwned            Article[]               @relation("ArticleOwner")
+  articlesReviewed         Article[]               @relation("ArticleReviewer")
+  articleAuthorships       ArticleAuthor[]
+  eventsOrganized          Event[]
+  eventRegistrations       EventRegistration[]
+  mentorshipsMentored      Mentorship[]
+  mentorshipMentorRoles    MentorshipMentor[]
+  mentorshipEnrollments    MentorshipEnrollment[]
+  ideaProposals            IdeaProposal[]
+  ideaProposalsReviewed    IdeaProposal[]          @relation("IdeaProposalReviewer")
+  ideaMemberships          IdeaMember[]
+  questions                ForumQuestion[]
+  answers                  ForumAnswer[]
+  votes                    Vote[]
+  likes                    Like[]
+  comments                 Comment[]
+  reportsMade              Report[]                @relation("ReportReporter")
+  reportsResolved          Report[]                @relation("ReportResolver")
+  approvalsRequested       ApprovalRequest[]       @relation("ApprovalRequester")
+  approvalsReviewed        ApprovalRequest[]       @relation("ApprovalReviewer")
+  mediaUploaded            MediaAsset[]
+  notifications            Notification[]
+  notificationPreference   NotificationPreference?
+  authActionTokens         AuthActionToken[]
+  refreshSessions          RefreshSession[]
 }
 
 model Role {
@@ -268,6 +307,17 @@ model UserSkill {
 
 // ─────────────────────────── Comunidades ───────────────────────────
 
+model InstitutionalSettings {
+  id                   String   @id @default("default")
+  institutionName      String   @default("Universidad Privada del Valle")
+  shortName            String   @default("Univalle")
+  careerName           String   @default("Carrera de Ingeniería de Sistemas")
+  institutionalLogoUrl String?  @default("https://www.univalle.edu/wp-content/uploads/2025/12/LOGO-cua_res-_01.png")
+  careerLogoUrl        String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
 model Community {
   id              String   @id @default(cuid())
   slug            String   @unique
@@ -289,6 +339,7 @@ model Community {
   studentLead   User?   @relation("CommunityStudentLead", fields: [studentLeadId], references: [id], onDelete: SetNull)
 
   members     CommunityMember[]
+  links       CommunityLink[]
   projects    Project[]
   events      Event[]
   news        News[]
@@ -305,6 +356,22 @@ model CommunityMember {
   user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([communityId, userId])
+  @@index([communityId, role])
+}
+
+model CommunityLink {
+  id          String    @id @default(cuid())
+  communityId String
+  platform    String
+  label       String?
+  url         String
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  @@index([communityId, isActive, sortOrder])
 }
 
 // ─────────────────────────── Noticias ───────────────────────────
@@ -368,15 +435,19 @@ model Project {
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
 
-  ownerId     String
-  owner       User       @relation("ProjectOwner", fields: [ownerId], references: [id])
-  reviewerId  String?
-  reviewer    User?      @relation("ProjectReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
-  communityId String?
-  community   Community? @relation(fields: [communityId], references: [id], onDelete: SetNull)
+  ownerId          String
+  owner            User            @relation("ProjectOwner", fields: [ownerId], references: [id])
+  reviewerId       String?
+  reviewer         User?           @relation("ProjectReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  communityId      String?
+  community        Community?      @relation(fields: [communityId], references: [id], onDelete: SetNull)
+  pendingVersionId String?         @unique
+  pendingVersion   ProjectVersion? @relation("ProjectPendingVersion", fields: [pendingVersionId], references: [id], onDelete: SetNull)
 
   members      ProjectMember[]
   technologies ProjectTechnology[]
+  clients      IncubatorClient[]   @relation("IncubatorProjectClients")
+  versions     ProjectVersion[]    @relation("ProjectVersions")
   gallery      MediaAsset[]
   milestones   ProjectMilestone[]
   auditLogs    ProjectAuditLog[]
@@ -384,6 +455,44 @@ model Project {
 
   @@index([status, isFeatured])
   @@index([communityId])
+}
+
+model IncubatorClient {
+  id             String    @id @default(cuid())
+  name           String
+  normalizedName String    @unique
+  logoUrl        String
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  projects       Project[] @relation("IncubatorProjectClients")
+
+  @@index([isActive, name])
+}
+
+model ProjectVersion {
+  id               String               @id @default(cuid())
+  projectId        String
+  number           Int
+  status           ProjectVersionStatus @default(PENDING)
+  snapshot         Json
+  requesterId      String
+  reviewerId       String?
+  reviewComment    String?
+  submittedAt      DateTime             @default(now())
+  decidedAt        DateTime?
+  publishedAt      DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  project          Project              @relation("ProjectVersions", fields: [projectId], references: [id], onDelete: Cascade)
+  pendingFor       Project?             @relation("ProjectPendingVersion")
+  requester        User                 @relation("ProjectVersionRequester", fields: [requesterId], references: [id], onDelete: Restrict)
+  reviewer         User?                @relation("ProjectVersionReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  approvalRequests ApprovalRequest[]
+
+  @@unique([projectId, number])
+  @@index([status, submittedAt])
+  @@index([projectId, createdAt])
 }
 
 model ProjectMember {
@@ -398,12 +507,14 @@ model ProjectMember {
 }
 
 model ProjectTechnology {
-  id        String  @id @default(cuid())
-  projectId String
-  name      String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id             String  @id @default(cuid())
+  projectId      String
+  name           String
+  normalizedName String
+  project        Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  @@unique([projectId, name])
+  @@unique([projectId, normalizedName])
+  @@index([normalizedName])
 }
 
 model ProjectMilestone {
@@ -427,25 +538,64 @@ model ProjectMilestone {
 // Historial append-only: el actor se conserva como snapshot para que una baja
 // o cambio posterior de correo no destruya la trazabilidad de la edición.
 model ProjectAuditLog {
-  id                 String            @id @default(cuid())
-  projectId          String
-  actorId            String
-  actorEmailSnapshot String
-  action             String
-  entityType         String
-  entityId           String?
-  before             Json?
-  after              Json?
-  metadata           Json?
-  rollbackOfId       String?           @unique
-  createdAt          DateTime          @default(now())
-  project            Project           @relation(fields: [projectId], references: [id], onDelete: Restrict)
-  rollbackOf         ProjectAuditLog?  @relation("ProjectAuditRollback", fields: [rollbackOfId], references: [id], onDelete: Restrict)
-  rollbackEntries    ProjectAuditLog[] @relation("ProjectAuditRollback")
-  delivery           ProjectAuditDelivery?
+  id                    String                @id @default(cuid())
+  projectId             String
+  actorId               String
+  actorUserId           String?
+  actorNameSnapshot     String
+  actorUsernameSnapshot String?
+  actorEmailSnapshot    String
+  actorRolesSnapshot    Json
+  action                String
+  entityType            String
+  entityId              String?
+  before                Json?
+  after                 Json?
+  metadata              Json?
+  rollbackOfId          String?               @unique
+  createdAt             DateTime              @default(now())
+  project               Project               @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  actor                 User?                 @relation("ProjectAuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  rollbackOf            ProjectAuditLog?      @relation("ProjectAuditRollback", fields: [rollbackOfId], references: [id], onDelete: Restrict)
+  rollbackEntries       ProjectAuditLog[]     @relation("ProjectAuditRollback")
+  delivery              ProjectAuditDelivery?
 
   @@index([projectId, createdAt])
   @@index([actorId, createdAt])
+  @@index([actorUserId, createdAt])
+}
+
+model SystemAuditLog {
+  id                    String   @id @default(cuid())
+  actorIdSnapshot       String?
+  actorUserId           String?
+  actorNameSnapshot     String
+  actorUsernameSnapshot String?
+  actorEmailSnapshot    String?
+  actorRolesSnapshot    Json
+  action                String
+  entityType            String
+  entityId              String?
+  before                Json?
+  after                 Json?
+  metadata              Json?
+  createdAt             DateTime @default(now())
+  actor                 User?    @relation("SystemAuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([entityType, entityId, createdAt])
+  @@index([actorUserId, createdAt])
+}
+
+model CatalogValue {
+  id             String      @id @default(cuid())
+  kind           CatalogKind
+  name           String
+  normalizedName String
+  createdAt      DateTime    @default(now())
+
+  @@unique([kind, normalizedName])
+  @@index([kind, name])
 }
 
 // Outbox separado: permite reintentar el aviso sin revertir la edición ya
@@ -554,19 +704,24 @@ model EventRegistration {
 // ─────────────────────────── Mentorías ───────────────────────────
 
 model Mentorship {
-  id          String     @id @default(cuid())
-  slug        String     @unique
+  id          String             @id @default(cuid())
+  slug        String             @unique
   title       String
   description String
   area        String
-  difficulty  Difficulty @default(BASICO)
-  syllabus    String[]   @default([])
+  difficulty  Difficulty         @default(BASICO)
+  syllabus    String[]           @default([])
   startsAt    DateTime?
+  endsAt      DateTime?
+  coverUrl    String?
+  modality    MentorshipModality @default(ONLINE)
+  location    String?
+  meetingUrl  String?
   teamsUrl    String?
   youtubeUrl  String?
   capacity    Int?
-  isActive    Boolean    @default(true)
-  createdAt   DateTime   @default(now())
+  isActive    Boolean            @default(true)
+  createdAt   DateTime           @default(now())
 
   mentorId    String?
   mentor      User?      @relation(fields: [mentorId], references: [id], onDelete: SetNull)
@@ -575,6 +730,20 @@ model Mentorship {
   community   Community? @relation(fields: [communityId], references: [id], onDelete: SetNull)
 
   enrollments MentorshipEnrollment[]
+  mentors     MentorshipMentor[]
+  gallery     MediaAsset[]
+}
+
+model MentorshipMentor {
+  mentorshipId String
+  userId       String
+  isLead       Boolean    @default(false)
+  joinedAt     DateTime   @default(now())
+  mentorship   Mentorship @relation(fields: [mentorshipId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([mentorshipId, userId])
+  @@index([userId])
 }
 
 model MentorshipEnrollment {
@@ -696,22 +865,29 @@ model Report {
 // ─────────────────────────── Gamificación ───────────────────────────
 
 model Badge {
-  id          String      @id @default(cuid())
-  code        String      @unique
-  name        String
-  description String
-  icon        String      @default("award")
-  color       String?
-  users       UserBadge[]
+  id            String         @id @default(cuid())
+  code          String         @unique
+  name          String
+  description   String
+  icon          String         @default("award")
+  color         String?
+  ruleType      BadgeRuleType?
+  targetValue   Int?
+  isActive      Boolean        @default(true)
+  isRetroactive Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  users         UserBadge[]
 }
 
 model UserBadge {
-  id        String   @id @default(cuid())
-  userId    String
-  badgeId   String
-  awardedAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  badge     Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  userId         String
+  badgeId        String
+  awardedAt      DateTime @default(now())
+  reasonSnapshot String?
+  progressValue  Int?
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge          Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
 
   @@unique([userId, badgeId])
 }
@@ -754,13 +930,16 @@ model ApprovalRequest {
   createdAt  DateTime           @default(now())
   decidedAt  DateTime?
 
-  requesterId String
-  requester   User    @relation("ApprovalRequester", fields: [requesterId], references: [id], onDelete: Cascade)
-  reviewerId  String?
-  reviewer    User?   @relation("ApprovalReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  requesterId      String
+  requester        User            @relation("ApprovalRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  reviewerId       String?
+  reviewer         User?           @relation("ApprovalReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  projectVersionId String?
+  projectVersion   ProjectVersion? @relation(fields: [projectVersionId], references: [id], onDelete: SetNull)
 
   @@index([targetType, targetId])
   @@index([decision])
+  @@index([projectVersionId])
 }
 
 model MediaAsset {
@@ -785,10 +964,72 @@ model MediaAsset {
   forumAnswer     ForumAnswer?   @relation(fields: [forumAnswerId], references: [id], onDelete: Cascade)
   eventId         String?
   event           Event?         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  mentorshipId    String?
+  mentorship      Mentorship?    @relation(fields: [mentorshipId], references: [id], onDelete: Cascade)
+  ideaProposalId  String?
+  ideaProposal    IdeaProposal?  @relation(fields: [ideaProposalId], references: [id], onDelete: Cascade)
 
   @@index([forumQuestionId])
   @@index([forumAnswerId])
   @@index([eventId])
+  @@index([mentorshipId])
+  @@index([ideaProposalId])
+}
+
+model IdeaProposal {
+  id                     String            @id @default(cuid())
+  title                  String
+  description            String
+  problem                String
+  proposedSolution       String
+  technologies           String[]          @default([])
+  isRealClient           Boolean           @default(false)
+  clientName             String?
+  clientContactName      String?
+  clientContact          String?
+  clientNeed             String?
+  clientAuthorizationUrl String?
+  attachmentUrl          String?
+  status                 PublicationStatus @default(PENDING)
+  reviewComment          String?
+  ownerId                String
+  reviewerId             String?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  decidedAt              DateTime?
+  owner                  User              @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  reviewer               User?             @relation("IdeaProposalReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  members                IdeaMember[]
+  media                  MediaAsset[]
+
+  @@index([status, createdAt])
+  @@index([ownerId, createdAt])
+}
+
+model IdeaMember {
+  ideaId String
+  userId String
+  idea   IdeaProposal @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([ideaId, userId])
+}
+
+model InstitutionalApplication {
+  id           String     @id @default(cuid())
+  name         String
+  description  String
+  icon         String     @default("external-link")
+  url          String
+  category     String
+  sortOrder    Int        @default(0)
+  visibleRoles RoleName[] @default([])
+  openInNewTab Boolean    @default(true)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([isActive, sortOrder])
 }
 
 // ─────────────────────────── Notificaciones ───────────────────────────

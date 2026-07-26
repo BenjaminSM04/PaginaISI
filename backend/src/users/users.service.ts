@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma, RoleName } from '@prisma/client';
+import { paginate } from '../common/utils';
 import { PrismaService } from '../prisma/prisma.service';
-import { UpdateProfileDto } from './users.dto';
+import { DirectoryQueryDto, DirectorySearchDto, UpdateProfileDto } from './users.dto';
 
 @Injectable()
 export class UsersService {
@@ -69,13 +71,58 @@ export class UsersService {
     });
   }
 
-  async teachers() {
-    const users = await this.prisma.user.findMany({
-      where: { isActive: true, emailVerifiedAt: { not: null }, roles: { some: { role: { name: 'TEACHER' } } } },
-      select: { username: true, profile: { select: { fullName: true, avatarUrl: true } } },
-      orderBy: { username: 'asc' },
-    });
-    return users;
+  private async directoryPage(query: DirectoryQueryDto, role?: RoleName) {
+    const { take, skip, page } = paginate(query.page, query.limit ?? 20);
+    const q = typeof query.q === 'string' ? query.q.trim().replace(/\s+/g, ' ').slice(0, 80) : '';
+    const where: Prisma.UserWhereInput = {
+      isActive: true,
+      emailVerifiedAt: { not: null },
+      ...(role ? { roles: { some: { role: { name: role } } } } : {}),
+      ...(q
+        ? {
+            OR: [
+              { username: { contains: q, mode: 'insensitive' } },
+              { profile: { fullName: { contains: q, mode: 'insensitive' } } },
+            ],
+          }
+        : {}),
+    };
+    const publicSelect = {
+      id: true,
+      username: true,
+      profile: { select: { fullName: true, avatarUrl: true } },
+      roles: { select: { role: { select: { name: true } } } },
+    } satisfies Prisma.UserSelect;
+    const [total, users] = await Promise.all([
+      this.prisma.user.count({ where }),
+      this.prisma.user.findMany({
+        where,
+        select: publicSelect,
+        orderBy: [{ username: 'asc' }, { id: 'asc' }],
+        take,
+        skip,
+      }),
+    ]);
+    return {
+      total,
+      page,
+      limit: take,
+      pages: Math.max(1, Math.ceil(total / take)),
+      items: users.map((user) => ({
+        id: user.id,
+        username: user.username,
+        profile: user.profile,
+        roles: user.roles.map((entry) => entry.role.name),
+      })),
+    };
+  }
+
+  searchDirectory(query: DirectorySearchDto) {
+    return this.directoryPage(query, query.role);
+  }
+
+  teachers(query: DirectoryQueryDto = {}) {
+    return this.directoryPage(query, 'TEACHER');
   }
 
   async myActivity(userId: string) {

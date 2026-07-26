@@ -7,6 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { ArticleCard, ProjectCard, QuestionCard } from '@/components/cards';
 import { BadgeIcon } from '@/components/badge-icon';
 import { ExternalResourceLink } from '@/components/external-resource-link';
+import type { UserBadgeAward } from '@/lib/types';
+import { badgeRuleExplanation } from '@/lib/badge-rules';
+import { formatDate } from '@/lib/utils';
 
 export const revalidate = 30;
 
@@ -140,17 +143,26 @@ export default async function PerfilPublicoPage({ params }: { params: Promise<{ 
               <Award className="h-3.5 w-3.5" /> Insignias ({user.badges?.length ?? 0})
             </h3>
             <div className="space-y-2.5">
-              {(user.badges ?? []).map((ub: any) => (
-                <div key={ub.badge.id} className="flex items-center gap-3">
+              {(user.badges ?? []).map((ub: UserBadgeAward) => (
+                <div key={ub.badge.id} className="flex items-start gap-3 rounded-lg border border-border/70 bg-secondary/20 p-2.5">
                   <div
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border"
                     style={{ backgroundColor: `${ub.badge.color ?? '#0C447C'}22`, borderColor: `${ub.badge.color ?? '#0C447C'}55`, color: ub.badge.color ?? '#0C447C' }}
                   >
                     <BadgeIcon icon={ub.badge.icon} label={ub.badge.name} className="h-4 w-4" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="text-sm font-bold">{ub.badge.name}</div>
-                    <div className="text-[11px] text-muted-foreground line-clamp-1">{ub.badge.description}</div>
+                    <div className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{ub.badge.description}</div>
+                    <div className="mt-1.5 text-[11px] font-medium leading-relaxed text-primary">
+                      {ub.reasonSnapshot || badgeRuleExplanation(ub.badge)}
+                    </div>
+                    {ub.progressValue !== null && ub.progressValue !== undefined && ub.badge.targetValue && (
+                      <div className="mt-1 text-[10px] text-muted-foreground">
+                        Progreso validado: {ub.progressValue} / {ub.badge.targetValue}
+                      </div>
+                    )}
+                    <div className="mt-1 text-[10px] text-muted-foreground">Otorgada el {formatDate(ub.awardedAt)}</div>
                   </div>
                 </div>
               ))}

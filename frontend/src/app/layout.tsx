@@ -6,11 +6,11 @@ import { Footer } from '@/components/footer';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Ingeniería de Sistemas Informáticos — Portal Académico',
-    template: '%s · Portal ISI',
+    default: 'Ingeniería de Sistemas · Universidad Privada del Valle',
+    template: '%s · Univalle',
   },
   description:
-    'Portal académico gamificado de la carrera de Ingeniería de Sistemas Informáticos: proyectos, artículos científicos, comunidades, eventos, foro Q&A y ranking estudiantil.',
+    'Portal académico de la Carrera de Ingeniería de Sistemas de la Universidad Privada del Valle: proyectos, artículos científicos, comunidades, eventos, foro y ranking estudiantil.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

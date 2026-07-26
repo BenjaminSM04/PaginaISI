@@ -198,10 +198,33 @@ export class StorageService implements OnModuleInit {
     const counts = await Promise.all([
       this.prisma.profile.count({ where: { avatarUrl: url } }),
       this.prisma.community.count({ where: { OR: [{ logoUrl: url }, { coverUrl: url }] } }),
+      this.prisma.institutionalSettings.count({
+        where: { OR: [{ institutionalLogoUrl: url }, { careerLogoUrl: url }] },
+      }),
+      this.prisma.incubatorClient.count({ where: { logoUrl: url } }),
       this.prisma.news.count({ where: { coverUrl: url } }),
       this.prisma.project.count({ where: { coverUrl: url } }),
+      // La edición de un proyecto ya publicado conserva la portada vigente en
+      // Project y guarda la nueva únicamente dentro del snapshot pendiente.
+      // Considerarla evita que la limpieza de huérfanos borre la imagen antes
+      // de que el revisor publique esa versión.
+      this.prisma.projectVersion.count({
+        where: { snapshot: { path: ['coverUrl'], equals: url } },
+      }),
+      this.prisma.projectVersion.count({
+        where: { snapshot: { path: ['clients'], array_contains: [{ logoUrl: url }] } },
+      }),
       this.prisma.article.count({ where: { OR: [{ pdfUrl: url }, { coverUrl: url }] } }),
       this.prisma.event.count({ where: { coverUrl: url } }),
+      this.prisma.mentorship.count({ where: { coverUrl: url } }),
+      this.prisma.ideaProposal.count({
+        where: {
+          OR: [
+            { attachmentUrl: url },
+            { clientAuthorizationUrl: url },
+          ],
+        },
+      }),
     ]);
     return counts.some((count) => count > 0);
   }
@@ -211,8 +234,17 @@ export class StorageService implements OnModuleInit {
     forumQuestionId: string | null;
     forumAnswerId: string | null;
     eventId: string | null;
+    mentorshipId: string | null;
+    ideaProposalId: string | null;
   }) {
-    return !!(asset.projectId || asset.forumQuestionId || asset.forumAnswerId || asset.eventId);
+    return !!(
+      asset.projectId
+      || asset.forumQuestionId
+      || asset.forumAnswerId
+      || asset.eventId
+      || asset.mentorshipId
+      || asset.ideaProposalId
+    );
   }
 
   async deleteOwnedUnlinked(user: AuthUser, id: string) {
@@ -235,6 +267,8 @@ export class StorageService implements OnModuleInit {
         forumQuestionId: null,
         forumAnswerId: null,
         eventId: null,
+        mentorshipId: null,
+        ideaProposalId: null,
       },
       orderBy: { createdAt: 'asc' },
       take: 200,
@@ -256,26 +290,69 @@ export class StorageService implements OnModuleInit {
   }
 
   /**
-   * Verifica que una lista de imágenes recién subida pueda vincularse a una
-   * entidad. Se ejecuta dentro de la misma transacción que realiza el connect.
+   * Verifica que archivos recién subidos pertenezcan al actor y sigan
+   * disponibles. Se ejecuta dentro de la transacción que realiza el connect,
+   * evitando que el mismo asset termine vinculado a dos entidades.
    */
-  async assertOwnedUnlinkedImages(tx: Prisma.TransactionClient, userId: string, imageIds: string[]) {
-    if (!imageIds.length) return;
-    const images = await tx.mediaAsset.findMany({
+  async assertOwnedUnlinkedAssets(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    assetIds: string[],
+    imagesOnly = false,
+  ) {
+    if (!assetIds.length) return [];
+    const assets = await tx.mediaAsset.findMany({
       where: {
-        id: { in: imageIds },
+        id: { in: assetIds },
         uploaderId: userId,
+        ...(imagesOnly ? { mime: { startsWith: 'image/' } } : {}),
+        projectId: null,
+        forumQuestionId: null,
+        forumAnswerId: null,
+        eventId: null,
+        mentorshipId: null,
+        ideaProposalId: null,
+      },
+      select: { id: true, url: true, mime: true, key: true, provider: true },
+    });
+    if (assets.length !== assetIds.length) {
+      const noun = imagesOnly ? 'imagen' : 'archivo';
+      throw new BadRequestException(`Un ${noun} no existe, no te pertenece o ya está vinculado`);
+    }
+    return assets;
+  }
+
+  async assertOwnedUnlinkedImageUrl(
+    userId: string,
+    url: string,
+    db: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const asset = await db.mediaAsset.findFirst({
+      where: {
+        url,
+        uploaderId: userId,
+        archivedAt: null,
         mime: { startsWith: 'image/' },
         projectId: null,
         forumQuestionId: null,
         forumAnswerId: null,
         eventId: null,
+        mentorshipId: null,
+        ideaProposalId: null,
       },
-      select: { id: true },
+      select: { id: true, url: true, mime: true, key: true, provider: true },
     });
-    if (images.length !== imageIds.length) {
-      throw new BadRequestException('Una imagen no existe, no te pertenece o ya está vinculada');
+    if (!asset) {
+      throw new BadRequestException('El logo debe ser una imagen vigente subida por tu cuenta y sin otra vinculación');
     }
+    return asset;
+  }
+
+  /**
+   * Contrato conservado para galerías existentes, restringido a imágenes.
+   */
+  async assertOwnedUnlinkedImages(tx: Prisma.TransactionClient, userId: string, imageIds: string[]) {
+    return this.assertOwnedUnlinkedAssets(tx, userId, imageIds, true);
   }
 
   async upload(

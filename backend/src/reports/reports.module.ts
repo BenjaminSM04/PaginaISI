@@ -24,7 +24,7 @@ export class ListReportsQueryDto {
 export class ResolveReportDto {
   @ApiProperty({ enum: ['VALID', 'DISMISSED'] }) @IsIn(['VALID', 'DISMISSED']) status: 'VALID' | 'DISMISSED';
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) resolutionNote?: string;
-  @ApiPropertyOptional({ description: 'true para penalizar al autor del contenido reportado (-15 pts)' })
+  @ApiPropertyOptional({ description: 'true para aplicar al autor la penalización configurada' })
   @IsOptional()
   @IsBoolean()
   penalizeAuthor?: boolean;
@@ -100,7 +100,7 @@ export class ReportsController {
 
   @Post()
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Reportar contenido inadecuado (+5 pts si el reporte resulta válido)' })
+  @ApiOperation({ summary: 'Reportar contenido inadecuado; un reporte válido aplica la regla configurada' })
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateReportDto) {
     return this.reports.create(user, dto);
   }

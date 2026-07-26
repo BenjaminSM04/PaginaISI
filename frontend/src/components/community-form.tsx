@@ -1,40 +1,147 @@
 'use client';
 
-import { ChangeEvent, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useQuery } from '@tanstack/react-query';
-import { ImagePlus, Loader2, Save, Trash2 } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  Github,
+  Globe2,
+  Instagram,
+  Link2,
+  Linkedin,
+  Loader2,
+  MessageCircle,
+  Plus,
+  Save,
+  Send,
+  Trash2,
+  Video,
+  Youtube,
+  type LucideIcon,
+} from 'lucide-react';
 import { z } from 'zod';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
-import type { Community, MediaAssetLite } from '@/lib/types';
+import type { Community, CommunityLink } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input, Label, Select, Textarea } from '@/components/ui/input';
+import { MediaUploadButton } from '@/components/media-upload-button';
+import {
+  UserDirectoryCombobox,
+  UserDirectoryMultiCombobox,
+  type DirectoryUserOption,
+} from '@/components/remote-selectors';
 
-const optionalUrl = z.string().url('URL inválida').optional().or(z.literal(''));
+const optionalWebUrl = z
+  .string()
+  .max(2048)
+  .refine((value) => !value || isSafeWebUrl(value), 'Usa una URL HTTP o HTTPS válida, sin credenciales');
+
 const schema = z.object({
   name: z.string().min(3, 'Usa al menos 3 caracteres').max(80),
   description: z.string().min(10, 'Usa al menos 10 caracteres').max(300),
   longDescription: z.string().max(5000).optional(),
-  logoUrl: optionalUrl,
-  coverUrl: optionalUrl,
+  logoUrl: optionalWebUrl,
+  coverUrl: optionalWebUrl,
   accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Usa un color hexadecimal como #06B6D4'),
-  whatsappUrl: optionalUrl,
-  teamsUrl: optionalUrl,
-  discordUrl: optionalUrl,
-  teacherLeadId: z.string().optional(),
-  studentLeadId: z.string().optional(),
   isActive: z.boolean(),
 });
 
 type CommunityFormData = z.infer<typeof schema>;
-interface Candidate {
-  id: string;
-  username: string;
-  profile?: { fullName?: string } | null;
-  roles: { role: { name: string } }[];
+
+interface PlatformOption {
+  value: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+interface EditableLink {
+  clientId: string;
+  platformChoice: string;
+  customPlatform: string;
+  url: string;
+  label: string;
+  isActive: boolean;
+}
+
+interface LinkFieldErrors {
+  platform?: string;
+  url?: string;
+  label?: string;
+}
+
+const PLATFORM_OPTIONS: PlatformOption[] = [
+  { value: 'WhatsApp', label: 'WhatsApp', icon: MessageCircle },
+  { value: 'Microsoft Teams', label: 'Microsoft Teams', icon: Video },
+  { value: 'Discord', label: 'Discord', icon: MessageCircle },
+  { value: 'Telegram', label: 'Telegram', icon: Send },
+  { value: 'GitHub', label: 'GitHub', icon: Github },
+  { value: 'LinkedIn', label: 'LinkedIn', icon: Linkedin },
+  { value: 'Instagram', label: 'Instagram', icon: Instagram },
+  { value: 'YouTube', label: 'YouTube', icon: Youtube },
+  { value: 'Sitio web', label: 'Sitio web', icon: Globe2 },
+];
+
+const CUSTOM_PLATFORM = '__custom__';
+const MAX_LINKS = 30;
+
+function isSafeWebUrl(raw: string) {
+  try {
+    const parsed = new URL(raw.trim());
+    return ['http:', 'https:'].includes(parsed.protocol) && !parsed.username && !parsed.password;
+  } catch {
+    return false;
+  }
+}
+
+function normalizedUrl(raw: string) {
+  try {
+    return new URL(raw.trim()).toString().toLocaleLowerCase('es');
+  } catch {
+    return raw.trim().toLocaleLowerCase('es');
+  }
+}
+
+function platformOption(platform: string) {
+  return PLATFORM_OPTIONS.find((option) => option.value.toLocaleLowerCase('es') === platform.toLocaleLowerCase('es'));
+}
+
+function linkPlatform(link: EditableLink) {
+  return link.platformChoice === CUSTOM_PLATFORM ? link.customPlatform.trim() : link.platformChoice;
+}
+
+function makeEditableLink(link: CommunityLink, index: number): EditableLink {
+  const known = platformOption(link.platform);
+  return {
+    clientId: link.id ?? `stored-link-${index}`,
+    platformChoice: known?.value ?? CUSTOM_PLATFORM,
+    customPlatform: known ? '' : link.platform,
+    url: link.url,
+    label: link.label ?? '',
+    isActive: link.isActive,
+  };
+}
+
+function initialLinks(initial?: Community) {
+  const stored = [...(initial?.links ?? [])].sort(
+    (a, b) => (a.order ?? a.sortOrder ?? 0) - (b.order ?? b.sortOrder ?? 0),
+  );
+  if (stored.length) return stored.map(makeEditableLink);
+
+  const legacy: CommunityLink[] = [];
+  if (initial?.whatsappUrl) {
+    legacy.push({ platform: 'WhatsApp', url: initial.whatsappUrl, label: 'WhatsApp', sortOrder: 0, isActive: true });
+  }
+  if (initial?.teamsUrl) {
+    legacy.push({ platform: 'Microsoft Teams', url: initial.teamsUrl, label: 'Teams', sortOrder: 1, isActive: true });
+  }
+  if (initial?.discordUrl) {
+    legacy.push({ platform: 'Discord', url: initial.discordUrl, label: 'Discord', sortOrder: 2, isActive: true });
+  }
+  return legacy.map(makeEditableLink);
 }
 
 function defaults(initial?: Community): CommunityFormData {
@@ -45,29 +152,97 @@ function defaults(initial?: Community): CommunityFormData {
     logoUrl: initial?.logoUrl ?? '',
     coverUrl: initial?.coverUrl ?? '',
     accentColor: initial?.accentColor ?? '#06B6D4',
-    whatsappUrl: initial?.whatsappUrl ?? '',
-    teamsUrl: initial?.teamsUrl ?? '',
-    discordUrl: initial?.discordUrl ?? '',
-    teacherLeadId: initial?.teacherLeadId ?? initial?.teacherLead?.id ?? '',
-    studentLeadId: initial?.studentLeadId ?? initial?.studentLead?.id ?? '',
     isActive: initial?.isActive ?? true,
   };
 }
 
-export function CommunityForm({ initial }: { initial?: Community }) {
+function initialTeacherOptions(initial?: Community, provided: DirectoryUserOption[] = []) {
+  const byId = new Map(provided.map((teacher) => [teacher.id, teacher]));
+  if (initial?.teacherLead?.id) {
+    byId.set(initial.teacherLead.id, {
+      id: initial.teacherLead.id,
+      username: initial.teacherLead.username,
+      profile: initial.teacherLead.profile,
+      roles: ['TEACHER'],
+    });
+  }
+  for (const id of initial?.teacherIds ?? []) {
+    if (!byId.has(id)) byId.set(id, { id, username: id, roles: ['TEACHER'] });
+  }
+  return [...byId.values()];
+}
+
+function validateLinks(links: EditableLink[]) {
+  const errors: Record<string, LinkFieldErrors> = {};
+  const seenUrls = new Map<string, string>();
+  const payload = links.map((link, index) => {
+    const entry: LinkFieldErrors = {};
+    const platform = linkPlatform(link);
+    const url = link.url.trim();
+    const label = link.label.trim();
+
+    if (platform.length < 2 || platform.length > 50 || /[<>\u0000-\u001f\u007f]/.test(platform)) {
+      entry.platform = 'Indica una plataforma válida de 2 a 50 caracteres.';
+    }
+    if (!isSafeWebUrl(url)) {
+      entry.url = 'Usa una URL HTTP o HTTPS válida, sin credenciales.';
+    } else {
+      const key = normalizedUrl(url);
+      const previousId = seenUrls.get(key);
+      if (previousId) {
+        entry.url = 'Este enlace ya fue agregado.';
+        errors[previousId] = { ...errors[previousId], url: 'Este enlace está repetido.' };
+      } else {
+        seenUrls.set(key, link.clientId);
+      }
+    }
+    if (label.length > 80) entry.label = 'La etiqueta admite hasta 80 caracteres.';
+    if (Object.keys(entry).length) errors[link.clientId] = { ...errors[link.clientId], ...entry };
+
+    return {
+      platform,
+      url,
+      label: label || null,
+      order: index,
+      isActive: link.isActive,
+    };
+  });
+  return { payload, errors };
+}
+
+function LinkIcon({ platform }: { platform: string }) {
+  const Icon = platformOption(platform)?.icon ?? Link2;
+  return <Icon className="h-4 w-4" aria-hidden="true" />;
+}
+
+export function CommunityForm({
+  initial,
+  initialTeachers = [],
+}: {
+  initial?: Community;
+  initialTeachers?: DirectoryUserOption[];
+}) {
   const router = useRouter();
   const { user } = useAuth();
   const editing = !!initial;
   const isAdmin = !!user?.roles.includes('ADMIN');
   const [serverError, setServerError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState<'logoUrl' | 'coverUrl' | null>(null);
   const [deactivating, setDeactivating] = useState(false);
-  const { data: candidates } = useQuery({
-    queryKey: ['community-management-candidates'],
-    queryFn: () => api.get<Candidate[]>('/communities/management/candidates'),
-    enabled: isAdmin,
-    retry: false,
-  });
+  const [teachers, setTeachers] = useState<DirectoryUserOption[]>(() => initialTeacherOptions(initial, initialTeachers));
+  const [studentLead, setStudentLead] = useState<DirectoryUserOption | null>(() => (
+    initial?.studentLead?.id
+      ? {
+          id: initial.studentLead.id,
+          username: initial.studentLead.username,
+          profile: initial.studentLead.profile,
+          roles: ['COMMUNITY_LEADER'],
+        }
+      : null
+  ));
+  const [teacherError, setTeacherError] = useState<string | null>(null);
+  const [links, setLinks] = useState<EditableLink[]>(() => initialLinks(initial));
+  const linkSequence = useRef(links.length);
+  const [linkErrors, setLinkErrors] = useState<Record<string, LinkFieldErrors>>({});
   const {
     register,
     handleSubmit,
@@ -78,30 +253,70 @@ export function CommunityForm({ initial }: { initial?: Community }) {
   const logoUrl = useWatch({ control, name: 'logoUrl' });
   const coverUrl = useWatch({ control, name: 'coverUrl' });
 
-  const uploadImage = async (field: 'logoUrl' | 'coverUrl', event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-    setServerError(null);
-    if (!file.type.startsWith('image/') || file.size > 8 * 1024 * 1024) {
-      setServerError('Selecciona una imagen de hasta 8 MB.');
-      return;
-    }
-    setUploading(field);
-    try {
-      const body = new FormData();
-      body.append('file', file);
-      const asset = await api.post<MediaAssetLite>('/media/upload', body);
-      setValue(field, asset.url, { shouldDirty: true, shouldValidate: true });
-    } catch (error) {
-      setServerError(error instanceof Error ? error.message : 'No se pudo optimizar la imagen');
-    } finally {
-      setUploading(null);
-    }
+  const teacherIds = useMemo(() => new Set(teachers.map((teacher) => teacher.id)), [teachers]);
+
+  const updateLink = (clientId: string, patch: Partial<EditableLink>) => {
+    setLinks((current) => current.map((link) => (link.clientId === clientId ? { ...link, ...patch } : link)));
+    setLinkErrors((current) => {
+      if (!current[clientId]) return current;
+      const next = { ...current };
+      delete next[clientId];
+      return next;
+    });
+  };
+
+  const addLink = () => {
+    if (links.length >= MAX_LINKS) return;
+    setLinks((current) => [
+      ...current,
+      {
+        clientId: `new-link-${++linkSequence.current}`,
+        platformChoice: 'WhatsApp',
+        customPlatform: '',
+        url: '',
+        label: '',
+        isActive: true,
+      },
+    ]);
+  };
+
+  const removeLink = (clientId: string) => {
+    setLinks((current) => current.filter((link) => link.clientId !== clientId));
+    setLinkErrors((current) => {
+      const next = { ...current };
+      delete next[clientId];
+      return next;
+    });
+  };
+
+  const moveLink = (index: number, direction: -1 | 1) => {
+    const destination = index + direction;
+    if (destination < 0 || destination >= links.length) return;
+    setLinks((current) => {
+      const next = [...current];
+      [next[index], next[destination]] = [next[destination], next[index]];
+      return next;
+    });
   };
 
   const onSubmit = async (data: CommunityFormData) => {
     setServerError(null);
+    setTeacherError(null);
+    const validatedLinks = validateLinks(links);
+    setLinkErrors(validatedLinks.errors);
+    if (Object.keys(validatedLinks.errors).length) {
+      setServerError('Revisa los enlaces marcados antes de guardar.');
+      return;
+    }
+    if (isAdmin && teachers.length === 0) {
+      setTeacherError('Debes asignar al menos un docente responsable.');
+      return;
+    }
+    if (isAdmin && studentLead && teacherIds.has(studentLead.id)) {
+      setTeacherError('Una misma persona no puede ser docente responsable y líder estudiantil.');
+      return;
+    }
+
     const payload: Record<string, unknown> = {
       name: data.name.trim(),
       description: data.description.trim(),
@@ -109,20 +324,19 @@ export function CommunityForm({ initial }: { initial?: Community }) {
       logoUrl: data.logoUrl?.trim() || null,
       coverUrl: data.coverUrl?.trim() || null,
       accentColor: data.accentColor,
-      whatsappUrl: data.whatsappUrl?.trim() || null,
-      teamsUrl: data.teamsUrl?.trim() || null,
-      discordUrl: data.discordUrl?.trim() || null,
+      links: validatedLinks.payload,
     };
     if (isAdmin) {
-      payload.teacherLeadId = data.teacherLeadId || null;
-      payload.studentLeadId = data.studentLeadId || null;
+      payload.teacherIds = teachers.map((teacher) => teacher.id);
+      payload.studentLeadId = studentLead?.id ?? null;
       if (editing) payload.isActive = data.isActive;
     }
+
     try {
       const community = editing
         ? await api.patch<Community>(`/communities/${initial.id}`, payload)
         : await api.post<Community>('/communities', payload);
-      router.push(`/comunidades/${community.slug}`);
+      router.push(community.isActive === false ? '/comunidades/gestionar' : `/comunidades/${community.slug}`);
       router.refresh();
     } catch (error) {
       setServerError(error instanceof Error ? error.message : 'No se pudo guardar la comunidad');
@@ -143,47 +357,63 @@ export function CommunityForm({ initial }: { initial?: Community }) {
     }
   };
 
-  const teachers = (candidates ?? []).filter((candidate) => candidate.roles.some((entry) => entry.role.name === 'TEACHER'));
-  const leaders = (candidates ?? []).filter((candidate) => candidate.roles.some((entry) => entry.role.name === 'COMMUNITY_LEADER'));
-
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 rounded-2xl border border-border bg-card p-6 shadow-sm md:p-8">
-      <div className="space-y-1.5">
-        <Label htmlFor="community-name">Nombre *</Label>
-        <Input id="community-name" {...register('name')} />
-        {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="community-description">Descripción breve *</Label>
-        <Textarea id="community-description" rows={3} {...register('description')} />
-        {errors.description && <p className="text-xs text-red-500">{errors.description.message}</p>}
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="community-long-description">Presentación completa</Label>
-        <Textarea id="community-long-description" rows={6} {...register('longDescription')} />
-      </div>
-
-      <div className="grid gap-5 md:grid-cols-2">
-        {([
-          ['logoUrl', 'Logotipo', logoUrl],
-          ['coverUrl', 'Portada', coverUrl],
-        ] as const).map(([field, label, preview]) => (
-          <div key={field} className="space-y-2 rounded-xl border border-border bg-secondary/30 p-4">
-            <Label>{label}</Label>
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-semibold hover:border-primary/50">
-              {uploading === field ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
-              {uploading === field ? 'Optimizando…' : 'Subir y comprimir'}
-              <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="sr-only" disabled={!!uploading} onChange={(event) => void uploadImage(field, event)} />
-            </label>
-            <Input aria-label={`URL de ${label.toLowerCase()}`} placeholder="https://…" {...register(field)} />
-            {errors[field] && <p className="text-xs text-red-500">{errors[field]?.message}</p>}
-            {preview && <img src={preview} alt={`Vista previa: ${label}`} className={`w-full rounded-lg border border-border object-cover ${field === 'logoUrl' ? 'h-28 object-contain' : 'h-28'}`} />}
-          </div>
-        ))}
-      </div>
-
-      <div className="grid gap-5 sm:grid-cols-2">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-7 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6 md:p-8">
+      <section className="space-y-5" aria-labelledby="community-general-heading">
+        <div>
+          <h2 id="community-general-heading" className="font-serif-heading text-xl font-bold text-primary">Información general</h2>
+          <p className="mt-1 text-xs text-muted-foreground">Esta información identifica la comunidad en el directorio público.</p>
+        </div>
         <div className="space-y-1.5">
+          <Label htmlFor="community-name">Nombre *</Label>
+          <Input id="community-name" {...register('name')} />
+          {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="community-description">Descripción breve *</Label>
+          <Textarea id="community-description" rows={3} {...register('description')} />
+          {errors.description && <p className="text-xs text-red-500">{errors.description.message}</p>}
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="community-long-description">Presentación completa</Label>
+          <Textarea id="community-long-description" rows={6} {...register('longDescription')} />
+        </div>
+      </section>
+
+      <section className="space-y-5 border-t border-border pt-7" aria-labelledby="community-media-heading">
+        <div>
+          <h2 id="community-media-heading" className="font-serif-heading text-xl font-bold text-primary">Identidad visual</h2>
+          <p className="mt-1 text-xs text-muted-foreground">Las imágenes se validan, comprimen y muestran antes de guardar.</p>
+        </div>
+        <div className="grid gap-5 md:grid-cols-2">
+          <div className="space-y-2 rounded-xl border border-border bg-secondary/20 p-4">
+            <Label htmlFor="community-logo-url">Logotipo</Label>
+            <MediaUploadButton
+              kind="image"
+              previewUrl={logoUrl}
+              previewAlt="Vista previa del logotipo de la comunidad"
+              disabled={isSubmitting || deactivating}
+              onUploaded={(asset) => setValue('logoUrl', asset.url, { shouldDirty: true, shouldValidate: true })}
+              onRemove={() => setValue('logoUrl', '', { shouldDirty: true, shouldValidate: true })}
+            />
+            <Input id="community-logo-url" aria-label="URL del logotipo" placeholder="O pega una URL HTTPS…" {...register('logoUrl')} />
+            {errors.logoUrl && <p className="text-xs text-red-500">{errors.logoUrl.message}</p>}
+          </div>
+          <div className="space-y-2 rounded-xl border border-border bg-secondary/20 p-4">
+            <Label htmlFor="community-cover-url">Portada</Label>
+            <MediaUploadButton
+              kind="image"
+              previewUrl={coverUrl}
+              previewAlt="Vista previa de la portada de la comunidad"
+              disabled={isSubmitting || deactivating}
+              onUploaded={(asset) => setValue('coverUrl', asset.url, { shouldDirty: true, shouldValidate: true })}
+              onRemove={() => setValue('coverUrl', '', { shouldDirty: true, shouldValidate: true })}
+            />
+            <Input id="community-cover-url" aria-label="URL de la portada" placeholder="O pega una URL HTTPS…" {...register('coverUrl')} />
+            {errors.coverUrl && <p className="text-xs text-red-500">{errors.coverUrl.message}</p>}
+          </div>
+        </div>
+        <div className="max-w-sm space-y-1.5">
           <Label htmlFor="community-color">Color identificador</Label>
           <div className="flex gap-2">
             <Input id="community-color" type="color" className="w-14 p-1" {...register('accentColor')} />
@@ -191,33 +421,159 @@ export function CommunityForm({ initial }: { initial?: Community }) {
           </div>
           {errors.accentColor && <p className="text-xs text-red-500">{errors.accentColor.message}</p>}
         </div>
-        <div />
-        <div className="space-y-1.5"><Label htmlFor="community-whatsapp">WhatsApp</Label><Input id="community-whatsapp" placeholder="https://…" {...register('whatsappUrl')} />{errors.whatsappUrl && <p className="text-xs text-red-500">{errors.whatsappUrl.message}</p>}</div>
-        <div className="space-y-1.5"><Label htmlFor="community-teams">Microsoft Teams</Label><Input id="community-teams" placeholder="https://…" {...register('teamsUrl')} />{errors.teamsUrl && <p className="text-xs text-red-500">{errors.teamsUrl.message}</p>}</div>
-        <div className="space-y-1.5"><Label htmlFor="community-discord">Discord</Label><Input id="community-discord" placeholder="https://…" {...register('discordUrl')} />{errors.discordUrl && <p className="text-xs text-red-500">{errors.discordUrl.message}</p>}</div>
-      </div>
+      </section>
 
-      {isAdmin && (
-        <section className="grid gap-5 rounded-xl border border-border p-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="community-teacher">Docente asesor</Label>
-            <Select id="community-teacher" {...register('teacherLeadId')}><option value="">Sin asignar</option>{teachers.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.profile?.fullName ?? candidate.username}</option>)}</Select>
+      <section className="space-y-5 border-t border-border pt-7" aria-labelledby="community-links-heading">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 id="community-links-heading" className="font-serif-heading text-xl font-bold text-primary">Canales y enlaces</h2>
+            <p className="mt-1 text-xs text-muted-foreground">Publica hasta {MAX_LINKS} recursos. Solo los enlaces activos serán visibles.</p>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="community-leader">Líder estudiantil</Label>
-            <Select id="community-leader" {...register('studentLeadId')}><option value="">Sin asignar</option>{leaders.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.profile?.fullName ?? candidate.username}</option>)}</Select>
+          <Button type="button" variant="outline" size="sm" onClick={addLink} disabled={links.length >= MAX_LINKS || isSubmitting}>
+            <Plus /> Agregar enlace
+          </Button>
+        </div>
+
+        {links.length === 0 && (
+          <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+            No hay enlaces configurados. Puedes guardar la comunidad así o agregar el primero.
           </div>
+        )}
+
+        <div className="space-y-3">
+          {links.map((link, index) => {
+            const platform = linkPlatform(link);
+            const errorsForLink = linkErrors[link.clientId];
+            return (
+              <fieldset key={link.clientId} className="rounded-xl border border-border bg-secondary/15 p-4">
+                <legend className="sr-only">Enlace {index + 1}</legend>
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <span className="inline-flex min-w-0 items-center gap-2 text-sm font-bold text-primary">
+                    <LinkIcon platform={platform} />
+                    <span className="truncate">{platform || `Enlace ${index + 1}`}</span>
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Button type="button" variant="ghost" size="icon" aria-label={`Subir enlace ${index + 1}`} disabled={index === 0} onClick={() => moveLink(index, -1)}>
+                      <ArrowUp />
+                    </Button>
+                    <Button type="button" variant="ghost" size="icon" aria-label={`Bajar enlace ${index + 1}`} disabled={index === links.length - 1} onClick={() => moveLink(index, 1)}>
+                      <ArrowDown />
+                    </Button>
+                    <Button type="button" variant="ghost" size="icon" aria-label={`Eliminar enlace ${index + 1}`} onClick={() => removeLink(link.clientId)} className="text-red-500 hover:text-red-600">
+                      <Trash2 />
+                    </Button>
+                  </div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`community-link-platform-${link.clientId}`}>Plataforma *</Label>
+                    <Select
+                      id={`community-link-platform-${link.clientId}`}
+                      value={link.platformChoice}
+                      onChange={(event) => updateLink(link.clientId, { platformChoice: event.target.value })}
+                    >
+                      {PLATFORM_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                      <option value={CUSTOM_PLATFORM}>Otra plataforma…</option>
+                    </Select>
+                    {link.platformChoice === CUSTOM_PLATFORM && (
+                      <Input
+                        aria-label={`Nombre personalizado del enlace ${index + 1}`}
+                        value={link.customPlatform}
+                        maxLength={50}
+                        placeholder="Ej. Moodle"
+                        onChange={(event) => updateLink(link.clientId, { customPlatform: event.target.value })}
+                      />
+                    )}
+                    {errorsForLink?.platform && <p className="text-xs text-red-500">{errorsForLink.platform}</p>}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`community-link-label-${link.clientId}`}>Etiqueta visible</Label>
+                    <Input
+                      id={`community-link-label-${link.clientId}`}
+                      value={link.label}
+                      maxLength={80}
+                      placeholder="Ej. Grupo principal"
+                      onChange={(event) => updateLink(link.clientId, { label: event.target.value })}
+                    />
+                    {errorsForLink?.label && <p className="text-xs text-red-500">{errorsForLink.label}</p>}
+                  </div>
+                  <div className="space-y-1.5 md:col-span-2">
+                    <Label htmlFor={`community-link-url-${link.clientId}`}>URL *</Label>
+                    <Input
+                      id={`community-link-url-${link.clientId}`}
+                      type="url"
+                      value={link.url}
+                      maxLength={2048}
+                      placeholder="https://…"
+                      onChange={(event) => updateLink(link.clientId, { url: event.target.value })}
+                    />
+                    {errorsForLink?.url && <p className="text-xs text-red-500">{errorsForLink.url}</p>}
+                  </div>
+                </div>
+                <label className="mt-4 flex w-fit items-center gap-2 text-sm font-semibold">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-[#06B6D4]"
+                    checked={link.isActive}
+                    onChange={(event) => updateLink(link.clientId, { isActive: event.target.checked })}
+                  />
+                  Enlace activo y visible
+                </label>
+              </fieldset>
+            );
+          })}
+        </div>
+      </section>
+
+      {isAdmin ? (
+        <section className="space-y-5 border-t border-border pt-7" aria-labelledby="community-responsibles-heading">
+          <div>
+            <h2 id="community-responsibles-heading" className="font-serif-heading text-xl font-bold text-primary">Responsables</h2>
+            <p className="mt-1 text-xs text-muted-foreground">Toda comunidad debe conservar al menos un docente. La búsqueda es remota y paginada.</p>
+          </div>
+          <UserDirectoryMultiCombobox
+            role="TEACHER"
+            label="Docentes responsables"
+            required
+            value={teachers}
+            onChange={(value) => {
+              setTeachers(value);
+              setTeacherError(null);
+            }}
+            maxSelected={20}
+            placeholder="Busca docentes por nombre o usuario…"
+            emptyMessage="No se encontraron docentes activos."
+            requestKey={initial?.id ?? 'new-community'}
+          />
+          <UserDirectoryCombobox
+            role="COMMUNITY_LEADER"
+            label="Líder estudiantil (opcional)"
+            value={studentLead}
+            onChange={(value) => {
+              setStudentLead(value);
+              setTeacherError(null);
+            }}
+            placeholder="Busca líderes por nombre o usuario…"
+            emptyMessage="No se encontraron líderes elegibles."
+            requestKey={initial?.id ?? 'new-community'}
+          />
+          {teacherError && <p role="alert" className="text-sm text-red-500">{teacherError}</p>}
           {editing && (
-            <label className="flex items-center gap-2 text-sm font-semibold sm:col-span-2">
-              <input type="checkbox" className="h-4 w-4 accent-[#06B6D4]" {...register('isActive')} /> Comunidad activa y visible públicamente
+            <label className="flex items-center gap-2 text-sm font-semibold">
+              <input type="checkbox" className="h-4 w-4 accent-[#06B6D4]" {...register('isActive')} />
+              Comunidad activa y visible públicamente
             </label>
           )}
         </section>
-      )}
+      ) : editing ? (
+        <p className="rounded-xl border border-border bg-secondary/20 p-4 text-sm text-muted-foreground">
+          Puedes actualizar la presentación y los canales. Solo administración puede cambiar responsables o el estado de la comunidad.
+        </p>
+      ) : null}
 
       {serverError && <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">{serverError}</p>}
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Button type="submit" size="lg" className="flex-1" disabled={isSubmitting || !!uploading || deactivating}>
+        <Button type="submit" size="lg" className="flex-1" disabled={isSubmitting || deactivating}>
           {isSubmitting ? <Loader2 className="animate-spin" /> : <Save />} {isSubmitting ? 'Guardando…' : editing ? 'Guardar cambios' : 'Crear comunidad'}
         </Button>
         {isAdmin && editing && initial.isActive !== false && (

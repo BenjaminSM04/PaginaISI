@@ -4,20 +4,24 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiProperty, ApiPropertyOptional, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ArrayMaxSize, IsArray, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { Prisma, VoteTargetType } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { GamificationService } from '../gamification/gamification.service';
 import { CurrentUser, Public, Roles, AuthUser } from '../common/decorators';
 import { clean, paginate } from '../common/utils';
 import { StorageModule, StorageService } from '../storage/storage.module';
 import { NotificationsService } from '../notifications/notifications.module';
+import { AuditService } from '../audit/audit.service';
+import { CatalogsService, normalizeCatalogValue } from '../catalogs/catalogs.module';
 
 export class CreateQuestionDto {
   @ApiProperty() @IsString() @MinLength(10) @MaxLength(180) title: string;
   @ApiProperty() @IsString() @MinLength(20) @MaxLength(10_000) body: string;
   @ApiPropertyOptional({ type: [String], maxItems: 5 }) @IsOptional() @IsArray() @ArrayMaxSize(5) @IsString({ each: true }) @MaxLength(30, { each: true }) tags?: string[];
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(80) subject?: string;
-  @ApiPropertyOptional() @IsOptional() @IsInt() @Min(1) @Max(12) semester?: number;
+  @ApiPropertyOptional() @IsOptional() @IsInt() @Min(1) @Max(8) semester?: number;
   @ApiPropertyOptional({ type: [String], maxItems: 2, description: 'IDs devueltos por POST /media/upload' })
   @IsOptional() @IsArray() @ArrayMaxSize(2) @IsString({ each: true }) @MaxLength(40, { each: true }) imageIds?: string[];
 }
@@ -30,6 +34,50 @@ export class CreateAnswerDto {
 
 export class VoteDto {
   @ApiProperty({ enum: [1, -1] }) @IsIn([1, -1]) value: 1 | -1;
+}
+
+export class ForumQuestionsQueryDto {
+  @ApiPropertyOptional({ default: 1 })
+  @IsOptional() @IsInt() @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ default: 12, maximum: 50 })
+  @IsOptional() @IsInt() @Min(1) @Max(50)
+  limit?: number;
+
+  @ApiPropertyOptional({ enum: ['recent', 'votes'], default: 'recent' })
+  @IsOptional() @IsIn(['recent', 'votes'])
+  sort?: 'recent' | 'votes';
+
+  @ApiPropertyOptional({ enum: ['all', 'unanswered', 'solved'], default: 'all' })
+  @IsOptional() @IsIn(['all', 'unanswered', 'solved'])
+  filter?: 'all' | 'unanswered' | 'solved';
+
+  @ApiPropertyOptional({ description: 'Busca en título, contenido, tags, materia y autor' })
+  @IsOptional() @IsString() @MaxLength(120)
+  search?: string;
+
+  @ApiPropertyOptional({ description: 'Hasta 5 tags separados por coma' })
+  @Transform(({ value }) => Array.isArray(value) ? value.join(',') : value)
+  @IsOptional() @IsString() @MaxLength(200)
+  tags?: string;
+
+  @ApiPropertyOptional({ description: 'Alias compatible para un tag' })
+  @Transform(({ value }) => Array.isArray(value) ? value.join(',') : value)
+  @IsOptional() @IsString() @MaxLength(40)
+  tag?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional() @IsString() @MaxLength(80)
+  subject?: string;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 8 })
+  @IsOptional() @IsInt() @Min(1) @Max(8)
+  semester?: number;
+
+  @ApiPropertyOptional({ description: 'Nombre completo o usuario del autor' })
+  @IsOptional() @IsString() @MaxLength(80)
+  author?: string;
 }
 
 const AUTHOR_SELECT = {
@@ -80,29 +128,66 @@ export class ForumService {
     private gamification: GamificationService,
     private storage: StorageService,
     private notifications: NotificationsService,
+    private audit: AuditService,
+    private catalogs: CatalogsService,
   ) {}
 
-  async list(q: any) {
-    const { take, skip } = paginate(q.page, q.limit);
-    const where: any = {};
+  async list(q: ForumQuestionsQueryDto) {
+    const { take, skip, page } = paginate(q.page, q.limit);
+    const where: Prisma.ForumQuestionWhereInput = {};
     const selectedTags = parseForumTagFilter(q.tags ?? q.tag);
     if (selectedTags.length) where.tags = { hasEvery: selectedTags };
-    if (q.subject) where.subject = { contains: q.subject, mode: 'insensitive' };
-    if (q.semester) where.semester = Number(q.semester);
-    if (q.search) where.OR = [
-      { title: { contains: q.search, mode: 'insensitive' } },
-      { body: { contains: q.search, mode: 'insensitive' } },
-    ];
+    const subject = q.subject?.trim();
+    const author = q.author?.trim();
+    const search = q.search?.trim();
+    if (subject) where.subject = { contains: subject, mode: 'insensitive' };
+    if (q.semester) where.semester = q.semester;
+    if (author) {
+      where.author = {
+        is: {
+          OR: [
+            { username: { contains: author, mode: 'insensitive' } },
+            { profile: { is: { fullName: { contains: author, mode: 'insensitive' } } } },
+          ],
+        },
+      };
+    }
+    if (search) {
+      const searchableTag = search
+        .normalize('NFKC')
+        .trim()
+        .replace(/^#+/, '')
+        .toLowerCase()
+        .replace(/[\s_]+/g, '-');
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { body: { contains: search, mode: 'insensitive' } },
+        { subject: { contains: search, mode: 'insensitive' } },
+        ...(searchableTag ? [{ tags: { has: searchableTag } } as Prisma.ForumQuestionWhereInput] : []),
+        {
+          author: {
+            is: {
+              OR: [
+                { username: { contains: search, mode: 'insensitive' } },
+                { profile: { is: { fullName: { contains: search, mode: 'insensitive' } } } },
+              ],
+            },
+          },
+        },
+      ];
+    }
     if (q.filter === 'unanswered') where.answersCount = 0;
     if (q.filter === 'solved') where.acceptedAnswerId = { not: null };
 
-    const orderBy: any = q.sort === 'votes' ? { votesScore: 'desc' } : { createdAt: 'desc' };
+    const orderBy: Prisma.ForumQuestionOrderByWithRelationInput[] = q.sort === 'votes'
+      ? [{ votesScore: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }]
+      : [{ createdAt: 'desc' }, { id: 'desc' }];
 
     const [total, items] = await this.prisma.$transaction([
       this.prisma.forumQuestion.count({ where }),
       this.prisma.forumQuestion.findMany({ where, orderBy, take, skip, include: { author: AUTHOR_SELECT, images: { ...IMAGE_SELECT, take: MAX_FORUM_IMAGES } } }),
     ]);
-    return { total, items };
+    return { total, items, page, limit: take, pages: Math.max(1, Math.ceil(total / take)) };
   }
 
   async detail(id: string, viewer?: AuthUser | null) {
@@ -130,14 +215,17 @@ export class ForumService {
   async createQuestion(user: AuthUser, dto: CreateQuestionDto) {
     const tags = normalizeForumTags(dto.tags);
     const imageIds = this.uniqueImageIds(dto.imageIds);
+    const subject = dto.subject ? normalizeCatalogValue(dto.subject).name : '';
     const question = await this.prisma.$transaction(async (tx) => {
       await this.storage.assertOwnedUnlinkedImages(tx, user.id, imageIds);
+      await this.catalogs.upsertMany('TAG', tags, tx);
+      if (subject) await this.catalogs.upsert('SUBJECT', subject, tx);
       return tx.forumQuestion.create({
         data: {
           title: dto.title.trim(),
           body: clean(dto.body) ?? '',
           tags,
-          subject: dto.subject?.trim() || null,
+          subject: subject || null,
           semester: dto.semester,
           authorId: user.id,
           images: imageIds.length ? { connect: imageIds.map((id) => ({ id })) } : undefined,
@@ -225,32 +313,137 @@ export class ForumService {
   }
 
   async acceptAnswer(user: AuthUser, questionId: string, answerId: string) {
-    const question = await this.prisma.forumQuestion.findUnique({ where: { id: questionId } });
-    if (!question) throw new NotFoundException('Pregunta no encontrada');
-    if (question.authorId !== user.id) throw new ForbiddenException('Solo quien preguntó puede aceptar una respuesta');
-    const answer = await this.prisma.forumAnswer.findUnique({ where: { id: answerId } });
-    if (!answer || answer.questionId !== questionId) throw new NotFoundException('Respuesta no encontrada');
-    if (answer.authorId === user.id) throw new BadRequestException('No puedes aceptar tu propia respuesta');
-    if (question.acceptedAnswerId === answerId) return { accepted: true, alreadyAccepted: true };
-    if (question.acceptedAnswerId) {
-      throw new BadRequestException('La pregunta ya tiene una respuesta aceptada');
-    }
+    const result = await this.serializable(async (tx) => {
+      const question = await tx.forumQuestion.findUnique({
+        where: { id: questionId },
+        select: {
+          id: true,
+          title: true,
+          authorId: true,
+          acceptedAnswerId: true,
+          acceptedAnswer: { select: { id: true, authorId: true } },
+        },
+      });
+      if (!question) throw new NotFoundException('Pregunta no encontrada');
+      if (question.authorId !== user.id) {
+        throw new ForbiddenException('Solo quien preguntó puede aceptar una respuesta');
+      }
+      const answer = await tx.forumAnswer.findFirst({
+        where: { id: answerId, questionId },
+        select: { id: true, questionId: true, authorId: true, isAccepted: true },
+      });
+      // Las respuestas se eliminan físicamente; exigir la fila y su pertenencia
+      // también impide seleccionar contenido eliminado o de otra pregunta.
+      if (!answer) throw new NotFoundException('Respuesta no encontrada');
+      if (answer.authorId === user.id) throw new BadRequestException('No puedes aceptar tu propia respuesta');
 
-    await this.prisma.$transaction([
-      this.prisma.forumAnswer.updateMany({ where: { questionId }, data: { isAccepted: false } }),
-      this.prisma.forumAnswer.update({ where: { id: answerId }, data: { isAccepted: true } }),
-      this.prisma.forumQuestion.update({ where: { id: questionId }, data: { acceptedAnswerId: answerId } }),
-    ]);
-    await this.gamification.onAnswerAccepted(answer.authorId, answerId);
-    await this.notifications.send({
-      userId: answer.authorId,
-      type: 'FORUM_ACCEPTED',
-      title: 'Tu respuesta fue aceptada',
-      body: `Tu respuesta en “${question.title}” fue marcada como la solución.`,
-      href: `/foro/${questionId}`,
-      dedupeKey: `forum-accepted:${answerId}`,
+      if (question.acceptedAnswerId === answerId) {
+        // Repara flags históricos inconsistentes sin volver a acreditar puntos.
+        await tx.forumAnswer.updateMany({
+          where: { questionId, id: { not: answerId }, isAccepted: true },
+          data: { isAccepted: false },
+        });
+        if (!answer.isAccepted) {
+          await tx.forumAnswer.update({ where: { id: answerId }, data: { isAccepted: true } });
+        }
+        return {
+          accepted: true as const,
+          alreadyAccepted: true as const,
+          changed: false as const,
+          pointsAwarded: 0,
+        };
+      }
+
+      const assignmentId = randomUUID();
+      const points = await this.gamification.reassignBestAnswerInTransaction(tx, {
+        questionId,
+        assignmentId,
+        previous: question.acceptedAnswer
+          ? { userId: question.acceptedAnswer.authorId, answerId: question.acceptedAnswer.id }
+          : null,
+        next: { userId: answer.authorId, answerId: answer.id },
+      });
+      await tx.forumAnswer.updateMany({
+        where: { questionId, isAccepted: true },
+        data: { isAccepted: false },
+      });
+      await tx.forumAnswer.update({ where: { id: answerId }, data: { isAccepted: true } });
+      await tx.forumQuestion.update({
+        where: { id: questionId },
+        data: { acceptedAnswerId: answerId },
+      });
+      await this.audit.record(tx, {
+        actor: user,
+        action: question.acceptedAnswerId ? 'FORUM_BEST_ANSWER_CHANGED' : 'FORUM_BEST_ANSWER_SELECTED',
+        entityType: 'FORUM_QUESTION',
+        entityId: questionId,
+        before: { acceptedAnswerId: question.acceptedAnswerId },
+        after: { acceptedAnswerId: answerId },
+        metadata: {
+          assignmentId,
+          previousAnswerAuthorId: question.acceptedAnswer?.authorId ?? null,
+          answerAuthorId: answer.authorId,
+          pointsAwarded: points.awardedPoints,
+          pointsRevoked: points.revokedPoints,
+          ledgerEntries: points.ledgerEntries,
+        },
+      });
+      return {
+        accepted: true as const,
+        changed: true as const,
+        assignmentId,
+        title: question.title,
+        answerAuthorId: answer.authorId,
+        previousAnswerAuthorId: question.acceptedAnswer?.authorId ?? null,
+        pointsAwarded: points.awardedPoints,
+        pointsRevoked: points.revokedPoints,
+      };
     });
-    return { accepted: true };
+
+    if (!result.changed) return result;
+    await this.gamification.onBestAnswerSelected(result.answerAuthorId);
+    await this.notifications.send({
+      userId: result.answerAuthorId,
+      type: 'FORUM_ACCEPTED',
+      title: 'Tu respuesta fue elegida como la mejor',
+      body: `Tu respuesta en “${result.title}” fue marcada como la solución.`,
+      href: `/foro/${questionId}`,
+      dedupeKey: `forum-best-answer:${result.assignmentId}:${result.answerAuthorId}`,
+    });
+    if (result.previousAnswerAuthorId && result.previousAnswerAuthorId !== result.answerAuthorId) {
+      await this.notifications.send({
+        userId: result.previousAnswerAuthorId,
+        type: 'FORUM_ACCEPTED',
+        title: 'Cambió la mejor respuesta',
+        body: `El autor cambió la mejor respuesta de “${result.title}”.`,
+        href: `/foro/${questionId}`,
+        dedupeKey: `forum-best-answer-changed:${result.assignmentId}:${result.previousAnswerAuthorId}`,
+      });
+    }
+    return {
+      accepted: true,
+      changed: true,
+      pointsAwarded: result.pointsAwarded,
+      pointsRevoked: result.pointsRevoked,
+    };
+  }
+
+  private async serializable<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(operation, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
+      } catch (error) {
+        if (
+          attempt >= 2
+          || !(error instanceof Prisma.PrismaClientKnownRequestError)
+          || error.code !== 'P2034'
+        ) {
+          throw error;
+        }
+      }
+    }
   }
 
   async removeQuestion(user: AuthUser, id: string) {
@@ -293,7 +486,7 @@ export class ForumController {
   @ApiQuery({ name: 'sort', required: false, enum: ['recent', 'votes'] })
   @ApiQuery({ name: 'filter', required: false, enum: ['all', 'unanswered', 'solved'] })
   @ApiQuery({ name: 'tags', required: false, description: 'Hasta 5 tags separados por coma; deben coincidir todos' })
-  list(@Query() query: any) {
+  list(@Query() query: ForumQuestionsQueryDto) {
     return this.forum.list(query);
   }
 
@@ -313,14 +506,14 @@ export class ForumController {
 
   @Post('questions')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Publicar pregunta (+5 pts)' })
+  @ApiOperation({ summary: 'Publicar pregunta y aplicar la regla de puntos configurada' })
   createQuestion(@CurrentUser() user: AuthUser, @Body() dto: CreateQuestionDto) {
     return this.forum.createQuestion(user, dto);
   }
 
   @Post('questions/:id/answers')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Responder pregunta (+10 pts)' })
+  @ApiOperation({ summary: 'Responder pregunta y aplicar la regla de puntos configurada' })
   createAnswer(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: CreateAnswerDto) {
     return this.forum.createAnswer(user, id, dto);
   }
@@ -341,7 +534,7 @@ export class ForumController {
 
   @Post('questions/:id/accept/:answerId')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Marcar respuesta correcta (+30 pts al autor de la respuesta)' })
+  @ApiOperation({ summary: 'Seleccionar o cambiar la mejor respuesta (puntos según regla vigente)' })
   accept(@CurrentUser() user: AuthUser, @Param('id') id: string, @Param('answerId') answerId: string) {
     return this.forum.acceptAnswer(user, id, answerId);
   }

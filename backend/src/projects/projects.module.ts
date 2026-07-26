@@ -3,7 +3,8 @@ import {
   NotFoundException, Param, Patch, Post, Query, Req,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags, OmitType, PartialType } from '@nestjs/swagger';
-import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsEnum, IsInt, IsOptional, IsString, IsUrl, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsDateString, IsEnum, IsIn, IsInt, IsOptional, IsString, IsUrl, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { ApprovalDecision, NewsCategory, Prisma, ProjectMilestoneStatus, ProjectStage, PublicationStatus } from '@prisma/client';
 import type { Request } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
@@ -14,12 +15,33 @@ import { NotificationsService } from '../notifications/notifications.module';
 import {
   ProjectAuditService,
   projectAuditRequestContext,
+  projectAuditSnapshot,
   projectAuditSnapshotsEqual,
   ProjectAuditRequestContext,
 } from '../project-collaboration/project-audit.service';
 import { ProjectAccessService } from '../project-collaboration/project-access.service';
+import { IncubatorClientsModule, IncubatorClientsService } from '../incubator-clients/incubator-clients.module';
 
 const WEB_URL_OPTIONS = { protocols: ['http', 'https'], require_protocol: true, require_tld: false };
+
+export class ListProjectsQueryDto {
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number;
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(50) limit?: number;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(120) search?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(40) tag?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(50) tech?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(80) community?: string;
+  @ApiPropertyOptional({ minimum: 1, maximum: 8 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(8)
+  semester?: number;
+  @ApiPropertyOptional({ enum: ProjectStage }) @IsOptional() @IsEnum(ProjectStage) stage?: ProjectStage;
+  @ApiPropertyOptional({ enum: ['true', 'false'] }) @IsOptional() @IsIn(['true', 'false']) incubator?: string;
+  @ApiPropertyOptional({ enum: ['true', 'false'] }) @IsOptional() @IsIn(['true', 'false']) featured?: string;
+}
 
 export class CreateProjectDto {
   @ApiProperty() @IsString() @MinLength(5) @MaxLength(140) title: string;
@@ -30,12 +52,20 @@ export class CreateProjectDto {
   @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsUrl(WEB_URL_OPTIONS) @MaxLength(2048) repoUrl?: string | null;
   @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsUrl(WEB_URL_OPTIONS) @MaxLength(2048) demoUrl?: string | null;
   @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() @MaxLength(80) subject?: string | null;
-  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsInt() @Min(1) @Max(12) semester?: number | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsInt() @Min(1) @Max(8) semester?: number | null;
   @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() @MaxLength(80) phase?: string | null;
   @ApiPropertyOptional({ enum: ProjectStage }) @IsOptional() @IsEnum(ProjectStage) stage?: ProjectStage;
   @ApiPropertyOptional({ type: [String] }) @IsOptional() @IsArray() @ArrayMaxSize(12) @IsString({ each: true }) @MaxLength(40, { each: true }) tags?: string[];
   @ApiPropertyOptional({ type: [String], description: 'Tecnologías usadas' }) @IsOptional() @IsArray() @ArrayMaxSize(20) @IsString({ each: true }) @MaxLength(50, { each: true }) technologies?: string[];
   @ApiPropertyOptional({ type: [String], description: 'Usernames de los integrantes' }) @IsOptional() @IsArray() @ArrayMaxSize(20) @IsString({ each: true }) @MaxLength(30, { each: true }) memberUsernames?: string[];
+  @ApiPropertyOptional({ type: [String], description: 'Clientes empresariales registrados para un proyecto de Incubadora' })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(30)
+  @ArrayUnique()
+  @IsString({ each: true })
+  @MaxLength(64, { each: true })
+  clientIds?: string[];
   @ApiPropertyOptional({ description: 'Username del docente revisor' }) @IsOptional() @IsString() @MaxLength(30) reviewerUsername?: string;
   @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsString() @MaxLength(80) communitySlug?: string | null;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isIncubator?: boolean;
@@ -113,18 +143,41 @@ function assertMilestoneDates(startsAt: Date, endsAt?: Date | null) {
   }
 }
 
-const PUBLIC_INCLUDE = {
+export const PUBLIC_INCLUDE = {
   owner: { select: { username: true, profile: { select: { fullName: true, avatarUrl: true } } } },
   reviewer: { select: { username: true, profile: { select: { fullName: true } } } },
   community: { select: { slug: true, name: true, accentColor: true } },
   technologies: true,
   members: { include: { user: { select: { username: true, profile: { select: { fullName: true, avatarUrl: true } } } } } },
+  clients: {
+    select: { id: true, name: true, logoUrl: true },
+    orderBy: { name: 'asc' as const },
+  },
 } as const;
 
-const MANAGE_INCLUDE = {
+const PENDING_VERSION_INCLUDE = {
+  requester: { select: { id: true, username: true, profile: { select: { fullName: true, avatarUrl: true } } } },
+  reviewer: { select: { id: true, username: true, profile: { select: { fullName: true, avatarUrl: true } } } },
+} as const;
+
+export const MANAGE_INCLUDE = {
   ...PUBLIC_INCLUDE,
+  clients: {
+    select: { id: true, name: true, logoUrl: true, isActive: true },
+    orderBy: { name: 'asc' as const },
+  },
+  pendingVersion: { include: PENDING_VERSION_INCLUDE },
   gallery: { where: { archivedAt: null }, orderBy: { createdAt: 'asc' as const } },
   milestones: { orderBy: [{ startsAt: 'asc' as const }, { createdAt: 'asc' as const }] },
+} satisfies Prisma.ProjectInclude;
+
+const MINE_INCLUDE = {
+  ...PUBLIC_INCLUDE,
+  clients: {
+    select: { id: true, name: true, logoUrl: true, isActive: true },
+    orderBy: { name: 'asc' as const },
+  },
+  pendingVersion: { include: PENDING_VERSION_INCLUDE },
 } satisfies Prisma.ProjectInclude;
 
 export const PROJECT_AUDIT_ACTIONS = {
@@ -132,6 +185,10 @@ export const PROJECT_AUDIT_ACTIONS = {
   updated: 'PROJECT_UPDATED',
   archived: 'PROJECT_ARCHIVED',
   reviewed: 'PROJECT_REVIEWED',
+  versionSubmitted: 'PROJECT_VERSION_SUBMITTED',
+  versionObserved: 'PROJECT_VERSION_OBSERVED',
+  versionRejected: 'PROJECT_VERSION_REJECTED',
+  versionPublished: 'PROJECT_VERSION_PUBLISHED',
   membersUpdated: 'MEMBERS_UPDATED',
   milestoneCreated: 'MILESTONE_CREATED',
   milestoneUpdated: 'MILESTONE_UPDATED',
@@ -160,7 +217,55 @@ const ROLLBACKABLE_PROJECT_ACTIONS = new Set<string>([
   PROJECT_AUDIT_ACTIONS.newsArchived,
 ]);
 
-function editableProjectSnapshot(project: any) {
+export function normalizeProjectValue(value: string) {
+  return value.normalize('NFKC').trim().replace(/\s+/g, ' ');
+}
+
+export function normalizeProjectValueKey(value: string) {
+  return normalizeProjectValue(value).toLocaleLowerCase('es');
+}
+
+export function normalizeProjectTags(values: string[] = []) {
+  return [...new Set(values.map(normalizeProjectValueKey).filter(Boolean))];
+}
+
+export function normalizeProjectTechnologies(values: string[] = []) {
+  const byKey = new Map<string, string>();
+  for (const raw of values) {
+    const name = normalizeProjectValue(raw);
+    const key = normalizeProjectValueKey(raw);
+    if (name && !byKey.has(key)) byKey.set(key, name);
+  }
+  return [...byKey.entries()].map(([normalizedName, name]) => ({ name, normalizedName }));
+}
+
+function projectClientIds(clients: any[] = []) {
+  return [...new Set(clients
+    .filter((client) => client && typeof client.id === 'string')
+    .map((client) => client.id as string))]
+    .sort((left, right) => left.localeCompare(right));
+}
+
+function projectWithClientIds(project: any) {
+  return { ...project, clientIds: projectClientIds(project.clients ?? []) };
+}
+
+export function canonicalProjectSnapshotClientRelation(snapshot: Record<string, any>) {
+  const clients = Array.isArray(snapshot.clients) ? snapshot.clients : [];
+  const clientIds = Array.isArray(snapshot.clientIds)
+    ? [...new Set(snapshot.clientIds.filter((id: unknown): id is string => typeof id === 'string'))]
+    : projectClientIds(clients);
+  clientIds.sort((left, right) => left.localeCompare(right));
+  return {
+    ...snapshot,
+    // La metadata pertenece al cliente global y puede cambiar sin editar el
+    // proyecto. Para concurrencia/rollback la relación se compara solo por IDs.
+    clients: [],
+    clientIds,
+  };
+}
+
+export function editableProjectSnapshot(project: any) {
   return {
     title: project.title,
     summary: project.summary,
@@ -185,6 +290,15 @@ function editableProjectSnapshot(project: any) {
     technologies: [...(project.technologies ?? [])]
       .map((technology: any) => technology.name)
       .sort((left: string, right: string) => left.localeCompare(right)),
+    clients: [...(project.clients ?? [])]
+      .map((client: any) => ({
+        id: client.id,
+        name: client.name,
+        logoUrl: client.logoUrl,
+        isActive: client.isActive ?? true,
+      }))
+      .sort((left: any, right: any) => left.id.localeCompare(right.id)),
+    clientIds: projectClientIds(project.clients ?? []),
   };
 }
 
@@ -202,6 +316,107 @@ function canonicalProjectMembers(members: any[]) {
   return [...members]
     .map((member) => ({ userId: member.userId, roleInProject: member.roleInProject ?? null }))
     .sort((left, right) => left.userId.localeCompare(right.userId));
+}
+
+export function projectVersionSnapshot(project: any) {
+  const editable = editableProjectSnapshot(project);
+  const {
+    status: _status,
+    publishedAt: _publishedAt,
+    technologies,
+    ...content
+  } = editable;
+  return {
+    ...content,
+    technologies,
+    members: projectMembersSnapshot(project.members ?? []),
+  };
+}
+
+function versionSnapshot(value: Prisma.JsonValue | Prisma.InputJsonValue) {
+  return auditObject(value as Prisma.JsonValue, 'de versión');
+}
+
+export function projectWithVersion(project: any, version: any | null) {
+  if (!version) return projectWithClientIds(project);
+  const snapshot = versionSnapshot(version.snapshot);
+  const currentUsers = new Map(
+    (project.members ?? []).map((member: any) => [member.userId, member.user]),
+  );
+  const members = Array.isArray(snapshot.members)
+    ? snapshot.members.map((member: any) => ({
+        id: `version:${member.userId}`,
+        projectId: project.id,
+        userId: member.userId,
+        roleInProject: member.roleInProject ?? null,
+        user: currentUsers.get(member.userId) ?? {
+          username: member.username ?? 'usuario',
+          profile: { fullName: member.fullName ?? member.username ?? 'Usuario', avatarUrl: null },
+        },
+      }))
+    : project.members;
+  const technologies = Array.isArray(snapshot.technologies)
+    ? snapshot.technologies.map((technology: unknown, index: number) => ({
+        id: `version:${index}`,
+        projectId: project.id,
+        name: String(technology),
+        normalizedName: normalizeProjectValueKey(String(technology)),
+      }))
+    : project.technologies;
+  const clients = Array.isArray(snapshot.clients)
+    ? snapshot.clients
+        .filter((client: any) => client && typeof client.id === 'string')
+        .map((client: any) => ({
+          id: client.id,
+          name: String(client.name ?? ''),
+          logoUrl: String(client.logoUrl ?? ''),
+          isActive: client.isActive !== false,
+        }))
+    : project.clients;
+  const clientIds = Array.isArray(snapshot.clientIds)
+    ? [...new Set(snapshot.clientIds.filter((id: unknown): id is string => typeof id === 'string'))]
+    : projectClientIds(clients ?? []);
+  const scalar = {
+    title: snapshot.title,
+    summary: snapshot.summary,
+    description: snapshot.description,
+    coverUrl: snapshot.coverUrl ?? null,
+    videoUrl: snapshot.videoUrl ?? null,
+    repoUrl: snapshot.repoUrl ?? null,
+    demoUrl: snapshot.demoUrl ?? null,
+    subject: snapshot.subject ?? null,
+    semester: snapshot.semester ?? null,
+    phase: snapshot.phase ?? null,
+    stage: snapshot.stage,
+    isFeatured: Boolean(snapshot.isFeatured),
+    isIncubator: Boolean(snapshot.isIncubator),
+    recruiting: Boolean(snapshot.recruiting),
+    tags: Array.isArray(snapshot.tags) ? snapshot.tags : [],
+    startedAt: snapshot.startedAt ?? null,
+  };
+  return {
+    ...project,
+    ...scalar,
+    technologies,
+    members,
+    clients,
+    clientIds,
+    reviewer: version.reviewer ?? project.reviewer,
+    reviewerId: snapshot.reviewerId ?? null,
+    communityId: snapshot.communityId ?? null,
+    publicStatus: project.status,
+    status: version.status,
+    pendingVersion: {
+      id: version.id,
+      number: version.number,
+      status: version.status,
+      submittedAt: version.submittedAt,
+      decidedAt: version.decidedAt,
+      reviewComment: version.reviewComment,
+      requester: version.requester,
+      reviewer: version.reviewer,
+    },
+  };
 }
 
 function projectMilestoneSnapshot(milestone: any) {
@@ -271,6 +486,7 @@ export class ProjectsService {
     private notifications: NotificationsService,
     private audit: ProjectAuditService,
     private accessPolicy: ProjectAccessService,
+    private incubatorClients: IncubatorClientsService,
   ) {}
 
   private async managedProject(user: AuthUser, id: string) {
@@ -311,7 +527,149 @@ export class ProjectsService {
     if (!user.roles.includes('ADMIN')) throw new ForbiddenException('Solo un administrador puede realizar esta acción');
   }
 
-  async list(q: any) {
+  private async registerCatalogValues(
+    tx: Prisma.TransactionClient,
+    tags: string[],
+    technologies: Array<{ name: string; normalizedName: string }>,
+    subject?: string | null,
+  ) {
+    const values = [
+      ...tags.map((name) => ({ kind: 'TAG' as const, name, normalizedName: normalizeProjectValueKey(name) })),
+      ...technologies.map((technology) => ({ kind: 'TECHNOLOGY' as const, ...technology })),
+      ...(subject?.trim()
+        ? [{ kind: 'SUBJECT' as const, name: normalizeProjectValue(subject), normalizedName: normalizeProjectValueKey(subject) }]
+        : []),
+    ];
+    for (const value of values) {
+      await tx.catalogValue.upsert({
+        where: { kind_normalizedName: { kind: value.kind, normalizedName: value.normalizedName } },
+        create: value,
+        update: {},
+      });
+    }
+  }
+
+  private buildVersionCandidate(
+    project: any,
+    dto: UpdateProjectDto,
+    normalizedTags: string[] | undefined,
+    normalizedTechnologies: Array<{ name: string; normalizedName: string }> | undefined,
+    memberIds: Array<{ userId: string; username: string; roleInProject?: string }> | undefined,
+    clients: Array<{ id: string; name: string; logoUrl: string; isActive: boolean }> | undefined,
+    reviewerId: string | undefined,
+    communitySpecified: boolean,
+    communityId: string | undefined,
+  ) {
+    const base = project.pendingVersion
+      ? versionSnapshot(project.pendingVersion.snapshot)
+      : projectVersionSnapshot(project);
+    const candidate = JSON.parse(JSON.stringify(base)) as Record<string, any>;
+    if (dto.title !== undefined) candidate.title = dto.title.trim();
+    if (dto.summary !== undefined) candidate.summary = dto.summary.trim();
+    if (dto.description !== undefined) candidate.description = clean(dto.description) ?? '';
+    if (dto.coverUrl !== undefined) candidate.coverUrl = dto.coverUrl;
+    if (dto.videoUrl !== undefined) candidate.videoUrl = dto.videoUrl;
+    if (dto.repoUrl !== undefined) candidate.repoUrl = dto.repoUrl;
+    if (dto.demoUrl !== undefined) candidate.demoUrl = dto.demoUrl;
+    if (dto.subject !== undefined) candidate.subject = dto.subject ? normalizeProjectValue(dto.subject) : null;
+    if (dto.semester !== undefined) candidate.semester = dto.semester;
+    if (dto.phase !== undefined) candidate.phase = dto.phase?.trim() || null;
+    if (dto.stage !== undefined) candidate.stage = dto.stage;
+    if (dto.recruiting !== undefined) candidate.recruiting = dto.recruiting;
+    if (dto.isIncubator !== undefined) candidate.isIncubator = dto.isIncubator;
+    if (dto.startedAt !== undefined) candidate.startedAt = dto.startedAt ? new Date(dto.startedAt).toISOString() : null;
+    if (normalizedTags !== undefined) candidate.tags = normalizedTags;
+    if (normalizedTechnologies !== undefined) candidate.technologies = normalizedTechnologies.map((item) => item.name);
+    if (memberIds !== undefined) candidate.members = memberIds;
+    if (clients !== undefined) {
+      candidate.clients = clients;
+      candidate.clientIds = projectClientIds(clients);
+    }
+    if (dto.isIncubator === false) {
+      candidate.clients = [];
+      candidate.clientIds = [];
+    }
+    if (dto.reviewerUsername !== undefined) candidate.reviewerId = reviewerId ?? null;
+    if (communitySpecified) candidate.communityId = communityId ?? null;
+    if (dto.isFeatured !== undefined) candidate.isFeatured = dto.isFeatured;
+    return candidate;
+  }
+
+  private async nextEditorialVersion(tx: Prisma.TransactionClient, projectId: string) {
+    const latest = await tx.projectVersion.aggregate({
+      where: { projectId },
+      _max: { number: true },
+    });
+    return (latest._max.number ?? 0) + 1;
+  }
+
+  private async publishVersionSnapshot(
+    tx: Prisma.TransactionClient,
+    project: any,
+    snapshot: Record<string, any>,
+    reviewerId: string | null,
+  ) {
+    const technologies = normalizeProjectTechnologies(
+      Array.isArray(snapshot.technologies)
+        ? snapshot.technologies.filter((value: unknown): value is string => typeof value === 'string')
+        : [],
+    );
+    const members = Array.isArray(snapshot.members)
+      ? snapshot.members
+          .filter((member: any) => member && typeof member.userId === 'string')
+          .map((member: any) => ({ userId: member.userId, roleInProject: member.roleInProject ?? null }))
+      : canonicalProjectMembers(project.members ?? []);
+    const clientIds = Array.isArray(snapshot.clientIds)
+      ? [...new Set(snapshot.clientIds.filter((id: unknown): id is string => typeof id === 'string'))]
+      : Array.isArray(snapshot.clients)
+        ? projectClientIds(snapshot.clients)
+        : null;
+    if (!members.some((member: any) => member.userId === project.ownerId)) {
+      members.unshift({ userId: project.ownerId, roleInProject: 'Líder' });
+    }
+    await tx.projectTechnology.deleteMany({ where: { projectId: project.id } });
+    await tx.projectMember.deleteMany({ where: { projectId: project.id } });
+    await this.registerCatalogValues(
+      tx,
+      normalizeProjectTags(Array.isArray(snapshot.tags) ? snapshot.tags : []),
+      technologies,
+      typeof snapshot.subject === 'string' ? snapshot.subject : null,
+    );
+    return tx.project.update({
+      where: { id: project.id },
+      data: {
+        title: String(snapshot.title),
+        summary: String(snapshot.summary),
+        description: String(snapshot.description),
+        coverUrl: snapshot.coverUrl ?? null,
+        videoUrl: snapshot.videoUrl ?? null,
+        repoUrl: snapshot.repoUrl ?? null,
+        demoUrl: snapshot.demoUrl ?? null,
+        subject: snapshot.subject ?? null,
+        semester: snapshot.semester ?? null,
+        phase: snapshot.phase ?? null,
+        stage: snapshot.stage as ProjectStage,
+        isFeatured: Boolean(snapshot.isFeatured),
+        isIncubator: Boolean(snapshot.isIncubator),
+        recruiting: Boolean(snapshot.recruiting),
+        tags: normalizeProjectTags(Array.isArray(snapshot.tags) ? snapshot.tags : []),
+        startedAt: snapshot.startedAt ? new Date(snapshot.startedAt) : null,
+        reviewerId: reviewerId ?? snapshot.reviewerId ?? null,
+        communityId: snapshot.communityId ?? null,
+        status: 'APPROVED',
+        publishedAt: new Date(),
+        pendingVersionId: null,
+        technologies: { create: technologies },
+        members: { create: members },
+        ...(clientIds === null
+          ? {}
+          : { clients: { set: clientIds.map((id) => ({ id })) } }),
+      },
+      include: MANAGE_INCLUDE,
+    });
+  }
+
+  async list(q: ListProjectsQueryDto) {
     const { take, skip } = paginate(q.page, q.limit);
     const where: any = { status: 'APPROVED' };
     if (q.search) where.OR = [
@@ -321,7 +679,7 @@ export class ProjectsService {
     if (q.tag) where.tags = { has: q.tag };
     if (q.tech) where.technologies = { some: { name: { equals: q.tech, mode: 'insensitive' } } };
     if (q.community) where.community = { slug: q.community };
-    if (q.semester) where.semester = Number(q.semester);
+    if (q.semester) where.semester = q.semester;
     if (q.stage) where.stage = q.stage;
     if (q.incubator === 'true') where.isIncubator = true;
     if (q.featured === 'true') where.isFeatured = true;
@@ -335,7 +693,7 @@ export class ProjectsService {
         include: PUBLIC_INCLUDE,
       }),
     ]);
-    return { total, items };
+    return { total, items: items.map(projectWithClientIds) };
   }
 
   async manageable(user: AuthUser) {
@@ -346,14 +704,14 @@ export class ProjectsService {
       include: PUBLIC_INCLUDE,
     });
     return projects.map((project) => ({
-      ...project,
+      ...projectWithClientIds(project),
       access: this.accessPolicy.forProject(user, project),
     }));
   }
 
   async manageDetail(user: AuthUser, id: string) {
     const { project, access } = await this.managedProject(user, id);
-    return { ...project, access };
+    return { ...projectWithVersion(project, project.pendingVersion), access };
   }
 
   async detail(slug: string, viewer?: AuthUser | null) {
@@ -400,7 +758,7 @@ export class ProjectsService {
         where: { userId_targetType_targetId: { userId: viewer.id, targetType: 'PROJECT', targetId: project.id } },
       }));
     }
-    return { ...project, comments, approvals, likedByMe };
+    return { ...projectWithClientIds(project), comments, approvals, likedByMe };
   }
 
   private async resolveRelations(dto: Partial<Pick<CreateProjectDto, 'reviewerUsername' | 'communitySlug'>>) {
@@ -425,32 +783,58 @@ export class ProjectsService {
   }
 
   private async resolveMembers(ownerId: string, usernames?: string[]) {
-    const requested = [...new Set((usernames ?? []).map((value) => value.trim().toLowerCase()).filter(Boolean))];
-    const users = requested.length
-      ? await this.prisma.user.findMany({ where: { username: { in: requested }, isActive: true }, select: { id: true, username: true } })
-      : [];
+    const requested = [...new Set((usernames ?? []).map((value) => normalizeProjectValueKey(value)).filter(Boolean))];
+    const users = await this.prisma.user.findMany({
+      where: {
+        isActive: true,
+        emailVerifiedAt: { not: null },
+        OR: [{ id: ownerId }, ...(requested.length ? [{ username: { in: requested } }] : [])],
+      },
+      select: { id: true, username: true, profile: { select: { fullName: true } } },
+    });
     const found = new Set(users.map((member) => member.username));
     const missing = requested.filter((username) => !found.has(username));
     if (missing.length) throw new BadRequestException(`Integrantes no encontrados: ${missing.join(', ')}`);
     return [
-      { userId: ownerId, roleInProject: 'Líder' },
-      ...users.filter((member) => member.id !== ownerId).map((member) => ({ userId: member.id })),
+      {
+        userId: ownerId,
+        username: users.find((member) => member.id === ownerId)?.username ?? '',
+        fullName: users.find((member) => member.id === ownerId)?.profile?.fullName ?? null,
+        roleInProject: 'Líder',
+      },
+      ...users.filter((member) => member.id !== ownerId).map((member) => ({
+        userId: member.id,
+        username: member.username,
+        fullName: member.profile?.fullName ?? null,
+        roleInProject: undefined,
+      })),
     ];
   }
 
   async create(user: AuthUser, dto: CreateProjectDto, request: ProjectAuditRequestContext) {
+    if ((dto as any).clientIds === null) {
+      throw new BadRequestException('clientIds debe ser una lista');
+    }
+    if (!(dto.isIncubator ?? false) && dto.clientIds?.length) {
+      throw new BadRequestException('Solo los proyectos de Incubadora pueden asociar clientes');
+    }
     const { reviewerId, communityId } = await this.resolveRelations(dto);
     const memberIds = await this.resolveMembers(user.id, dto.memberUsernames);
+    const tags = normalizeProjectTags(dto.tags);
+    const technologies = normalizeProjectTechnologies(dto.technologies);
+    const subject = dto.subject ? normalizeProjectValue(dto.subject) : null;
     return this.prisma.$transaction(async (tx) => {
+      const clients = await this.incubatorClients.resolveActive(dto.clientIds ?? [], tx);
+      await this.registerCatalogValues(tx, tags, technologies, subject);
       const project = await tx.project.create({ data: {
-        title: dto.title,
-        summary: dto.summary,
+        title: dto.title.trim(),
+        summary: dto.summary.trim(),
         description: clean(dto.description) ?? '',
         slug: uniqueSlug(dto.title),
         coverUrl: dto.coverUrl, videoUrl: dto.videoUrl, repoUrl: dto.repoUrl, demoUrl: dto.demoUrl,
-        subject: dto.subject, semester: dto.semester, phase: dto.phase,
+        subject, semester: dto.semester, phase: dto.phase?.trim() || null,
         stage: dto.stage ?? 'IN_DEVELOPMENT',
-        tags: dto.tags ?? [],
+        tags,
         isIncubator: dto.isIncubator ?? false,
         recruiting: dto.recruiting ?? false,
         startedAt: dto.startedAt ? new Date(dto.startedAt) : null,
@@ -458,11 +842,32 @@ export class ProjectsService {
         ownerId: user.id,
         reviewerId,
         communityId,
-        technologies: { create: [...new Set((dto.technologies ?? []).map((name) => name.trim()).filter(Boolean))].map((name) => ({ name })) },
-        members: { create: memberIds },
-      }, include: PUBLIC_INCLUDE });
+        technologies: { create: technologies },
+        members: {
+          create: memberIds.map(({ userId, roleInProject }) => ({ userId, roleInProject })),
+        },
+        clients: { connect: clients.map(({ id }) => ({ id })) },
+      }, include: MANAGE_INCLUDE });
+      const version = await tx.projectVersion.create({
+        data: {
+          projectId: project.id,
+          number: 1,
+          status: 'PENDING',
+          snapshot: projectAuditSnapshot(projectVersionSnapshot(project)),
+          requesterId: user.id,
+          reviewerId,
+        },
+        include: PENDING_VERSION_INCLUDE,
+      });
+      await tx.project.update({ where: { id: project.id }, data: { pendingVersionId: version.id } });
       await tx.approvalRequest.create({
-        data: { targetType: 'PROJECT', targetId: project.id, requesterId: user.id, reviewerId },
+        data: {
+          targetType: 'PROJECT',
+          targetId: project.id,
+          requesterId: user.id,
+          reviewerId,
+          projectVersionId: version.id,
+        },
       });
       await this.audit.record(tx, {
         projectId: project.id,
@@ -474,15 +879,26 @@ export class ProjectsService {
         after: editableProjectSnapshot(project),
         request,
       });
-      return project;
+      return projectWithVersion(project, version);
     });
   }
 
   async update(user: AuthUser, id: string, dto: UpdateProjectDto, request: ProjectAuditRequestContext) {
+    if ((dto as any).clientIds === null) {
+      throw new BadRequestException('clientIds debe ser una lista');
+    }
     const { project, access } = await this.managedProject(user, id);
     this.assertExpectedVersion(project.version, dto.expectedVersion);
 
     const communitySpecified = Object.prototype.hasOwnProperty.call(dto, 'communitySlug');
+    const editorialBase = project.pendingVersion
+      ? versionSnapshot(project.pendingVersion.snapshot)
+      : null;
+    const targetIsIncubator = dto.isIncubator
+      ?? (editorialBase ? Boolean(editorialBase.isIncubator) : project.isIncubator);
+    if (!targetIsIncubator && dto.clientIds?.length) {
+      throw new BadRequestException('Solo los proyectos de Incubadora pueden asociar clientes');
+    }
     const governanceChanged = dto.memberUsernames !== undefined
       || dto.reviewerUsername !== undefined
       || communitySpecified;
@@ -496,7 +912,7 @@ export class ProjectsService {
     const mutableKeys = [
       'title', 'summary', 'description', 'coverUrl', 'videoUrl', 'repoUrl', 'demoUrl', 'subject', 'semester',
       'phase', 'stage', 'tags', 'technologies', 'memberUsernames', 'reviewerUsername', 'communitySlug',
-      'isIncubator', 'recruiting', 'startedAt', 'isFeatured', 'status', 'resubmit',
+      'clientIds', 'isIncubator', 'recruiting', 'startedAt', 'isFeatured', 'status', 'resubmit',
     ] as const;
     if (!mutableKeys.some((key) => dto[key] !== undefined)) {
       throw new BadRequestException('No se recibió ningún cambio');
@@ -508,15 +924,29 @@ export class ProjectsService {
       : undefined;
     const normalizedTags = dto.tags === undefined
       ? undefined
-      : [...new Set(dto.tags.map((tag) => tag.trim().toLowerCase()).filter(Boolean))];
+      : normalizeProjectTags(dto.tags);
     const normalizedTechnologies = dto.technologies === undefined
       ? undefined
-      : [...new Set(dto.technologies.map((name) => name.trim()).filter(Boolean))];
+      : normalizeProjectTechnologies(dto.technologies);
+    const baseClientIds = editorialBase && Array.isArray(editorialBase.clientIds)
+      ? editorialBase.clientIds.filter((id: unknown): id is string => typeof id === 'string')
+      : editorialBase && Array.isArray(editorialBase.clients)
+        ? projectClientIds(editorialBase.clients)
+        : project.clients.map((client) => client.id);
+    const existingClientIds = [...new Set([
+      ...project.clients.map((client) => client.id),
+      ...baseClientIds,
+    ])];
+    const resolvedClients = dto.clientIds !== undefined
+      ? await this.incubatorClients.resolveForProjectUpdate(dto.clientIds, existingClientIds)
+      : dto.isIncubator === false ? [] : undefined;
     const sameList = (left: string[], right: string[]) => {
       const a = [...left].sort((x, y) => x.localeCompare(y));
       const b = [...right].sort((x, y) => x.localeCompare(y));
       return a.length === b.length && a.every((value, index) => value === b[index]);
     };
+    const clientsChanged = resolvedClients !== undefined
+      && !sameList(resolvedClients.map((client) => client.id), baseClientIds);
     const contentChanged =
       (dto.title !== undefined && dto.title.trim() !== project.title)
       || (dto.summary !== undefined && dto.summary.trim() !== project.summary)
@@ -525,16 +955,20 @@ export class ProjectsService {
       || (dto.videoUrl !== undefined && dto.videoUrl !== project.videoUrl)
       || (dto.repoUrl !== undefined && dto.repoUrl !== project.repoUrl)
       || (dto.demoUrl !== undefined && dto.demoUrl !== project.demoUrl)
-      || (dto.subject !== undefined && (dto.subject?.trim() || null) !== project.subject)
+      || (dto.subject !== undefined && (dto.subject ? normalizeProjectValue(dto.subject) : null) !== project.subject)
       || (dto.semester !== undefined && dto.semester !== project.semester)
       || (dto.phase !== undefined && (dto.phase?.trim() || null) !== project.phase)
       || (dto.stage !== undefined && dto.stage !== project.stage)
       || (normalizedTags !== undefined && !sameList(normalizedTags, project.tags))
-      || (normalizedTechnologies !== undefined && !sameList(normalizedTechnologies, project.technologies.map((item) => item.name)))
+      || (normalizedTechnologies !== undefined && !sameList(
+        normalizedTechnologies.map((item) => item.normalizedName),
+        project.technologies.map((item) => item.normalizedName),
+      ))
       || (dto.isIncubator !== undefined && dto.isIncubator !== project.isIncubator)
       || (dto.recruiting !== undefined && dto.recruiting !== project.recruiting)
       || (dto.startedAt !== undefined
-        && (dto.startedAt ? new Date(dto.startedAt).toISOString() : null) !== (project.startedAt?.toISOString() ?? null));
+        && (dto.startedAt ? new Date(dto.startedAt).toISOString() : null) !== (project.startedAt?.toISOString() ?? null))
+      || clientsChanged;
     const data: Prisma.ProjectUpdateInput = {};
     if (dto.title !== undefined) data.title = dto.title.trim();
     if (dto.summary !== undefined) data.summary = dto.summary.trim();
@@ -543,13 +977,14 @@ export class ProjectsService {
     if (dto.videoUrl !== undefined) data.videoUrl = dto.videoUrl;
     if (dto.repoUrl !== undefined) data.repoUrl = dto.repoUrl;
     if (dto.demoUrl !== undefined) data.demoUrl = dto.demoUrl;
-    if (dto.subject !== undefined) data.subject = dto.subject?.trim() || null;
+    if (dto.subject !== undefined) data.subject = dto.subject ? normalizeProjectValue(dto.subject) : null;
     if (dto.semester !== undefined) data.semester = dto.semester;
     if (dto.phase !== undefined) data.phase = dto.phase?.trim() || null;
     if (dto.stage !== undefined) data.stage = dto.stage;
     if (dto.recruiting !== undefined) data.recruiting = dto.recruiting;
     if (dto.isIncubator !== undefined) data.isIncubator = dto.isIncubator;
     if (dto.startedAt !== undefined) data.startedAt = dto.startedAt ? new Date(dto.startedAt) : null;
+    if (resolvedClients !== undefined) data.clients = { set: resolvedClients.map(({ id: clientId }) => ({ id: clientId })) };
     if (normalizedTags !== undefined) data.tags = normalizedTags;
     if (reviewerId) data.reviewer = { connect: { id: reviewerId } };
     if (communitySpecified) data.community = communityId ? { connect: { id: communityId } } : { disconnect: true };
@@ -559,28 +994,137 @@ export class ProjectsService {
       if (dto.status === 'APPROVED' && !project.publishedAt) data.publishedAt = new Date();
     }
 
-    const approvedEditRequiresReview = project.status === 'APPROVED' && contentChanged && !access.isAdmin;
+    const shouldCreatePublishedVersion = project.status === 'APPROVED'
+      && dto.status === undefined
+      && (contentChanged || governanceChanged);
+    if (shouldCreatePublishedVersion) {
+      const candidate = this.buildVersionCandidate(
+        project,
+        dto,
+        normalizedTags,
+        normalizedTechnologies,
+        memberIds,
+        resolvedClients,
+        reviewerId,
+        communitySpecified,
+        communityId,
+      );
+      const base = project.pendingVersion
+        ? versionSnapshot(project.pendingVersion.snapshot)
+        : projectVersionSnapshot(project);
+      if (projectAuditSnapshotsEqual(base, candidate)) {
+        throw new BadRequestException('Los datos enviados no contienen cambios efectivos');
+      }
+      return this.prisma.$transaction(async (tx) => {
+        if (resolvedClients?.length) {
+          await this.incubatorClients.resolveForProjectUpdate(
+            resolvedClients.map((client) => client.id),
+            existingClientIds,
+            tx,
+          );
+        }
+        const revision = await this.bumpVersion(tx, id, project.version);
+        if (project.pendingVersion?.status === 'PENDING') {
+          await tx.projectVersion.update({
+            where: { id: project.pendingVersion.id },
+            data: { status: 'SUPERSEDED', decidedAt: project.pendingVersion.decidedAt ?? new Date() },
+          });
+        }
+        await this.registerCatalogValues(
+          tx,
+          normalizeProjectTags(Array.isArray(candidate.tags) ? candidate.tags : []),
+          normalizeProjectTechnologies(Array.isArray(candidate.technologies) ? candidate.technologies : []),
+          typeof candidate.subject === 'string' ? candidate.subject : null,
+        );
+        const number = await this.nextEditorialVersion(tx, id);
+        const version = await tx.projectVersion.create({
+          data: {
+            projectId: id,
+            number,
+            status: 'PENDING',
+            snapshot: projectAuditSnapshot(candidate),
+            requesterId: user.id,
+            reviewerId: (candidate.reviewerId as string | null) ?? null,
+          },
+          include: PENDING_VERSION_INCLUDE,
+        });
+        const existingApproval = await tx.approvalRequest.findFirst({
+          where: { targetType: 'PROJECT', targetId: id, decision: null },
+          orderBy: { createdAt: 'desc' },
+        });
+        const approval = existingApproval
+          ? await tx.approvalRequest.update({
+              where: { id: existingApproval.id },
+              data: {
+                requesterId: user.id,
+                reviewerId: version.reviewerId,
+                projectVersionId: version.id,
+              },
+            })
+          : await tx.approvalRequest.create({
+              data: {
+                targetType: 'PROJECT',
+                targetId: id,
+                requesterId: user.id,
+                reviewerId: version.reviewerId,
+                projectVersionId: version.id,
+              },
+            });
+        await tx.project.update({ where: { id }, data: { pendingVersionId: version.id } });
+        await this.audit.record(tx, {
+          projectId: id,
+          actor: user,
+          action: PROJECT_AUDIT_ACTIONS.versionSubmitted,
+          entityType: 'PROJECT_VERSION',
+          entityId: version.id,
+          before: base,
+          after: candidate,
+          metadata: {
+            publicVersionUnchanged: true,
+            editorialVersion: number,
+            versionBefore: project.version,
+            versionAfter: revision,
+            approvalRequestId: approval.id,
+          },
+          request,
+        });
+        return projectWithVersion({ ...project, version: revision, pendingVersion: version }, version);
+      });
+    }
+
     const requestedResubmit = !!dto.resubmit && ['OBSERVED', 'REJECTED', 'DRAFT'].includes(project.status);
-    if (approvedEditRequiresReview || requestedResubmit) data.status = 'PENDING';
+    if (requestedResubmit) data.status = 'PENDING';
 
     return this.prisma.$transaction(async (tx) => {
+      if (resolvedClients?.length) {
+        await this.incubatorClients.resolveForProjectUpdate(
+          resolvedClients.map((client) => client.id),
+          existingClientIds,
+          tx,
+        );
+      }
       const version = await this.bumpVersion(tx, id, project.version);
       let approvalRequestId: string | null = null;
+      await this.registerCatalogValues(
+        tx,
+        normalizedTags ?? project.tags,
+        normalizedTechnologies ?? project.technologies.map((item) => ({
+          name: item.name,
+          normalizedName: item.normalizedName,
+        })),
+        dto.subject !== undefined ? (dto.subject ? normalizeProjectValue(dto.subject) : null) : project.subject,
+      );
       if (dto.technologies !== undefined) {
         await tx.projectTechnology.deleteMany({ where: { projectId: id } });
         data.technologies = {
-          create: (normalizedTechnologies ?? []).map((name) => ({ name })),
+          create: normalizedTechnologies ?? [],
         };
       }
       if (memberIds) {
         await tx.projectMember.deleteMany({ where: { projectId: id } });
-        data.members = { create: memberIds };
-      }
-      if (approvedEditRequiresReview || requestedResubmit) {
-        const approval = await tx.approvalRequest.create({
-          data: { targetType: 'PROJECT', targetId: id, requesterId: user.id, reviewerId: reviewerId ?? project.reviewerId },
-        });
-        approvalRequestId = approval.id;
+        data.members = {
+          create: memberIds.map(({ userId, roleInProject }) => ({ userId, roleInProject })),
+        };
       }
       const updated = await tx.project.update({ where: { id }, data, include: MANAGE_INCLUDE });
       const beforeProject = editableProjectSnapshot(project);
@@ -591,6 +1135,68 @@ export class ProjectsService {
       const membersChanged = !projectAuditSnapshotsEqual(beforeMembers, afterMembers);
       if (!projectChanged && !membersChanged) {
         throw new BadRequestException('Los datos enviados no contienen cambios efectivos');
+      }
+      let editorialVersion: any | null = null;
+      if (projectChanged || membersChanged) {
+        if (project.pendingVersion?.status === 'PENDING') {
+          await tx.projectVersion.update({
+            where: { id: project.pendingVersion.id },
+            data: { status: 'SUPERSEDED', decidedAt: project.pendingVersion.decidedAt ?? new Date() },
+          });
+        }
+        const number = await this.nextEditorialVersion(tx, id);
+        const status = updated.status === 'APPROVED'
+          ? 'PUBLISHED'
+          : updated.status === 'OBSERVED'
+            ? 'OBSERVED'
+            : updated.status === 'REJECTED'
+              ? 'REJECTED'
+              : 'PENDING';
+        if (status === 'PUBLISHED') {
+          await tx.projectVersion.updateMany({
+            where: { projectId: id, status: 'PUBLISHED' },
+            data: { status: 'SUPERSEDED' },
+          });
+        }
+        editorialVersion = await tx.projectVersion.create({
+          data: {
+            projectId: id,
+            number,
+            status,
+            snapshot: projectAuditSnapshot(projectVersionSnapshot(updated)),
+            requesterId: user.id,
+            reviewerId: updated.reviewerId,
+            publishedAt: status === 'PUBLISHED' ? new Date() : null,
+          },
+          include: PENDING_VERSION_INCLUDE,
+        });
+        await tx.project.update({
+          where: { id },
+          data: {
+            pendingVersionId: status === 'PUBLISHED' ? null : editorialVersion.id,
+          },
+        });
+        if (status === 'PENDING') {
+          const open = await tx.approvalRequest.findFirst({
+            where: { targetType: 'PROJECT', targetId: id, decision: null },
+            orderBy: { createdAt: 'desc' },
+          });
+          const approval = open
+            ? await tx.approvalRequest.update({
+                where: { id: open.id },
+                data: { reviewerId: updated.reviewerId, projectVersionId: editorialVersion.id },
+              })
+            : await tx.approvalRequest.create({
+                data: {
+                  targetType: 'PROJECT',
+                  targetId: id,
+                  requesterId: user.id,
+                  reviewerId: updated.reviewerId,
+                  projectVersionId: editorialVersion.id,
+                },
+              });
+          approvalRequestId = approval.id;
+        }
       }
       if (projectChanged) {
         await this.audit.record(tx, {
@@ -618,7 +1224,10 @@ export class ProjectsService {
           request,
         });
       }
-      return { ...updated, access: this.accessPolicy.forProject(user, updated) };
+      const response = editorialVersion && editorialVersion.status !== 'PUBLISHED'
+        ? projectWithVersion({ ...updated, pendingVersion: editorialVersion }, editorialVersion)
+        : updated;
+      return { ...projectWithClientIds(response), access: this.accessPolicy.forProject(user, updated) };
     });
   }
 
@@ -844,6 +1453,15 @@ export class ProjectsService {
         take,
         skip,
         include: {
+          actor: {
+            select: {
+              id: true,
+              email: true,
+              username: true,
+              profile: { select: { fullName: true } },
+              roles: { select: { role: { select: { name: true } } } },
+            },
+          },
           rollbackEntries: { select: { id: true, createdAt: true } },
           delivery: { select: { status: true, attempts: true, sentAt: true, lastError: true } },
         },
@@ -855,6 +1473,10 @@ export class ProjectsService {
       limit: take,
       items: items.map((item) => ({
         ...item,
+        actor: item.actor
+          ? { ...item.actor, roles: item.actor.roles.map((entry) => entry.role.name) }
+          : null,
+        actorDeleted: !item.actor,
         canRollback: ROLLBACKABLE_PROJECT_ACTIONS.has(item.action) && item.rollbackEntries.length === 0,
       })),
     };
@@ -870,6 +1492,10 @@ export class ProjectsService {
     if (search) {
       where.OR = [
         { actorEmailSnapshot: { contains: search, mode: 'insensitive' } },
+        { actorNameSnapshot: { contains: search, mode: 'insensitive' } },
+        { actorUsernameSnapshot: { contains: search, mode: 'insensitive' } },
+        { actor: { is: { username: { contains: search, mode: 'insensitive' } } } },
+        { actor: { is: { profile: { fullName: { contains: search, mode: 'insensitive' } } } } },
         { project: { title: { contains: search, mode: 'insensitive' } } },
       ];
     }
@@ -881,6 +1507,15 @@ export class ProjectsService {
         take,
         skip,
         include: {
+          actor: {
+            select: {
+              id: true,
+              email: true,
+              username: true,
+              profile: { select: { fullName: true } },
+              roles: { select: { role: { select: { name: true } } } },
+            },
+          },
           project: { select: { id: true, title: true, slug: true } },
           delivery: { select: { status: true, attempts: true, sentAt: true, lastError: true } },
         },
@@ -892,6 +1527,10 @@ export class ProjectsService {
         : {};
       return {
         ...row,
+        actor: row.actor
+          ? { ...row.actor, roles: row.actor.roles.map((entry) => entry.role.name) }
+          : null,
+        actorDeleted: !row.actor,
         riskSignals: Array.isArray(metadata.security?.riskSignals) ? metadata.security.riskSignals : [],
       };
     });
@@ -903,11 +1542,15 @@ export class ProjectsService {
     projectId: string,
     snapshot: Record<string, any>,
   ) {
+    const relationSnapshot = canonicalProjectSnapshotClientRelation(snapshot);
     await tx.projectTechnology.deleteMany({ where: { projectId } });
-    const technologies = Array.isArray(snapshot.technologies)
-      ? [...new Set(snapshot.technologies.filter((name: unknown) => typeof name === 'string'))] as string[]
-      : [];
-    const data: Prisma.ProjectUncheckedUpdateInput = {
+    const technologies = normalizeProjectTechnologies(
+      Array.isArray(snapshot.technologies)
+        ? snapshot.technologies.filter((name: unknown): name is string => typeof name === 'string')
+        : [],
+    );
+    const clientIds = relationSnapshot.clientIds;
+    const data: Prisma.ProjectUpdateInput = {
       title: String(snapshot.title),
       summary: String(snapshot.summary),
       description: String(snapshot.description),
@@ -926,9 +1569,14 @@ export class ProjectsService {
       tags: Array.isArray(snapshot.tags) ? snapshot.tags.filter((tag: unknown) => typeof tag === 'string') : [],
       startedAt: snapshot.startedAt ? new Date(snapshot.startedAt) : null,
       publishedAt: snapshot.publishedAt ? new Date(snapshot.publishedAt) : null,
-      reviewerId: snapshot.reviewerId ?? null,
-      communityId: snapshot.communityId ?? null,
-      technologies: { create: technologies.map((name) => ({ name })) },
+      reviewer: snapshot.reviewerId
+        ? { connect: { id: snapshot.reviewerId } }
+        : { disconnect: true },
+      community: snapshot.communityId
+        ? { connect: { id: snapshot.communityId } }
+        : { disconnect: true },
+      technologies: { create: technologies },
+      clients: { set: clientIds.map((id) => ({ id })) },
     };
     return tx.project.update({ where: { id: projectId }, data, include: MANAGE_INCLUDE });
   }
@@ -967,12 +1615,15 @@ export class ProjectsService {
         ].includes(log.action as any)) {
           const current = await tx.project.findUnique({
             where: { id: projectId },
-            include: { technologies: true },
+            include: { technologies: true, clients: true },
           });
           if (!current) throw new NotFoundException('Proyecto no encontrado');
           const currentSnapshot = editableProjectSnapshot(current);
           const expectedAfter = auditObject(log.after, 'posterior');
-          if (!projectAuditSnapshotsEqual(currentSnapshot, expectedAfter)) {
+          if (!projectAuditSnapshotsEqual(
+            canonicalProjectSnapshotClientRelation(currentSnapshot),
+            canonicalProjectSnapshotClientRelation(expectedAfter),
+          )) {
             throw new ConflictException('El proyecto cambió después de esa edición; revierte primero los cambios más recientes');
           }
           const restored = await this.restoreProjectSnapshot(tx, projectId, auditObject(log.before, 'anterior'));
@@ -1157,54 +1808,117 @@ export class ProjectsService {
     const project = await this.prisma.project.findUnique({ where: { id }, include: MANAGE_INCLUDE });
     if (!project) throw new NotFoundException('Proyecto no encontrado');
     this.assertExpectedVersion(project.version, dto.expectedVersion);
-    if (project.status !== 'PENDING') throw new BadRequestException('El proyecto no está pendiente de revisión');
-    if (!reviewer.roles.includes('ADMIN') && project.reviewerId && project.reviewerId !== reviewer.id) {
+    const editorial = project.pendingVersion;
+    if ((!editorial || editorial.status !== 'PENDING') && project.status !== 'PENDING') {
+      throw new BadRequestException('El proyecto no está pendiente de revisión');
+    }
+    const assignedReviewerId = editorial?.reviewerId ?? project.reviewerId;
+    if (!reviewer.roles.includes('ADMIN') && assignedReviewerId && assignedReviewerId !== reviewer.id) {
       throw new ForbiddenException('Este proyecto está asignado a otro docente revisor');
     }
     if (dto.decision !== 'APPROVED' && !dto.comment?.trim()) {
       throw new BadRequestException('Debes explicar por qué observas o rechazas el proyecto');
     }
 
-    const statusMap: Record<ApprovalDecision, 'APPROVED' | 'OBSERVED' | 'REJECTED'> = {
-      APPROVED: 'APPROVED', OBSERVED: 'OBSERVED', REJECTED: 'REJECTED',
-    };
     const updated = await this.prisma.$transaction(async (tx) => {
-      const version = await this.bumpVersion(tx, id, project.version);
+      const revision = await this.bumpVersion(tx, id, project.version);
       const open = await tx.approvalRequest.findFirst({
-        where: { targetType: 'PROJECT', targetId: id, decision: null },
+        where: {
+          targetType: 'PROJECT',
+          targetId: id,
+          decision: null,
+          ...(editorial ? { OR: [{ projectVersionId: editorial.id }, { projectVersionId: null }] } : {}),
+        },
         orderBy: { createdAt: 'desc' },
       });
       if (open) {
         await tx.approvalRequest.update({
           where: { id: open.id },
-          data: { decision: dto.decision, comment: dto.comment?.trim(), reviewerId: reviewer.id, decidedAt: new Date() },
+          data: {
+            decision: dto.decision,
+            comment: dto.comment?.trim(),
+            reviewerId: reviewer.id,
+            projectVersionId: editorial?.id,
+            decidedAt: new Date(),
+          },
         });
       } else {
         await tx.approvalRequest.create({
-          data: { targetType: 'PROJECT', targetId: id, requesterId: project.ownerId, reviewerId: reviewer.id, decision: dto.decision, comment: dto.comment?.trim(), decidedAt: new Date() },
+          data: {
+            targetType: 'PROJECT',
+            targetId: id,
+            requesterId: editorial?.requesterId ?? project.ownerId,
+            reviewerId: reviewer.id,
+            projectVersionId: editorial?.id,
+            decision: dto.decision,
+            comment: dto.comment?.trim(),
+            decidedAt: new Date(),
+          },
         });
       }
-      const reviewed = await tx.project.update({
-        where: { id },
-        data: {
-          status: statusMap[dto.decision],
-          publishedAt: dto.decision === 'APPROVED' ? new Date() : project.publishedAt,
-        },
-        include: MANAGE_INCLUDE,
-      });
+      let reviewed: any;
+      if (editorial) {
+        const snapshot = versionSnapshot(editorial.snapshot);
+        if (dto.decision === 'APPROVED') {
+          await tx.projectVersion.updateMany({
+            where: { projectId: id, status: 'PUBLISHED', id: { not: editorial.id } },
+            data: { status: 'SUPERSEDED' },
+          });
+          reviewed = await this.publishVersionSnapshot(tx, project, snapshot, reviewer.id);
+          await tx.projectVersion.update({
+            where: { id: editorial.id },
+            data: {
+              status: 'PUBLISHED',
+              reviewerId: reviewer.id,
+              reviewComment: dto.comment?.trim() || null,
+              decidedAt: new Date(),
+              publishedAt: new Date(),
+            },
+          });
+        } else {
+          const versionStatus = dto.decision === 'OBSERVED' ? 'OBSERVED' : 'REJECTED';
+          await tx.projectVersion.update({
+            where: { id: editorial.id },
+            data: {
+              status: versionStatus,
+              reviewerId: reviewer.id,
+              reviewComment: dto.comment!.trim(),
+              decidedAt: new Date(),
+            },
+          });
+          if (project.status !== 'APPROVED') {
+            await tx.project.update({ where: { id }, data: { status: versionStatus } });
+          }
+          reviewed = await tx.project.findUniqueOrThrow({ where: { id }, include: MANAGE_INCLUDE });
+        }
+      } else {
+        const status = dto.decision === 'APPROVED' ? 'APPROVED' : dto.decision === 'OBSERVED' ? 'OBSERVED' : 'REJECTED';
+        reviewed = await tx.project.update({
+          where: { id },
+          data: { status, publishedAt: status === 'APPROVED' ? new Date() : project.publishedAt },
+          include: MANAGE_INCLUDE,
+        });
+      }
+      const pendingSnapshot = editorial ? versionSnapshot(editorial.snapshot) : null;
       await this.audit.record(tx, {
         projectId: id,
         actor: reviewer,
-        action: PROJECT_AUDIT_ACTIONS.reviewed,
-        entityType: 'PROJECT',
-        entityId: id,
-        before: editableProjectSnapshot(project),
-        after: editableProjectSnapshot(reviewed),
+        action: dto.decision === 'APPROVED'
+          ? PROJECT_AUDIT_ACTIONS.versionPublished
+          : dto.decision === 'OBSERVED'
+            ? PROJECT_AUDIT_ACTIONS.versionObserved
+            : PROJECT_AUDIT_ACTIONS.versionRejected,
+        entityType: editorial ? 'PROJECT_VERSION' : 'PROJECT',
+        entityId: editorial?.id ?? id,
+        before: projectVersionSnapshot(project),
+        after: dto.decision === 'APPROVED' ? projectVersionSnapshot(reviewed) : pendingSnapshot,
         metadata: {
           decision: dto.decision,
           comment: dto.comment?.trim() || null,
+          editorialVersion: editorial?.number ?? null,
+          publicVersionUnchanged: dto.decision !== 'APPROVED' && project.status === 'APPROVED',
           versionBefore: project.version,
-          versionAfter: version,
+          versionAfter: revision,
         },
         request,
       });
@@ -1216,24 +1930,76 @@ export class ProjectsService {
       userId: project.ownerId,
       type: 'CONTENT_REVIEW',
       title: `Tu proyecto fue ${decisionLabel}`,
-      body: dto.comment?.trim() || `La revisión de “${project.title}” ya está disponible.`,
+      body: dto.comment?.trim() || `La revisión de “${editorial ? versionSnapshot(editorial.snapshot).title : project.title}” ya está disponible.`,
       href: '/cuenta?tab=proyectos',
-      dedupeKey: `project-review:${id}:${updated.updatedAt.toISOString()}`,
+      dedupeKey: `project-review:${id}:${editorial?.id ?? updated.updatedAt.toISOString()}:${dto.decision}`,
     });
-    return updated;
+    return projectWithClientIds(updated);
   }
 
   async pendingForReviewer(user: AuthUser) {
-    const where: any = { status: 'PENDING' };
-    if (!user.roles.includes('ADMIN')) where.OR = [{ reviewerId: user.id }, { reviewerId: null }];
-    return this.prisma.project.findMany({ where, orderBy: { createdAt: 'asc' }, include: PUBLIC_INCLUDE });
+    const assignment = user.roles.includes('ADMIN')
+      ? {}
+      : {
+          OR: [
+            { pendingVersion: { is: { reviewerId: user.id } } },
+            { pendingVersion: { is: { reviewerId: null } } },
+            { AND: [{ pendingVersionId: null }, { OR: [{ reviewerId: user.id }, { reviewerId: null }] }] },
+          ],
+        };
+    const projects = await this.prisma.project.findMany({
+      where: {
+        AND: [
+          {
+            OR: [
+              { pendingVersion: { is: { status: 'PENDING' } } },
+              { pendingVersionId: null, status: 'PENDING' },
+            ],
+          },
+          assignment,
+        ],
+      },
+      orderBy: { createdAt: 'asc' },
+      include: MINE_INCLUDE,
+    });
+    return projects.map((project) => projectWithVersion(project, project.pendingVersion));
+  }
+
+  async reviewPreview(user: AuthUser, id: string) {
+    const project = await this.prisma.project.findUnique({ where: { id }, include: MANAGE_INCLUDE });
+    if (!project?.pendingVersion || project.pendingVersion.status !== 'PENDING') {
+      throw new NotFoundException('Versión pendiente no encontrada');
+    }
+    const assigned = project.pendingVersion.reviewerId ?? project.reviewerId;
+    if (!user.roles.includes('ADMIN') && assigned && assigned !== user.id) {
+      throw new ForbiddenException('Esta revisión está asignada a otro docente');
+    }
+    return projectWithVersion(project, project.pendingVersion);
+  }
+
+  async versionHistory(user: AuthUser, id: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id },
+      include: { members: { select: { userId: true } } },
+    });
+    if (!project) throw new NotFoundException('Proyecto no encontrado');
+    const canRead = user.roles.includes('ADMIN')
+      || user.id === project.ownerId
+      || user.id === project.reviewerId
+      || project.members.some((member) => member.userId === user.id);
+    if (!canRead) throw new NotFoundException('Proyecto no encontrado');
+    return this.prisma.projectVersion.findMany({
+      where: { projectId: id },
+      orderBy: [{ number: 'desc' }, { createdAt: 'desc' }],
+      include: PENDING_VERSION_INCLUDE,
+    });
   }
 
   async mine(userId: string) {
     const items = await this.prisma.project.findMany({
       where: { ownerId: userId },
       orderBy: { createdAt: 'desc' },
-      include: PUBLIC_INCLUDE,
+      include: MINE_INCLUDE,
     });
     if (!items.length) return [];
     const approvals = await this.prisma.approvalRequest.findMany({
@@ -1247,11 +2013,14 @@ export class ProjectsService {
       history.push(approval);
       byTarget.set(approval.targetId, history);
     }
-    return items.map((item) => ({ ...item, approvals: byTarget.get(item.id) ?? [] }));
+    return items.map((item) => ({
+      ...projectWithVersion(item, item.pendingVersion),
+      approvals: byTarget.get(item.id) ?? [],
+    }));
   }
 
   async mineDetail(user: AuthUser, id: string) {
-    const project = await this.prisma.project.findUnique({ where: { id }, include: PUBLIC_INCLUDE });
+    const project = await this.prisma.project.findUnique({ where: { id }, include: MINE_INCLUDE });
     if (!project || (project.ownerId !== user.id && !user.roles.includes('ADMIN'))) {
       throw new NotFoundException('Proyecto no encontrado');
     }
@@ -1260,7 +2029,7 @@ export class ProjectsService {
       orderBy: { createdAt: 'desc' },
       include: { reviewer: { select: { username: true, profile: { select: { fullName: true } } } } },
     });
-    return { ...project, approvals };
+    return { ...projectWithVersion(project, project.pendingVersion), approvals };
   }
 
   async likeStatus(userId: string, id: string) {
@@ -1346,7 +2115,7 @@ export class ProjectsController {
   @Public()
   @Get()
   @ApiOperation({ summary: 'Vitrina pública de proyectos aprobados con filtros' })
-  list(@Query() query: any) {
+  list(@Query() query: ListProjectsQueryDto) {
     return this.projects.list(query);
   }
 
@@ -1407,6 +2176,21 @@ export class ProjectsController {
   @ApiOperation({ summary: '[Docente/Admin] Proyectos pendientes de revisión' })
   pending(@CurrentUser() user: AuthUser) {
     return this.projects.pendingForReviewer(user);
+  }
+
+  @Get(':id/review-preview')
+  @Roles('TEACHER', 'ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '[Docente/Admin] Vista previa exacta de la versión sometida a revisión' })
+  reviewPreview(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.projects.reviewPreview(user, id);
+  }
+
+  @Get(':id/versions')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Historial editorial de versiones publicadas, pendientes, observadas y rechazadas' })
+  versions(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.projects.versionHistory(user, id);
   }
 
   @Get(':id/like-status')
@@ -1517,7 +2301,7 @@ export class ProjectsController {
   @Post(':id/review')
   @Roles('TEACHER', 'ADMIN')
   @ApiBearerAuth()
-  @ApiOperation({ summary: '[Docente/Admin] Aprobar, observar o rechazar (+40 pts al aprobar)' })
+  @ApiOperation({ summary: '[Docente/Admin] Aprobar, observar o rechazar y aplicar la regla configurada' })
   review(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: ReviewDto, @Req() request: Request) {
     return this.projects.review(user, id, dto, projectAuditRequestContext(request));
   }
@@ -1550,6 +2334,7 @@ export class ProjectsController {
 }
 
 @Module({
+  imports: [IncubatorClientsModule],
   providers: [ProjectsService],
   controllers: [ProjectsController],
 })

@@ -1,10 +1,22 @@
 import Link from 'next/link';
-import { Calendar, Eye, MapPin, ThumbsUp, Users, Video, CheckCircle2, GraduationCap } from 'lucide-react';
+import {
+  Calendar,
+  CheckCircle2,
+  Clock3,
+  Eye,
+  Lightbulb,
+  MapPin,
+  Monitor,
+  ThumbsUp,
+  Users,
+  Video,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
 import { CoverPlaceholder, TagList } from '@/components/shared';
 import { cn, EVENT_CATEGORIES, NEWS_CATEGORIES, PROJECT_STAGES, formatDate, timeAgo, DIFFICULTY_LABELS } from '@/lib/utils';
-import type { Article, Community, EventItem, Mentorship, News, Project, Question } from '@/lib/types';
+import type { Article, Community, EventItem, IdeaProposal, Mentorship, News, Project, Question } from '@/lib/types';
+import { PointReward } from '@/components/point-reward';
 
 export function ProjectCard({ project }: { project: Project | any }) {
   return (
@@ -163,7 +175,7 @@ export function CommunityCard({ community }: { community: Community }) {
           <span className="flex items-center gap-1.5 font-semibold text-primary">
             <Users className="h-3.5 w-3.5" /> {community._count?.members ?? 0} miembros
           </span>
-          <Badge variant="secondary">+5 pts al unirte</Badge>
+          <Badge variant="secondary"><PointReward reason="UNIRSE_COMUNIDAD" suffix="pts al unirte" /></Badge>
         </div>
       </div>
     </Link>
@@ -242,34 +254,105 @@ export function QuestionCard({ question }: { question: Question }) {
 }
 
 export function MentorshipCard({ mentorship, enrolled }: { mentorship: Mentorship; enrolled?: boolean }) {
+  const isEnrolled = enrolled ?? mentorship.enrolled;
+  const modality = mentorship.modality ?? 'ONLINE';
+  const modalityLabel = modality === 'IN_PERSON' ? 'Presencial' : modality === 'HYBRID' ? 'Híbrida' : 'En línea';
+  const statusLabel = mentorship.status === 'IN_PROGRESS'
+    ? 'En curso'
+    : mentorship.status === 'COMPLETED'
+      ? 'Finalizada'
+      : mentorship.status === 'INACTIVE'
+        ? 'Inactiva'
+        : 'Próxima';
+  const statusClass = mentorship.status === 'IN_PROGRESS'
+    ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+    : mentorship.status === 'COMPLETED' || mentorship.status === 'INACTIVE'
+      ? 'border-border bg-secondary text-muted-foreground'
+      : 'border-cyan-500/30 bg-cyan-500/15 text-cyan-600 dark:text-cyan-400';
+
   return (
-    <Link
-      href={`/mentorias/${mentorship.slug}`}
-      className="group flex flex-col justify-between gap-3 rounded-xl border border-border bg-card p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
-    >
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
+    <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+      <Link href={`/mentorias/${mentorship.slug}`} className="relative block h-44 overflow-hidden border-b border-border bg-secondary">
+        {mentorship.coverUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={mentorship.coverUrl} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+        ) : (
+          <CoverPlaceholder label={mentorship.title[0]} accent={mentorship.community?.accentColor ?? '#14b8a6'} />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
+        <span className={cn('absolute left-3 top-3 rounded-md border px-2 py-1 text-[10px] font-bold uppercase tracking-wide backdrop-blur', statusClass)}>
+          {statusLabel}
+        </span>
+        {isEnrolled && (
+          <span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-md border border-emerald-300/40 bg-emerald-950/80 px-2 py-1 text-[10px] font-bold text-emerald-200 backdrop-blur">
+            <CheckCircle2 className="h-3.5 w-3.5" /> Inscrito
+          </span>
+        )}
+      </Link>
+      <div className="flex flex-1 flex-col gap-3 p-5">
+        <div className="flex flex-wrap gap-1.5">
           <Badge variant="accent">{mentorship.area}</Badge>
           <Badge variant={mentorship.difficulty === 'AVANZADO' ? 'gold' : 'secondary'}>
             {DIFFICULTY_LABELS[mentorship.difficulty] ?? mentorship.difficulty}
           </Badge>
+          <Badge variant="outline">{modalityLabel}</Badge>
         </div>
-        <h3 className="font-serif-heading text-base font-bold leading-snug text-primary transition group-hover:text-accent">
+        <Link href={`/mentorias/${mentorship.slug}`} className="font-serif-heading text-lg font-bold leading-snug text-primary transition hover:text-accent">
           {mentorship.title}
-        </h3>
+        </Link>
         <p className="text-xs text-muted-foreground line-clamp-2">{mentorship.description}</p>
+        <div className="mt-auto space-y-2 border-t border-border pt-3 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <Calendar className="h-4 w-4 text-accent" /> {formatDate(mentorship.startsAt, true)}
+          </span>
+          <span className="flex items-center gap-1.5">
+            {modality === 'ONLINE' ? <Monitor className="h-4 w-4 text-accent" /> : <MapPin className="h-4 w-4 text-accent" />}
+            {modality === 'ONLINE' ? 'Sesión virtual' : mentorship.location ?? modalityLabel}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Users className="h-4 w-4 text-accent" />
+            {mentorship._count?.enrollments ?? 0}{mentorship.capacity ? ` / ${mentorship.capacity}` : ''} participantes
+          </span>
+        </div>
+        <Link href={`/mentorias/${mentorship.slug}`} className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-4 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90">
+          Ver detalles y acciones
+        </Link>
       </div>
-      <div className="flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5">
-          <GraduationCap className="h-4 w-4 text-accent" />
-          {mentorship.mentor?.profile?.fullName ?? mentorship.mentorName ?? 'Mentor ISI'}
-        </span>
-        {enrolled ? (
-          <span className="flex items-center gap-1 font-semibold text-emerald-500"><CheckCircle2 className="h-3.5 w-3.5" /> Inscrito</span>
+    </article>
+  );
+}
+
+export function IdeaCard({ idea }: { idea: IdeaProposal }) {
+  const cover = idea.media?.find((asset) => asset.mime?.startsWith('image/'));
+  return (
+    <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+      <Link href={`/incubadora/ideas/${idea.id}`} className="relative block h-36 overflow-hidden border-b border-border bg-purple-500/10">
+        {cover ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={cover.url} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
         ) : (
-          <span>{formatDate(mentorship.startsAt)}</span>
+          <CoverPlaceholder label={idea.title[0]} accent="#a855f7" />
         )}
+        <span className="absolute left-3 top-3 flex items-center gap-1 rounded-md border border-purple-300/30 bg-purple-950/75 px-2 py-1 text-[10px] font-bold text-purple-100 backdrop-blur">
+          <Lightbulb className="h-3.5 w-3.5" /> Idea aprobada
+        </span>
+      </Link>
+      <div className="flex flex-1 flex-col gap-3 p-4">
+        <div className="flex flex-wrap gap-1.5">
+          {idea.technologies.slice(0, 4).map((technology) => <Badge key={technology} variant="secondary">{technology}</Badge>)}
+        </div>
+        <Link href={`/incubadora/ideas/${idea.id}`} className="font-serif-heading text-lg font-bold leading-snug text-primary transition hover:text-purple-500">
+          {idea.title}
+        </Link>
+        <p className="text-xs text-muted-foreground line-clamp-3">{idea.description}</p>
+        <div className="mt-auto flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
+          <span className="flex min-w-0 items-center gap-1.5 truncate">
+            <Users className="h-4 w-4 text-purple-500" />
+            {idea.owner?.profile?.fullName ?? idea.owner?.username ?? 'Equipo ISI'}
+          </span>
+          <span className="flex shrink-0 items-center gap-1"><Clock3 className="h-3.5 w-3.5" /> {formatDate(idea.decidedAt ?? idea.createdAt)}</span>
+        </div>
       </div>
-    </Link>
+    </article>
   );
 }

@@ -6,6 +6,7 @@ import { EmptyState, SectionHeader } from '@/components/shared';
 import { CommunityViewTabs } from '@/components/community-view-tabs';
 import { CommunityManagementShortcut } from '@/components/community-management-shortcut';
 import SociedadCientificaContent from '../sociedad-cientifica/page';
+import { PointReward } from '@/components/point-reward';
 
 export const revalidate = 60;
 export const metadata: Metadata = { title: 'Sociedad Científica y comunidades' };
@@ -32,8 +33,8 @@ async function CommunitiesDirectory() {
     <div className="container space-y-8 py-10">
       <SectionHeader kicker="Encuentra tu tribu técnica" title="Comunidades de la carrera" />
       <p className="max-w-2xl text-sm text-muted-foreground">
-        Cada comunidad tiene un docente asesor, un líder estudiantil y canales oficiales. Unirte suma
-        <strong className="text-emerald-500"> +5 puntos</strong> y te conecta con proyectos, eventos y mentorías de esa área.
+        Cada comunidad tiene docentes asesores, responsables estudiantiles y canales oficiales. Unirte suma{' '}
+        <PointReward reason="UNIRSE_COMUNIDAD" suffix="puntos" className="text-emerald-500" /> y te conecta con proyectos, eventos y mentorías de esa área.
       </p>
       <CommunityManagementShortcut />
       {communities.length === 0 ? (

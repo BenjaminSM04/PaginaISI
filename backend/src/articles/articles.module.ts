@@ -375,7 +375,7 @@ export class ArticlesController {
 
   @Post()
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Enviar artículo → queda PENDIENTE hasta aprobación (+35 pts al aprobarse)' })
+  @ApiOperation({ summary: 'Enviar artículo → queda PENDIENTE y aplica la regla configurada al aprobarse' })
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateArticleDto) {
     return this.articles.create(user, dto);
   }

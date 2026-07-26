@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Coins, FileClock, Flag, LayoutDashboard, Newspaper, Users } from 'lucide-react';
+import { Building2, Coins, FileClock, Flag, Grid3X3, LayoutDashboard, Newspaper, Users } from 'lucide-react';
 import { RequireAuth } from '@/components/require-auth';
 import { cn } from '@/lib/utils';
 
@@ -13,6 +13,9 @@ const LINKS = [
   { href: '/admin/auditoria', label: 'Auditoría de proyectos', icon: FileClock },
   { href: '/admin/reportes', label: 'Reportes', icon: Flag },
   { href: '/admin/gamificacion', label: 'Puntos e insignias', icon: Coins },
+  { href: '/admin/aplicaciones', label: 'Aplicaciones', icon: Grid3X3 },
+  { href: '/admin/institucion', label: 'Identidad institucional', icon: Building2 },
+  { href: '/admin/incubadora/clientes', label: 'Clientes de incubadora', icon: Building2 },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
