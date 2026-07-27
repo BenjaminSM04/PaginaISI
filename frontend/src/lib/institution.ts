@@ -11,7 +11,7 @@ export const DEFAULT_INSTITUTIONAL_SETTINGS: InstitutionalSettings = {
   institutionName: 'Universidad Privada del Valle',
   shortName: 'Univalle',
   careerName: 'Carrera de Ingeniería de Sistemas',
-  institutionalLogoUrl: 'https://www.univalle.edu/wp-content/uploads/2025/12/LOGO-cua_res-_01.png',
+  institutionalLogoUrl: '/branding/univalle-logo.png',
   careerLogoUrl: null,
   updatedAt: null,
 };

@@ -33,7 +33,7 @@ export default async function PerfilPublicoPage({ params }: { params: Promise<{ 
               <div className="pb-1">
                 <h1 className="font-serif-heading text-2xl font-bold">{p.fullName}</h1>
                 <p className="text-sm text-muted-foreground">
-                  @{user.username} · {p.career ?? 'Ingeniería de Sistemas Informáticos'}{p.semester ? ` · ${p.semester}º semestre` : ''}
+                  @{user.username} · {p.career ?? 'Ingeniería de Sistemas'}{p.semester ? ` · ${p.semester}º semestre` : ''}
                 </p>
               </div>
             </div>

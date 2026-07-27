@@ -276,7 +276,7 @@ model Profile {
   fullName        String
   avatarUrl       String?
   bio             String?
-  career          String  @default("Ingeniería de Sistemas Informáticos")
+  career          String  @default("Ingeniería de Sistemas")
   semester        Int?
   githubUrl       String?
   linkedinUrl     String?
@@ -312,7 +312,7 @@ model InstitutionalSettings {
   institutionName      String   @default("Universidad Privada del Valle")
   shortName            String   @default("Univalle")
   careerName           String   @default("Carrera de Ingeniería de Sistemas")
-  institutionalLogoUrl String?  @default("https://www.univalle.edu/wp-content/uploads/2025/12/LOGO-cua_res-_01.png")
+  institutionalLogoUrl String?  @default("/branding/univalle-logo.png")
   careerLogoUrl        String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt

@@ -72,7 +72,7 @@ export default function RegistroPage() {
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-accent text-white shadow-md">
             <Sparkles className="h-5 w-5" />
           </div>
-          <h1 className="font-serif-heading text-2xl font-bold text-primary">Únete a la comunidad ISI</h1>
+          <h1 className="font-serif-heading text-2xl font-bold text-primary">Únete a Ingeniería de Sistemas</h1>
           <p className="mt-1 text-sm text-muted-foreground">Crea tu cuenta, verifica tu correo y gana <PointReward reason="REGISTRO_COMPLETO" suffix="puntos" className="text-emerald-500" /> de bienvenida.</p>
         </div>
 

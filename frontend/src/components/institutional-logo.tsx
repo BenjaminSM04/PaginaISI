@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useInstitutionalSettings } from '@/lib/use-institutional-settings';
 
+const LOCAL_INSTITUTIONAL_LOGO = '/branding/univalle-logo.png';
+
 interface InstitutionalLogoProps {
   kind?: 'institutional' | 'career';
   className?: string;
@@ -32,11 +34,19 @@ export function InstitutionalLogo({
   fallbackToInstitutional = false,
 }: InstitutionalLogoProps) {
   const { settings } = useInstitutionalSettings();
-  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const [failedUrls, setFailedUrls] = useState<string[]>([]);
   const configuredUrl = kind === 'career' ? settings.careerLogoUrl : settings.institutionalLogoUrl;
-  const url = configuredUrl || (fallbackToInstitutional ? settings.institutionalLogoUrl : null);
+  const candidates = [
+    configuredUrl,
+    ...(kind === 'institutional' || fallbackToInstitutional
+      ? [settings.institutionalLogoUrl, LOCAL_INSTITUTIONAL_LOGO]
+      : []),
+  ].filter((candidate, index, values): candidate is string =>
+    Boolean(candidate) && values.indexOf(candidate) === index,
+  );
+  const url = candidates.find((candidate) => !failedUrls.includes(candidate)) ?? null;
 
-  if (!url || failedUrl === url) return null;
+  if (!url) return null;
 
   return (
     // Los logos configurables pueden vivir en el almacenamiento local, S3 o el dominio institucional.
@@ -46,7 +56,7 @@ export function InstitutionalLogo({
       alt={kind === 'career' && configuredUrl ? `Logo de ${settings.careerName}` : `Logo de ${settings.institutionName}`}
       className={cn('object-contain', className)}
       referrerPolicy="no-referrer"
-      onError={() => setFailedUrl(url)}
+      onError={() => setFailedUrls((current) => current.includes(url) ? current : [...current, url])}
     />
   );
 }

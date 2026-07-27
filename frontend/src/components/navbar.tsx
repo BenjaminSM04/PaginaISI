@@ -216,7 +216,9 @@ export function Navbar() {
             </div>
             <div className="hidden sm:block">
               <div className="font-serif-heading text-base font-bold leading-tight text-primary">{institution.shortName}</div>
-              <div className="max-w-44 truncate text-[10px] font-semibold uppercase tracking-wider text-muted-foreground" title={institution.careerName}>{institution.careerName}</div>
+              <div className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground" title={institution.careerName}>
+                {institution.careerName.replace(/^Carrera\s+de\s+/i, '')}
+              </div>
             </div>
           </Link>
         </div>

@@ -55,7 +55,7 @@ export function ProjectCard({ project }: { project: Project | any }) {
         <div className="flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
           <span className="flex items-center gap-1.5 truncate">
             <Avatar src={project.owner?.profile?.avatarUrl} name={project.owner?.profile?.fullName} className="h-5 w-5 text-[8px]" />
-            {project.owner?.profile?.fullName ?? 'Equipo ISI'}
+            {project.owner?.profile?.fullName ?? 'Equipo de Ingeniería de Sistemas'}
           </span>
           <span className="flex shrink-0 items-center gap-1"><Eye className="h-3.5 w-3.5" /> {project.viewsCount ?? 0}</span>
         </div>
@@ -89,7 +89,7 @@ export function NewsCard({ news }: { news: News }) {
         </div>
         <div className="flex items-center justify-between gap-3 border-t border-border pt-3 text-xs text-muted-foreground">
           <span className="truncate" title={news.project?.title ?? news.community?.name ?? news.author?.profile?.fullName ?? undefined}>
-            {news.project?.title ?? news.community?.name ?? news.author?.profile?.fullName ?? 'Redacción ISI'}
+            {news.project?.title ?? news.community?.name ?? news.author?.profile?.fullName ?? 'Redacción de Ingeniería de Sistemas'}
           </span>
           <span className="flex shrink-0 items-center gap-3">
             <span className="flex items-center gap-1"><ThumbsUp className="h-3.5 w-3.5" /> {news.likesCount ?? 0}</span>
@@ -348,7 +348,7 @@ export function IdeaCard({ idea }: { idea: IdeaProposal }) {
         <div className="mt-auto flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
           <span className="flex min-w-0 items-center gap-1.5 truncate">
             <Users className="h-4 w-4 text-purple-500" />
-            {idea.owner?.profile?.fullName ?? idea.owner?.username ?? 'Equipo ISI'}
+            {idea.owner?.profile?.fullName ?? idea.owner?.username ?? 'Equipo de Ingeniería de Sistemas'}
           </span>
           <span className="flex shrink-0 items-center gap-1"><Clock3 className="h-3.5 w-3.5" /> {formatDate(idea.decidedAt ?? idea.createdAt)}</span>
         </div>

@@ -1,4 +1,4 @@
-# Presentación final del Portal Académico ISI
+# Presentación final del Portal Académico de Ingeniería de Sistemas · Univalle
 
 Este documento es el guion operativo para una defensa de **10 a 15 minutos**. Está basado en las rutas, permisos y datos que existen en el proyecto. La demostración recomendada cuenta una sola historia de extremo a extremo: una publicación pasa por revisión docente, el estudiante recibe el resultado y la gamificación se actualiza, mientras líderes y administradores operan el resto del portal.
 
@@ -8,7 +8,7 @@ Este documento es el guion operativo para una defensa de **10 a 15 minutos**. Es
 
 ### Presentación en 30 segundos
 
-> El Portal ISI integra en una sola plataforma la información institucional y la actividad académica de la carrera. Los estudiantes publican proyectos y artículos, participan en comunidades, eventos, mentorías y foro; los docentes revisan contenido con trazabilidad; y la administración modera, comunica y gestiona la gamificación. No es un conjunto de páginas estáticas: los módulos comparten usuarios, permisos, notificaciones, puntos y relaciones entre contenido.
+> El Portal de Ingeniería de Sistemas de Univalle integra en una sola plataforma la información institucional y la actividad académica de la carrera. Los estudiantes publican proyectos y artículos, participan en comunidades, eventos, mentorías y foro; los docentes revisan contenido con trazabilidad; y la administración modera, comunica y gestiona la gamificación. No es un conjunto de páginas estáticas: los módulos comparten usuarios, permisos, notificaciones, puntos y relaciones entre contenido.
 
 ### Problema y respuesta
 

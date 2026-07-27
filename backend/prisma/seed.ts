@@ -207,7 +207,7 @@ async function main() {
             githubUrl: opts.github,
             linkedinUrl: opts.linkedin,
             websiteUrl: opts.website,
-            career: 'Ingeniería de Sistemas Informáticos',
+            career: 'Ingeniería de Sistemas',
           },
         },
       },
@@ -283,7 +283,7 @@ async function main() {
   const incubadora = await prisma.community.create({
     data: {
       slug: 'incubadora', name: 'Incubadora de Proyectos', accentColor: '#a78bfa',
-      logoUrl: communityLogo('Incubadora ISI'),
+      logoUrl: communityLogo('Incubadora de Ingeniería de Sistemas'),
       coverUrl: unsplash('photo-1522071820081-009f0129c71c'),
       description: 'Acompañamiento a proyectos con potencial de producto real.',
       longDescription: 'La incubadora conecta equipos estudiantiles con docentes mentores para convertir proyectos de materia en productos con usuarios reales.',
@@ -369,7 +369,7 @@ async function main() {
       slug: 'convenio-empresa-tech',
       title: 'Nuevo convenio amplía las prácticas profesionales para estudiantes ISI',
       summary: 'La carrera firmó un acuerdo con TechCorp Bolivia para abrir plazas de prácticas, mentorías y revisiones de portafolio.',
-      content: 'La carrera de Ingeniería de Sistemas Informáticos suscribió un convenio de cooperación con TechCorp Bolivia orientado a estudiantes de los últimos semestres. El acuerdo habilita prácticas supervisadas en desarrollo de software, datos, infraestructura y ciberseguridad.\n\nLa primera convocatoria ofrecerá doce plazas y un ciclo de preparación con revisión de currículum, simulación de entrevistas y acompañamiento docente. La selección considerará desempeño académico, portafolio y participación en proyectos.\n\nLos resultados y fechas de postulación se publicarán en el portal institucional.',
+      content: 'La Carrera de Ingeniería de Sistemas suscribió un convenio de cooperación con TechCorp Bolivia orientado a estudiantes de los últimos semestres. El acuerdo habilita prácticas supervisadas en desarrollo de software, datos, infraestructura y ciberseguridad.\n\nLa primera convocatoria ofrecerá doce plazas y un ciclo de preparación con revisión de currículum, simulación de entrevistas y acompañamiento docente. La selección considerará desempeño académico, portafolio y participación en proyectos.\n\nLos resultados y fechas de postulación se publicarán en el portal institucional.',
       category: 'CONVENIOS', tags: ['convenio', 'prácticas', 'empleabilidad'], likesCount: 0,
       authorId: admin.id, coverUrl: unsplash('photo-1521791055366-0d553872125f'), publishedInDays: -6,
     },

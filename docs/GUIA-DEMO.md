@@ -1,4 +1,4 @@
-# Guía de demostración del Portal ISI
+# Guía de demostración del Portal de Ingeniería de Sistemas · Univalle
 
 Para una defensa cronometrada, con discurso, recorrido por roles, contingencias y preguntas técnicas, consulta [`PRESENTACION-FINAL.md`](PRESENTACION-FINAL.md).
 
@@ -27,6 +27,17 @@ docker compose logs api | grep -E "Primera base|Seed inicial"
 ```
 
 En PowerShell sustituye `grep` por `Select-String -Pattern 'Primera base|Seed inicial'`.
+
+Si la base demo fue creada antes de incorporar aplicaciones institucionales,
+ideas y clientes reutilizables de Incubadora, completa únicamente esos datos
+demostrativos —sin resetear usuarios ni contenidos— con:
+
+```powershell
+docker compose exec -T api npm run seed:presentation
+```
+
+Los registros agregados por este comando usan IDs y rótulos `demo`, requieren
+un `WEB_ORIGIN` local y pueden retirarse sin confundirlos con información real.
 
 Todas las cuentas demo usan `password123` y el portal solo publica puertos en `127.0.0.1`.
 
@@ -174,7 +185,7 @@ Con `AUTH_DEV_LINKS=true` y `WEB_ORIGIN` en loopback, `/olvide-contrasena` y el 
 
 ## 5. Datos listos para enseñar
 
-Una base nueva contiene 9 usuarios, 6 comunidades, 10 noticias, 6 proyectos con 13 hitos y 12 imágenes, 4 artículos, 7 eventos con 18 inscripciones y 8 imágenes, 3 mentorías, 6 preguntas/respuestas con 5 imágenes, 10 insignias, 93 movimientos de puntos y 33 entradas de auditoría. Las portadas son remotas para no ocupar el storage local; las cargas hechas durante la demo sí se decodifican, eliminan metadatos y almacenan como WebP.
+Una base nueva contiene 9 usuarios, 6 comunidades, 10 noticias, 6 proyectos con 13 hitos y 12 imágenes, 4 artículos, 7 eventos con 18 inscripciones y 8 imágenes, 3 mentorías, 6 preguntas/respuestas con 5 imágenes, 10 insignias, 93 movimientos de puntos y 33 entradas de auditoría. Al ejecutar `seed:presentation` se completan además 4 aplicaciones institucionales, 1 cliente demostrativo reutilizable y 1 idea aprobada de demostración. Las portadas son remotas para no ocupar el storage local; las cargas hechas durante la demo sí se decodifican, eliminan metadatos y almacenan como WebP.
 
 Escenarios especialmente completos:
 

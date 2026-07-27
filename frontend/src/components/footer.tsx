@@ -22,7 +22,7 @@ export function Footer() {
           </p>
           <div className="flex items-center gap-3 pt-1 text-muted-foreground">
             <MapPin className="h-4 w-4" />
-            <span className="text-xs">Campus universitario — Laboratorios de Sistemas</span>
+            <span className="text-xs"><InstitutionalText field="institutionName" /> · Bolivia</span>
           </div>
         </div>
         <div>
@@ -50,7 +50,7 @@ export function Footer() {
         <div className="container flex flex-col items-center justify-between gap-2 text-xs text-muted-foreground sm:flex-row">
           <span>© {new Date().getFullYear()} <InstitutionalText field="institutionName" /> · <InstitutionalText field="careerName" />.</span>
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:justify-end">
-            <span className="flex items-center gap-1"><FlaskConical className="h-3.5 w-3.5 text-accent" /> Hecho por estudiantes ISI</span>
+            <span className="flex items-center gap-1"><FlaskConical className="h-3.5 w-3.5 text-accent" /> Hecho por estudiantes de Ingeniería de Sistemas</span>
             <span className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> Entorno académico de demostración</span>
           </div>
         </div>

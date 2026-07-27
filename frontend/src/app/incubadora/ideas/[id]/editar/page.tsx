@@ -39,7 +39,7 @@ function EditarIdeaContent() {
     <div className="container max-w-5xl space-y-7 py-10">
       <BackButton fallbackHref="/incubadora/mis-ideas" label="Volver a mis ideas" variant="ghost" />
       <header>
-        <span className="section-kicker">Incubadora ISI</span>
+        <span className="section-kicker">Incubadora de Ingeniería de Sistemas</span>
         <h1 className="mt-1 font-serif-heading text-3xl font-bold text-primary">Editar postulación</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {['OBSERVED', 'REJECTED'].includes(idea.status)

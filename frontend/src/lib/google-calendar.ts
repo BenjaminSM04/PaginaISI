@@ -28,7 +28,7 @@ export function buildGoogleCalendarUrl(event: CalendarEventData, timeZone = DEFA
   ].filter(Boolean).join('\n\n');
   const location = event.isOnline
     ? event.meetingUrl || 'Evento en línea'
-    : event.location || 'Campus ISI';
+    : event.location || 'Actividad de Ingeniería de Sistemas';
 
   const params = new URLSearchParams({
     action: 'TEMPLATE',

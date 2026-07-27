@@ -44,16 +44,16 @@ export default async function HomePage() {
   return (
     <div className="space-y-16 pb-12">
       {/* HERO */}
-      <section className="container pt-6">
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#0C447C] via-[#093561] to-[#082F54] text-white shadow-xl">
+      <section className="container min-w-0 max-w-full pt-6">
+        <div className="relative min-w-0 max-w-full overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#0C447C] via-[#093561] to-[#082F54] text-white shadow-xl">
           <div className="grid-bg absolute inset-0 opacity-40" />
-          <div className="relative grid grid-cols-1 items-center gap-10 px-6 py-12 md:py-16 lg:grid-cols-12 lg:px-10">
-            <div className="space-y-6 lg:col-span-7">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-cyan-300 backdrop-blur-sm">
+          <div className="relative grid min-w-0 grid-cols-1 items-center gap-10 px-6 py-12 md:py-16 lg:grid-cols-12 lg:px-10">
+            <div className="min-w-0 space-y-6 lg:col-span-7">
+              <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-cyan-300 backdrop-blur-sm">
                 <Sparkles className="h-4 w-4" /> <InstitutionalText field="institutionName" />
               </div>
-              <h1 className="font-serif-heading text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
-                <InstitutionalText field="careerName" compact />: <span className="block text-cyan-400 sm:inline">innovación y comunidad</span>.
+              <h1 className="break-words font-serif-heading text-3xl font-bold leading-tight tracking-tight min-[420px]:text-4xl sm:text-5xl">
+                <InstitutionalText field="careerName" compact className="break-words" />: <span className="block text-cyan-400 sm:inline">innovación y comunidad<span className="text-white">.</span></span>
               </h1>
               <p className="max-w-2xl text-base leading-relaxed text-white/85 sm:text-lg">
                 Bienvenido al portal de la <strong className="text-white"><InstitutionalText field="careerName" /></strong> de <InstitutionalText field="shortName" />:
@@ -73,16 +73,16 @@ export default async function HomePage() {
               </div>
             </div>
 
-            <div className="lg:col-span-5">
-              <div className="glass relative space-y-4 overflow-hidden rounded-2xl p-6 shadow-2xl">
+            <div className="min-w-0 lg:col-span-5">
+              <div className="glass relative min-w-0 space-y-4 overflow-hidden rounded-2xl p-4 shadow-2xl sm:p-6">
                 <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rotate-12 rounded-2xl border-2 border-cyan-400/25" />
                 <div className="pointer-events-none absolute -bottom-10 -left-10 h-40 w-40 -rotate-6 rounded-2xl border-2 border-amber-300/20" />
-                <div className="relative flex items-center justify-between border-b border-white/10 pb-3">
-                  <div className="flex items-center gap-3">
+                <div className="relative flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
+                  <div className="flex min-w-0 items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-white p-0.5">
                       <InstitutionalLogo className="h-full w-full" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-sm font-bold">Ecosistema <InstitutionalText field="shortName" /></div>
                       <div className="text-xs text-cyan-300">Datos publicados en el portal</div>
                     </div>
@@ -101,8 +101,8 @@ export default async function HomePage() {
                 </div>
                 {featuredEvent && (
                   <Link href={`/eventos/${featuredEvent.slug}`} className="relative block space-y-2 rounded-xl border border-white/10 bg-white/5 p-3.5 transition hover:bg-white/10">
-                    <div className="flex justify-between text-xs font-semibold">
-                      <span className="line-clamp-1">{featuredEvent.title}</span>
+                    <div className="flex min-w-0 justify-between gap-2 text-xs font-semibold">
+                      <span className="min-w-0 line-clamp-1">{featuredEvent.title}</span>
                       <span className="shrink-0 text-cyan-300">{formatDate(featuredEvent.startsAt)}</span>
                     </div>
                     {featuredEvent.capacity && (
@@ -188,12 +188,12 @@ export default async function HomePage() {
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl border border-border bg-secondary/40 p-4">
-                <h3 className="text-sm font-bold text-primary">Misión</h3>
-                <p className="mt-1 text-xs text-muted-foreground">Formar profesionales íntegros en sistemas informáticos, con base científica, práctica intensiva y compromiso con su entorno.</p>
+                <h3 className="text-sm font-bold text-primary">Propósito del portal</h3>
+                <p className="mt-1 text-xs text-muted-foreground">Dar visibilidad al talento estudiantil y reunir proyectos, investigación y participación académica en un solo espacio.</p>
               </div>
               <div className="rounded-xl border border-border bg-secondary/40 p-4">
-                <h3 className="text-sm font-bold text-primary">Visión</h3>
-                <p className="mt-1 text-xs text-muted-foreground">Ser referente regional en formación tecnológica, investigación aplicada e innovación estudiantil.</p>
+                <h3 className="text-sm font-bold text-primary">Proyección del portal</h3>
+                <p className="mt-1 text-xs text-muted-foreground">Conectar estudiantes, docentes, comunidades y aliados alrededor de la innovación en Ingeniería de Sistemas.</p>
               </div>
             </div>
           </div>

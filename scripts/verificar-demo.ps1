@@ -97,14 +97,14 @@ try {
   }
 
   $pageChecks = @(
-    @{ Path = '/'; Text = 'Ingeniería de Sistemas Informáticos' },
+    @{ Path = '/'; Text = 'Ingeniería de Sistemas' },
     @{ Path = '/comunidades'; Text = 'Sociedad Científica' },
     @{ Path = '/proyectos'; Text = 'Proyectos' },
     @{ Path = '/articulos'; Text = 'Artículos científicos' },
     @{ Path = '/eventos'; Text = 'Eventos' },
     @{ Path = '/noticias'; Text = 'Noticias' },
     @{ Path = '/foro'; Text = 'Foro' },
-    @{ Path = '/login'; Text = 'Iniciar sesión' }
+    @{ Path = '/login'; Text = 'Ingresar · Univalle' }
   )
 
   foreach ($check in $pageChecks) {

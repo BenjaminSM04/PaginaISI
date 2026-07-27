@@ -6,7 +6,7 @@
 
 ## Contexto
 
-La carrera de Ingeniería de Sistemas Informáticos necesita un portal que no sea solo informativo: combina página institucional, sociedad científica, comunidades, vitrina de proyectos y artículos con aprobación docente, eventos con inscripción, foro Q&A tipo Stack Overflow y un sistema de gamificación (puntos e insignias) con rankings.
+La Carrera de Ingeniería de Sistemas necesita un portal que no sea solo informativo: combina página institucional, sociedad científica, comunidades, vitrina de proyectos y artículos con aprobación docente, eventos con inscripción, foro Q&A tipo Stack Overflow y un sistema de gamificación (puntos e insignias) con rankings.
 
 Restricciones dadas:
 

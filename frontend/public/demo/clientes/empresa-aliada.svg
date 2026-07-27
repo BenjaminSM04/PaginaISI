@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Empresa aliada de demostración</title>
+  <desc id="desc">Identificador visual genérico y explícitamente demostrativo.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B4778"/>
+      <stop offset="1" stop-color="#14B8A6"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#background)"/>
+  <path d="M128 300V172l128-62 128 62v128H128Z" fill="#fff" opacity=".18"/>
+  <path d="M164 286V194h184v92M128 332h256" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="28"/>
+  <path d="M210 286v-44h92v44" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="24"/>
+  <rect x="116" y="354" width="280" height="70" rx="35" fill="#fff"/>
+  <text x="256" y="402" fill="#0B4778" font-family="Arial, sans-serif" font-size="38" font-weight="700" text-anchor="middle">DEMO</text>
+</svg>

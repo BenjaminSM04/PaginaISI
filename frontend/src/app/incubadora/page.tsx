@@ -24,7 +24,7 @@ export default async function IncubadoraPage() {
         <div className="grid-bg absolute inset-0 opacity-30" />
         <div className="relative max-w-2xl space-y-4">
           <div className="inline-flex items-center gap-2 rounded-full border border-purple-400/30 bg-purple-400/10 px-3.5 py-1.5 text-xs font-semibold text-purple-300">
-            <Lightbulb className="h-4 w-4" /> Incubadora ISI
+            <Lightbulb className="h-4 w-4" /> Incubadora de Ingeniería de Sistemas
           </div>
           <h1 className="font-serif-heading text-3xl font-bold leading-tight sm:text-4xl">
             De proyecto de aula a <span className="text-purple-300">producto real</span>

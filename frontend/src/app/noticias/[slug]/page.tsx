@@ -28,7 +28,7 @@ export default async function NoticiaDetailPage({ params }: { params: Promise<{ 
         <div className="flex flex-wrap items-center gap-4 border-y border-border py-3 text-sm text-muted-foreground">
           <span className="flex items-center gap-2">
             <Avatar src={news.author?.profile?.avatarUrl} name={news.author?.profile?.fullName} className="h-7 w-7" />
-            {news.author?.profile?.fullName ?? 'Redacción ISI'}
+            {news.author?.profile?.fullName ?? 'Redacción de Ingeniería de Sistemas'}
           </span>
           <span className="flex items-center gap-1.5"><CalendarDays className="h-4 w-4" /> {formatDate(news.publishedAt)}</span>
           <LikeButton

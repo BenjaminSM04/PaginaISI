@@ -51,7 +51,7 @@ async function SociedadCientificaContent() {
             Donde la curiosidad se convierte en <span className="text-cyan-400">investigación aplicada</span>
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-white/80">
-            La Sociedad Científica de Ingeniería de Sistemas Informáticos agrupa a las comunidades técnicas de la carrera:
+            La Sociedad Científica de Ingeniería de Sistemas agrupa a las comunidades técnicas de la carrera:
             organizamos competencias, publicamos investigación estudiantil y llevamos proyectos de aula a producción.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">

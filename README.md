@@ -1,4 +1,4 @@
-# Portal Académico ISI — Ingeniería de Sistemas Informáticos
+# Portal Académico ISI — Ingeniería de Sistemas
 
 [![CI](https://github.com/BenjaminSM04/PaginaISI/actions/workflows/ci.yml/badge.svg)](https://github.com/BenjaminSM04/PaginaISI/actions/workflows/ci.yml)
 

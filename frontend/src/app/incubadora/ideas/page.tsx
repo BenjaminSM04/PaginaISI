@@ -41,7 +41,7 @@ export default function IdeasIncubadoraPage() {
       <BackButton fallbackHref="/incubadora" label="Volver a incubadora" variant="ghost" />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <span className="section-kicker">Incubadora ISI</span>
+          <span className="section-kicker">Incubadora de Ingeniería de Sistemas</span>
           <h1 className="mt-1 font-serif-heading text-3xl font-bold text-primary">Ideas aprobadas</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
             Propuestas revisadas que pueden convertirse en proyectos, alianzas o equipos interdisciplinarios.
