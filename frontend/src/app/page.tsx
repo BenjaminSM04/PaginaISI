@@ -44,7 +44,7 @@ export default async function HomePage() {
   return (
     <div className="space-y-16 pb-12">
       {/* HERO */}
-      <section className="container min-w-0 max-w-full pt-6">
+      <section className="container min-w-0 pt-6">
         <div className="relative min-w-0 max-w-full overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#0C447C] via-[#093561] to-[#082F54] text-white shadow-xl">
           <div className="grid-bg absolute inset-0 opacity-40" />
           <div className="relative grid min-w-0 grid-cols-1 items-center gap-10 px-6 py-12 md:py-16 lg:grid-cols-12 lg:px-10">
