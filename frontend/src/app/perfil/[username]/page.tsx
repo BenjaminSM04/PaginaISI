@@ -25,7 +25,7 @@ export default async function PerfilPublicoPage({ params }: { params: Promise<{ 
     <div className="container space-y-8 py-10">
       {/* Cabecera de perfil */}
       <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        <div className="grid-bg h-28 bg-gradient-to-r from-[#0C447C] to-[#082F54]" />
+        <div className="grid-bg h-28 bg-gradient-to-r from-hero to-hero-end" />
         <div className="px-6 pb-6">
           <div className="-mt-10 flex flex-wrap items-end justify-between gap-4">
             <div className="flex items-end gap-4">
@@ -71,7 +71,7 @@ export default async function PerfilPublicoPage({ params }: { params: Promise<{ 
               <div className="font-serif-heading text-2xl font-bold text-purple-500">{p.researchPoints ?? 0}</div>
               <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Research</div>
             </div>
-            <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 text-center">
+            <div className="rounded-xl border border-success/40 bg-success/10 p-3 text-center">
               <div className="font-serif-heading text-2xl font-bold text-emerald-500">{p.communityPoints ?? 0}</div>
               <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Community</div>
             </div>
@@ -123,8 +123,8 @@ export default async function PerfilPublicoPage({ params }: { params: Promise<{ 
                 <div className="text-xl font-bold">{stats.answersCount ?? 0}</div>
                 <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Respuestas</div>
               </div>
-              <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 text-center">
-                <div className="flex items-center justify-center gap-1 text-xl font-bold text-emerald-500">
+              <div className="rounded-xl border border-success/40 bg-success/10 p-3 text-center">
+                <div className="flex items-center justify-center gap-1 text-xl font-bold text-success">
                   <CheckCircle2 className="h-4 w-4" /> {stats.acceptedCount ?? 0}
                 </div>
                 <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Aceptadas</div>
@@ -147,7 +147,7 @@ export default async function PerfilPublicoPage({ params }: { params: Promise<{ 
                 <div key={ub.badge.id} className="flex items-start gap-3 rounded-lg border border-border/70 bg-secondary/20 p-2.5">
                   <div
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border"
-                    style={{ backgroundColor: `${ub.badge.color ?? '#0C447C'}22`, borderColor: `${ub.badge.color ?? '#0C447C'}55`, color: ub.badge.color ?? '#0C447C' }}
+                    style={{ backgroundColor: 'color-mix(in srgb, ' + (ub.badge.color ?? 'hsl(var(--primary))') + ' 13%, transparent)', borderColor: 'color-mix(in srgb, ' + (ub.badge.color ?? 'hsl(var(--primary))') + ' 33%, transparent)', color: ub.badge.color ?? 'hsl(var(--primary))' }}
                   >
                     <BadgeIcon icon={ub.badge.icon} label={ub.badge.name} className="h-4 w-4" />
                   </div>

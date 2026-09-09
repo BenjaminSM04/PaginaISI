@@ -62,8 +62,8 @@ function ResetPasswordContent() {
         </div>
 
         {done ? (
-          <div className="space-y-4 rounded-2xl border border-emerald-500/30 bg-card p-6 text-center shadow-sm">
-            <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-500" />
+          <div className="space-y-4 rounded-2xl border border-success/30 bg-card p-6 text-center shadow-sm">
+            <CheckCircle2 className="mx-auto h-10 w-10 text-success" />
             <div>
               <h2 className="font-bold">Contraseña actualizada</h2>
               <p className="mt-1 text-sm text-muted-foreground">Todas tus sesiones anteriores fueron cerradas por seguridad.</p>
@@ -72,7 +72,7 @@ function ResetPasswordContent() {
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
-            {token === '' && <p role="alert" className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">Este enlace está incompleto. Solicita una nueva recuperación.</p>}
+            {token === '' && <p role="alert" className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">Este enlace está incompleto. Solicita una nueva recuperación.</p>}
             <div className="space-y-1.5">
               <Label htmlFor="reset-password">Nueva contraseña</Label>
               <Input id="reset-password" type="password" autoComplete="new-password" minLength={8} maxLength={72} value={password} onChange={(event) => setPassword(event.target.value)} required />
@@ -81,7 +81,7 @@ function ResetPasswordContent() {
               <Label htmlFor="reset-confirm">Confirmar contraseña</Label>
               <Input id="reset-confirm" type="password" autoComplete="new-password" minLength={8} maxLength={72} value={confirm} onChange={(event) => setConfirm(event.target.value)} required />
             </div>
-            {error && <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">{error}</p>}
+            {error && <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{error}</p>}
             <Button type="submit" className="w-full" size="lg" disabled={loading || token === null || token === ''}>
               {loading ? <Loader2 className="animate-spin" /> : <KeyRound />} Guardar contraseña
             </Button>

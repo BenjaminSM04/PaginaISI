@@ -266,10 +266,10 @@ export function CommunityMembersManager({ community }: { community: Pick<Communi
         />
       </div>
 
-      {error && <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">{error}</p>}
-      {success && <p role="status" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-600 dark:text-emerald-400">{success}</p>}
+      {error && <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{error}</p>}
+      {success && <p role="status" className="rounded-lg border border-success/30 bg-success/10 p-3 text-sm text-success">{success}</p>}
       {membersQuery.error && (
-        <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">
+        <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
           {membersQuery.error instanceof Error ? membersQuery.error.message : 'No se pudieron cargar los miembros'}
         </p>
       )}
@@ -340,7 +340,7 @@ export function CommunityMembersManager({ community }: { community: Pick<Communi
                         type="button"
                         size="sm"
                         variant="ghost"
-                        className="text-red-500 hover:text-red-600"
+                        className="text-danger hover:text-danger"
                         disabled={!!busyAction || isSelfResponsible || teacherRestricted}
                         title={
                           isSelfResponsible

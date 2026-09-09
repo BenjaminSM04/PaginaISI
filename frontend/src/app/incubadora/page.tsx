@@ -68,7 +68,7 @@ export default async function IncubadoraPage() {
         <section className="space-y-4">
           <div className="flex items-center gap-2">
             <h2 className="font-serif-heading text-xl font-bold text-primary">Equipos buscando integrantes</h2>
-            <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-bold text-emerald-500">{recruiting.length} abiertos</span>
+            <span className="rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-bold text-success">{recruiting.length} abiertos</span>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {recruiting.map((p) => <ProjectCard key={p.id} project={p} />)}

@@ -100,7 +100,7 @@ function BuscarContent() {
       )}
 
       {!isFetching && isError && (
-        <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-5 text-sm text-red-600 dark:text-red-400">
+        <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-5 text-sm text-danger">
           <div className="flex items-start gap-3">
             <AlertTriangle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />
             <div>

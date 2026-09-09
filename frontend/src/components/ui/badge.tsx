@@ -12,7 +12,7 @@ const badgeVariants = cva(
         accent: 'border-transparent bg-accent/15 text-accent border-accent/30',
         gold: 'border-gold/40 bg-gold/15 text-gold',
         outline: 'text-foreground border-border',
-        success: 'border-emerald-500/30 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+        success: 'border-success/30 bg-success/15 text-success',
       },
     },
     defaultVariants: { variant: 'default' },

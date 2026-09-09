@@ -31,16 +31,16 @@ async function SociedadCientificaContent() {
   return (
     <div className="pb-12">
       {/* Hero cyber */}
-      <section className="relative overflow-hidden border-b border-border bg-[#071426] text-white">
+      <section className="relative overflow-hidden border-b border-border bg-hero-end text-white">
         <div className="grid-bg absolute inset-0 opacity-60" />
         <div className="pointer-events-none absolute left-8 top-16 hidden h-28 w-px bg-gradient-to-b from-transparent via-cyan-400/50 to-transparent lg:block" />
         <div className="pointer-events-none absolute bottom-16 right-8 hidden h-28 w-px bg-gradient-to-b from-transparent via-cyan-400/50 to-transparent lg:block" />
-        <div className="pointer-events-none absolute right-10 top-24 hidden font-mono text-[9px] uppercase tracking-[0.3em] text-cyan-400/30 lg:block">
+        <div className="pointer-events-none absolute right-10 top-24 hidden font-mono text-[9px] uppercase tracking-[0.3em] text-hero-accent/30 lg:block">
           SYS_CORE: STABLE<br />NODE_SYNC: 100%
         </div>
 
         <div className="container relative py-16 text-center md:py-24">
-          <div className="hud-chip mx-auto mb-8 border-cyan-400/40 bg-cyan-400/10 text-cyan-300">
+          <div className="hud-chip mx-auto mb-8 border-hero-accent/40 bg-cyan-400/10 text-hero-accent">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-400" />
@@ -48,7 +48,7 @@ async function SociedadCientificaContent() {
             Sociedad_Científica // Convocatoria_abierta
           </div>
           <h1 className="mx-auto max-w-3xl font-serif-heading text-4xl font-bold leading-tight sm:text-5xl">
-            Donde la curiosidad se convierte en <span className="text-cyan-400">investigación aplicada</span>
+            Donde la curiosidad se convierte en <span className="text-hero-accent">investigación aplicada</span>
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-white/80">
             La Sociedad Científica de Ingeniería de Sistemas agrupa a las comunidades técnicas de la carrera:
@@ -68,7 +68,7 @@ async function SociedadCientificaContent() {
               { icon: Globe, value: '3', label: 'Competencias intl.' },
             ].map((s) => (
               <div key={s.label} className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-                <s.icon className="mx-auto mb-1.5 h-5 w-5 text-cyan-400" />
+                <s.icon className="mx-auto mb-1.5 h-5 w-5 text-hero-accent" />
                 <div className="font-mono text-xl font-bold">{s.value}</div>
                 <div className="text-[10px] uppercase tracking-widest text-white/60">{s.label}</div>
               </div>
@@ -78,7 +78,7 @@ async function SociedadCientificaContent() {
       </section>
 
       <section className="container pt-6" aria-label="Aviso sobre el contenido demostrativo">
-        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-center text-xs text-amber-700 dark:text-amber-300">
+        <p className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-center text-xs text-warning">
           Presentación demostrativa: los logros e indicadores de esta sección son datos de muestra y deben reemplazarse por información institucional validada antes de una publicación oficial.
         </p>
       </section>
@@ -169,10 +169,10 @@ async function SociedadCientificaContent() {
 
       {/* CTA canales */}
       <section className="container">
-        <div className="relative overflow-hidden rounded-2xl border border-accent/30 bg-[#071426] p-8 text-center text-white md:p-12">
+        <div className="relative overflow-hidden rounded-2xl border border-accent/30 bg-hero-end p-8 text-center text-white md:p-12">
           <div className="grid-bg absolute inset-0 opacity-50" />
           <div className="relative space-y-4">
-            <MessageCircle className="mx-auto h-8 w-8 text-cyan-400" />
+            <MessageCircle className="mx-auto h-8 w-8 text-hero-accent" />
             <h2 className="font-serif-heading text-2xl font-bold sm:text-3xl">¿Listo para sumarte?</h2>
             <p className="mx-auto max-w-xl text-sm text-white/75">
               Crea tu cuenta, únete a una comunidad y entra a los canales oficiales. La sociedad científica está abierta

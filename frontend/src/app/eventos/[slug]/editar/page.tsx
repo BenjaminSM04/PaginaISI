@@ -28,7 +28,7 @@ function EditarEventoContent() {
         <h1 className="mt-1 flex items-center gap-2 font-serif-heading text-3xl font-bold text-primary"><Pencil /> Editar evento</h1>
       </div>
       {isLoading && <div className="flex justify-center rounded-xl border border-border py-16"><Loader2 className="animate-spin text-primary" /></div>}
-      {error && <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-500">{error instanceof Error ? error.message : 'No se pudo cargar el evento'}</p>}
+      {error && <p role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger">{error instanceof Error ? error.message : 'No se pudo cargar el evento'}</p>}
       {data && <EventForm initial={data} />}
     </div>
   );

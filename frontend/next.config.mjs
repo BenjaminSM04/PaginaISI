@@ -1,23 +1,15 @@
 /** @type {import('next').NextConfig} */
-const apiOrigin = (() => {
-  try {
-    return new URL(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').origin;
-  } catch {
-    return 'http://localhost:4000';
-  }
-})();
-
 const contentSecurityPolicy = [
   "default-src 'self'",
   "base-uri 'self'",
   "object-src 'none'",
   "form-action 'self'",
   "frame-ancestors 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}`,
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data:",
   "img-src 'self' data: blob: http: https:",
-  `connect-src 'self' ${apiOrigin}`,
+  "connect-src 'self'",
   "frame-src 'self' http: https:",
   "worker-src 'self' blob:",
 ].join('; ');
@@ -25,6 +17,7 @@ const contentSecurityPolicy = [
 const nextConfig = {
   output: 'standalone',
   poweredByHeader: false,
+  experimental: { proxyClientMaxBodySize: '32mb' },
   async headers() {
     return [
       {

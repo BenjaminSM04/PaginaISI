@@ -7,7 +7,9 @@
     "build": "next build",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm run lint && npm run build",
+    "test": "node --test test/identity-api.test.cjs",
+    "test:proxy": "node --test test/proxy-smoke.cjs",
+    "check": "npm run typecheck && npm run lint && npm test && npm run build",
     "start": "next start"
   },
   "dependencies": {

@@ -314,6 +314,13 @@ model InstitutionalSettings {
   careerName           String   @default("Carrera de Ingeniería de Sistemas")
   institutionalLogoUrl String?  @default("/branding/univalle-logo.png")
   careerLogoUrl        String?
+  institutionalLogoDarkUrl String?
+  careerLogoDarkUrl     String?
+  faviconUrl           String?
+  logoMaxHeight        Int      @default(48)
+  logoMaxWidth         Int      @default(160)
+  logoObjectFit        String   @default("contain")
+  theme                Json     @default("{}")
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 }

@@ -59,7 +59,7 @@ function VoteBox({
       >
         <ChevronUp className="h-5 w-5" />
       </button>
-      <span className={cn('font-bold tabular-nums', score > 0 ? 'text-accent' : score < 0 ? 'text-red-500' : 'text-muted-foreground')}>
+      <span className={cn('font-bold tabular-nums', score > 0 ? 'text-accent' : score < 0 ? 'text-danger' : 'text-muted-foreground')}>
         {score}
       </span>
       <button
@@ -68,7 +68,7 @@ function VoteBox({
         title="Voto negativo"
         className={cn(
           'flex h-8 w-8 items-center justify-center rounded-lg border transition disabled:opacity-40',
-          myVote === -1 ? 'border-red-500 bg-red-500/15 text-red-500' : 'border-border hover:border-red-500 hover:text-red-500',
+          myVote === -1 ? 'border-danger bg-danger/15 text-danger' : 'border-border hover:border-danger hover:text-danger',
         )}
       >
         <ChevronDown className="h-5 w-5" />
@@ -162,8 +162,8 @@ export default function PreguntaDetailPage() {
   if (isError) {
     return (
       <div className="container flex min-h-[50vh] max-w-2xl items-center justify-center py-12">
-        <section role="alert" aria-labelledby="question-error-title" className="w-full rounded-2xl border border-red-500/30 bg-card p-8 text-center shadow-sm">
-          <AlertTriangle aria-hidden="true" className="mx-auto h-9 w-9 text-red-500" />
+        <section role="alert" aria-labelledby="question-error-title" className="w-full rounded-2xl border border-danger/30 bg-card p-8 text-center shadow-sm">
+          <AlertTriangle aria-hidden="true" className="mx-auto h-9 w-9 text-danger" />
           <h1 id="question-error-title" className="mt-4 font-serif-heading text-2xl font-bold text-primary">No pudimos cargar la pregunta</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             {queryError instanceof Error ? queryError.message : 'Comprueba tu conexión e inténtalo nuevamente.'}
@@ -244,7 +244,7 @@ export default function PreguntaDetailPage() {
         </div>
       </div>
 
-      {error && <p className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">{error}</p>}
+      {error && <p className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{error}</p>}
 
       {/* Respuestas */}
       <h2 className="font-serif-heading text-xl font-bold text-primary">
@@ -259,11 +259,11 @@ export default function PreguntaDetailPage() {
               key={answer.id}
               className={cn(
                 'rounded-xl border bg-card p-5 shadow-sm',
-                answer.isAccepted ? 'border-emerald-500/50 ring-1 ring-emerald-500/30' : 'border-border',
+                answer.isAccepted ? 'border-success/50 ring-1 ring-success/30' : 'border-border',
               )}
             >
               {answer.isAccepted && (
-                <div className="mb-3 flex items-center gap-2 text-xs font-bold text-emerald-500">
+                <div className="mb-3 flex items-center gap-2 text-xs font-bold text-success">
                   <CheckCircle2 className="h-4 w-4" /> Mejor respuesta elegida por quien preguntó
                 </div>
               )}
@@ -282,7 +282,7 @@ export default function PreguntaDetailPage() {
                     <div className="flex items-center gap-3">
                       {isAsker && !answer.isAccepted && !mine && (
                         <Button size="sm" variant="outline" onClick={() => markBestAnswer(answer.id)} disabled={acceptMutation.isPending}>
-                          <Check className="text-emerald-500" /> Marcar como mejor respuesta
+                          <Check className="text-success" /> Marcar como mejor respuesta
                         </Button>
                       )}
                       <ReportButton targetType="ANSWER" targetId={answer.id} />
@@ -302,7 +302,7 @@ export default function PreguntaDetailPage() {
 
       {/* Responder */}
       <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-        <h3 className="font-serif-heading text-lg font-bold text-primary">Tu respuesta <PointReward reason="RESPUESTA_PUBLICADA" className="text-sm font-normal text-emerald-500" parentheses /></h3>
+        <h3 className="font-serif-heading text-lg font-bold text-primary">Tu respuesta <PointReward reason="RESPUESTA_PUBLICADA" className="text-sm font-normal text-success" parentheses /></h3>
         <form
           onSubmit={(e) => {
             e.preventDefault();

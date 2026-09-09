@@ -131,7 +131,7 @@ export default function ForoPage() {
             {isLoading ? (
               <div role="status" className="flex justify-center py-16"><Loader2 aria-hidden="true" className="h-6 w-6 animate-spin text-primary" /><span className="sr-only">Cargando preguntas</span></div>
             ) : isError ? (
-              <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-5 text-sm text-red-600 dark:text-red-400">
+              <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-5 text-sm text-danger">
                 <div className="flex items-start gap-3">
                   <AlertTriangle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />
                   <div>
@@ -225,7 +225,7 @@ export default function ForoPage() {
                 .map((rule) => (
                   <li key={rule.reason} className="flex justify-between gap-3">
                     <span>{rule.label}</span>
-                    <strong className={rule.points >= 0 ? 'text-emerald-500' : 'text-red-500'}>{rule.points >= 0 ? '+' : ''}{rule.points}</strong>
+                    <strong className={rule.points >= 0 ? 'text-success' : 'text-danger'}>{rule.points >= 0 ? '+' : ''}{rule.points}</strong>
                   </li>
                 ))}
               {(pointRules?.length ?? 0) === 0 && <li>Las reglas activas no están disponibles.</li>}

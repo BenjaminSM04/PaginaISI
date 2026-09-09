@@ -2,52 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: 210 40% 98%;
-  --foreground: 217 33% 17%;
-  --card: 0 0% 100%;
-  --card-foreground: 217 33% 17%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 217 33% 17%;
-  --primary: 210 82% 27%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 217 33% 17%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
-  --accent: 188 94% 43%;
-  --accent-foreground: 0 0% 100%;
-  --gold: 46 65% 52%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 188 94% 43%;
-  --radius: 0.75rem;
-}
-
-.dark {
-  --background: 221 46% 8%;
-  --foreground: 210 40% 98%;
-  --card: 221 39% 11%;
-  --card-foreground: 210 40% 98%;
-  --popover: 221 39% 11%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 198 93% 60%;
-  --primary-foreground: 221 46% 8%;
-  --secondary: 217 33% 17%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217 33% 17%;
-  --muted-foreground: 215 20% 65%;
-  --accent: 188 94% 43%;
-  --accent-foreground: 0 0% 100%;
-  --gold: 45 93% 47%;
-  --destructive: 0 72% 51%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 217 33% 17%;
-  --input: 217 33% 17%;
-  --ring: 188 94% 43%;
-}
+:root { --radius: 0.75rem; }
 
 @layer base {
   * {

@@ -130,7 +130,7 @@ export default function AdminNoticiasPage() {
         </Button>
       </div>
 
-      {error && <p className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">{error}</p>}
+      {error && <p className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{error}</p>}
 
       {showForm && (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm animate-fade-in">
@@ -152,12 +152,12 @@ export default function AdminNoticiasPage() {
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Título *</Label>
               <Input {...register('title')} />
-              {errors.title && <p className="text-xs text-red-500">{errors.title.message}</p>}
+              {errors.title && <p className="text-xs text-danger">{errors.title.message}</p>}
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Resumen *</Label>
               <Input {...register('summary')} />
-              {errors.summary && <p className="text-xs text-red-500">{errors.summary.message}</p>}
+              {errors.summary && <p className="text-xs text-danger">{errors.summary.message}</p>}
             </div>
             <div className="space-y-1.5">
               <Label>Categoría *</Label>
@@ -167,12 +167,12 @@ export default function AdminNoticiasPage() {
                   <option key={k} value={k}>{v}</option>
                 ))}
               </Select>
-              {errors.category && <p className="text-xs text-red-500">{errors.category.message}</p>}
+              {errors.category && <p className="text-xs text-danger">{errors.category.message}</p>}
             </div>
             <div className="space-y-1.5">
               <Label>Imagen principal (URL)</Label>
               <Input placeholder="https://…/imagen.jpg" {...register('coverUrl')} />
-              {errors.coverUrl && <p className="text-xs text-red-500">{errors.coverUrl.message}</p>}
+              {errors.coverUrl && <p className="text-xs text-danger">{errors.coverUrl.message}</p>}
               <MediaUploadButton kind="image" disabled={isSubmitting} onUploaded={(asset) => setValue('coverUrl', asset.url, { shouldDirty: true, shouldValidate: true })} />
             </div>
             <div className="space-y-1.5">
@@ -197,7 +197,7 @@ export default function AdminNoticiasPage() {
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Contenido *</Label>
               <Textarea rows={6} {...register('content')} />
-              {errors.content && <p className="text-xs text-red-500">{errors.content.message}</p>}
+              {errors.content && <p className="text-xs text-danger">{errors.content.message}</p>}
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Tags (por coma)</Label>

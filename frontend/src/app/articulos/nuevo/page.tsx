@@ -83,13 +83,13 @@ function NuevoArticuloForm() {
         <div className="space-y-1.5">
           <Label>Título *</Label>
           <Input placeholder="Título del trabajo de investigación" {...register('title')} />
-          {errors.title && <p className="text-xs text-red-500">{errors.title.message}</p>}
+          {errors.title && <p className="text-xs text-danger">{errors.title.message}</p>}
         </div>
 
         <div className="space-y-1.5">
           <Label>Resumen / Abstract *</Label>
           <Textarea rows={5} placeholder="Contexto, metodología, resultados y conclusiones en un párrafo" {...register('abstract')} />
-          {errors.abstract && <p className="text-xs text-red-500">{errors.abstract.message}</p>}
+          {errors.abstract && <p className="text-xs text-danger">{errors.abstract.message}</p>}
         </div>
 
         <div className="space-y-1.5">
@@ -101,7 +101,7 @@ function NuevoArticuloForm() {
           <div className="space-y-1.5">
             <Label>Área de investigación *</Label>
             <Input placeholder="Inteligencia Artificial en Salud" {...register('area')} />
-            {errors.area && <p className="text-xs text-red-500">{errors.area.message}</p>}
+            {errors.area && <p className="text-xs text-danger">{errors.area.message}</p>}
           </div>
           <div className="space-y-1.5">
             <Label>Impacto o aporte</Label>
@@ -110,7 +110,7 @@ function NuevoArticuloForm() {
           <div className="space-y-1.5">
             <Label>PDF (URL)</Label>
             <Input placeholder="https://…/paper.pdf" {...register('pdfUrl')} />
-            {errors.pdfUrl && <p className="text-xs text-red-500">{errors.pdfUrl.message}</p>}
+            {errors.pdfUrl && <p className="text-xs text-danger">{errors.pdfUrl.message}</p>}
             <MediaUploadButton kind="pdf" disabled={isSubmitting} onUploaded={(asset) => setValue('pdfUrl', asset.url, { shouldDirty: true, shouldValidate: true })} />
           </div>
           <div className="space-y-1.5">
@@ -124,7 +124,7 @@ function NuevoArticuloForm() {
           <div className="space-y-1.5">
             <Label>Imagen de portada</Label>
             <Input placeholder="https://…/portada.webp" {...register('coverUrl')} />
-            {errors.coverUrl && <p className="text-xs text-red-500">{errors.coverUrl.message}</p>}
+            {errors.coverUrl && <p className="text-xs text-danger">{errors.coverUrl.message}</p>}
             <MediaUploadButton kind="image" disabled={isSubmitting} onUploaded={(asset) => setValue('coverUrl', asset.url, { shouldDirty: true, shouldValidate: true })} />
           </div>
           <div className="space-y-1.5">
@@ -149,10 +149,10 @@ function NuevoArticuloForm() {
               <option key={t.username} value={t.username}>{t.profile?.fullName ?? t.username}</option>
             ))}
           </Select>
-          {errors.reviewerUsername && <p className="text-xs text-red-500">{errors.reviewerUsername.message}</p>}
+          {errors.reviewerUsername && <p className="text-xs text-danger">{errors.reviewerUsername.message}</p>}
         </div>
 
-        {serverError && <p className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">{serverError}</p>}
+        {serverError && <p className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{serverError}</p>}
 
         <Button type="submit" disabled={isSubmitting} size="lg" className="w-full">
           {isSubmitting ? <Loader2 className="animate-spin" /> : <FileText />} Enviar a revisión

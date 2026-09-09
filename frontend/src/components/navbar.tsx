@@ -211,9 +211,7 @@ export function Navbar() {
           </div>
 
           <Link href="/" aria-label={`Ir al inicio de ${institution.institutionName}`} className="flex items-center gap-2.5 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg">
-            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-border bg-white p-0.5 shadow-sm transition-transform group-hover:scale-105">
-              <InstitutionalLogo className="h-full w-full" />
-            </div>
+            <InstitutionalLogo />
             <div className="hidden sm:block">
               <div className="font-serif-heading text-base font-bold leading-tight text-primary">{institution.shortName}</div>
               <div className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground" title={institution.careerName}>
@@ -331,7 +329,7 @@ export function Navbar() {
                       <div className="my-1 border-y border-border py-1">
                         <p className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Gestión académica</p>
                         <Link href="/comunidades/gestionar" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition hover:bg-secondary">
-                          <Users className="h-4 w-4 text-emerald-500" /> Gestionar comunidades
+                          <Users className="h-4 w-4 text-success" /> Gestionar comunidades
                         </Link>
                         <Link href="/eventos/gestionar" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition hover:bg-secondary">
                           <CalendarCog className="h-4 w-4 text-orange-500" /> Gestionar eventos
@@ -344,7 +342,7 @@ export function Navbar() {
                     {hasRole('TEACHER', 'ADMIN') && (
                       <>
                         <Link href="/revision" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-secondary transition">
-                          <Shield className="h-4 w-4 text-emerald-500" /> Revisión de contenidos
+                          <Shield className="h-4 w-4 text-success" /> Revisión de contenidos
                         </Link>
                         <Link href="/incubadora/revision" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-secondary transition">
                           <Lightbulb className="h-4 w-4 text-purple-500" /> Revisión de ideas
@@ -359,7 +357,7 @@ export function Navbar() {
                     <button
                       type="button"
                       onClick={() => void logout()}
-                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-500 transition hover:bg-red-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-danger transition hover:bg-danger/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       <LogOut className="h-4 w-4" /> Cerrar sesión
                     </button>
@@ -441,7 +439,7 @@ export function Navbar() {
             <div className="mt-3 border-t border-border pt-3">
               <p className="mb-1 px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Gestión académica</p>
               <div className="grid gap-1 sm:grid-cols-3">
-                <Link href="/comunidades/gestionar" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-secondary"><Users className="h-4 w-4 text-emerald-500" /> Comunidades</Link>
+                <Link href="/comunidades/gestionar" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-secondary"><Users className="h-4 w-4 text-success" /> Comunidades</Link>
                 <Link href="/eventos/gestionar" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-secondary"><CalendarCog className="h-4 w-4 text-orange-500" /> Eventos</Link>
                 <Link href="/mentorias/gestionar" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-secondary"><GraduationCap className="h-4 w-4 text-teal-500" /> Mentorías</Link>
               </div>

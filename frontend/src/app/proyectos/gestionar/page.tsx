@@ -37,8 +37,8 @@ function ProjectManagementList() {
       )}
 
       {isError && (
-        <div role="alert" className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-sm">
-          <h2 className="font-bold text-red-600 dark:text-red-400">No se pudieron cargar tus proyectos</h2>
+        <div role="alert" className="rounded-2xl border border-danger/30 bg-danger/10 p-6 text-sm">
+          <h2 className="font-bold text-danger">No se pudieron cargar tus proyectos</h2>
           <p className="mt-1 text-muted-foreground">{error instanceof Error ? error.message : 'Intenta nuevamente.'}</p>
           <button type="button" className={buttonVariants({ size: 'sm', variant: 'outline', className: 'mt-4' })} onClick={() => void refetch()}>
             Reintentar

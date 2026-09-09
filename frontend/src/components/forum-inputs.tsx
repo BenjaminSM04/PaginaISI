@@ -179,7 +179,7 @@ export function ForumImagePicker({
       >
         <ImagePlus className="h-4 w-4" /> Adjuntar imágenes ({value.length}/{MAX_FORUM_IMAGES})
       </button>
-      <p className={cn('text-xs', error ? 'text-red-500' : 'text-muted-foreground')}>
+      <p className={cn('text-xs', error ? 'text-danger' : 'text-muted-foreground')}>
         {error ?? 'Se optimizan automáticamente para reducir espacio y eliminar metadatos.'}
       </p>
     </div>

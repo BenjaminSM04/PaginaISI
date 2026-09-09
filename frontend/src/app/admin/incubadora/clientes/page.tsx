@@ -239,12 +239,12 @@ export default function AdminIncubatorClientsPage() {
 
       <div aria-live="polite" className="space-y-2">
         {message && (
-          <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
+          <p className="rounded-lg border border-success/30 bg-success/10 p-3 text-sm text-success">
             {message}
           </p>
         )}
         {error && (
-          <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400">
+          <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
             {error}
           </p>
         )}
@@ -351,7 +351,7 @@ export default function AdminIncubatorClientsPage() {
         </div>
       )}
       {clientsQuery.isError && (
-        <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-5 text-sm text-red-600 dark:text-red-400">
+        <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-5 text-sm text-danger">
           <p>No se pudo cargar la cartera de clientes.</p>
           <Button type="button" size="sm" variant="outline" className="mt-3" onClick={() => void clientsQuery.refetch()}>
             <RefreshCw /> Reintentar

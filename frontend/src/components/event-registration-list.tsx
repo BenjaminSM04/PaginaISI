@@ -39,7 +39,7 @@ export function EventRegistrationIndicator({
   }
   if (!query.data?.myRegistrations?.includes(eventId)) return null;
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/40 bg-emerald-500/20 px-3 py-1 text-xs font-bold text-emerald-200">
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-success/40 bg-success/20 px-3 py-1 text-xs font-bold text-success">
       <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> Inscrito
     </span>
   );

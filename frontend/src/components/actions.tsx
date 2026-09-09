@@ -85,7 +85,7 @@ export function JoinCommunityButton({
         {busy ? <Loader2 className="animate-spin" /> : <UserPlus />}
         {joined ? 'Salir de la comunidad' : 'Unirme a la comunidad'}
       </Button>
-      {msg && <span className="text-xs font-semibold text-emerald-500">{msg}</span>}
+      {msg && <span className="text-xs font-semibold text-success">{msg}</span>}
     </div>
   );
 }
@@ -154,16 +154,16 @@ export function EventRegisterButton({ slug, initialRegistered, isPast }: { slug:
   return (
     <div className="flex w-full flex-col items-stretch gap-2">
       {registered && (
-        <div role="status" className="flex items-center gap-2 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-3 py-2 text-sm font-bold text-emerald-600 dark:text-emerald-400">
+        <div role="status" className="flex items-center gap-2 rounded-lg border border-success/35 bg-success/10 px-3 py-2 text-sm font-bold text-success">
           <CheckCircle2 className="h-5 w-5" aria-hidden="true" /> Inscrito
         </div>
       )}
       <Button onClick={toggle} disabled={busy} variant={registered ? 'outline' : 'accent'} size="lg" className="w-full">
-        {busy ? <Loader2 className="animate-spin" /> : registered ? <XCircle className="text-red-500" /> : null}
+        {busy ? <Loader2 className="animate-spin" /> : registered ? <XCircle className="text-danger" /> : null}
         {registered ? 'Cancelar inscripción' : 'Inscribirme al evento'}
       </Button>
-      {msg && <span role="status" className="text-xs font-semibold text-emerald-500">{msg}</span>}
-      {visibleError && <span role="alert" className="text-xs font-semibold text-red-500">{visibleError}</span>}
+      {msg && <span role="status" className="text-xs font-semibold text-success">{msg}</span>}
+      {visibleError && <span role="alert" className="text-xs font-semibold text-danger">{visibleError}</span>}
     </div>
   );
 }
@@ -243,16 +243,16 @@ export function EnrollMentorshipButton({
   return (
     <div className="flex w-full flex-col items-stretch gap-1.5">
       {enrolled && (
-        <div role="status" className="flex items-center gap-2 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-3 py-2 text-sm font-bold text-emerald-600 dark:text-emerald-400">
+        <div role="status" className="flex items-center gap-2 rounded-lg border border-success/35 bg-success/10 px-3 py-2 text-sm font-bold text-success">
           <CheckCircle2 className="h-5 w-5" /> Inscripción confirmada
         </div>
       )}
       <Button onClick={toggle} disabled={busy || (!enrolled && Boolean(disabledReason))} variant={enrolled ? 'outline' : 'accent'} className="w-full">
-        {busy ? <Loader2 className="animate-spin" /> : enrolled ? <XCircle className="text-red-500" /> : null}
+        {busy ? <Loader2 className="animate-spin" /> : enrolled ? <XCircle className="text-danger" /> : null}
         {enrolled ? 'Cancelar inscripción' : 'Inscribirme'}
       </Button>
       {!enrolled && disabledReason && <span className="text-xs text-muted-foreground">{disabledReason}</span>}
-      {error && <span role="alert" className="text-xs font-semibold text-red-500">{error}</span>}
+      {error && <span role="alert" className="text-xs font-semibold text-danger">{error}</span>}
     </div>
   );
 }
@@ -328,14 +328,14 @@ export function LikeButton({
         className={cn(
           'inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-semibold transition',
           liked
-            ? 'border-red-400/50 bg-red-500/10 text-red-500'
-            : 'border-border bg-card hover:border-red-400/50 hover:text-red-500',
+            ? 'border-danger/50 bg-danger/10 text-danger'
+            : 'border-border bg-card hover:border-danger/50 hover:text-danger',
           isOwner && 'cursor-not-allowed opacity-60',
         )}
       >
         <Heart className={cn('h-4 w-4', liked && 'fill-current')} /> {count}
       </button>
-      {error && <span role="alert" className="text-xs font-semibold text-red-500">{error}</span>}
+      {error && <span role="alert" className="text-xs font-semibold text-danger">{error}</span>}
     </div>
   );
 }
@@ -384,7 +384,7 @@ export function CommentSection({
           disabled={!user || busy}
           className="min-h-[80px]"
         />
-        {error && <p className="text-xs text-red-500">{error}</p>}
+        {error && <p className="text-xs text-danger">{error}</p>}
         <Button type="submit" disabled={!user || busy || body.trim().length < 2} size="sm">
           {busy ? <Loader2 className="animate-spin" /> : <Send />} Comentar
         </Button>
@@ -432,13 +432,13 @@ export function ReportButton({ targetType, targetId }: { targetType: string; tar
     }
   };
 
-  if (done) return <span className="text-xs font-semibold text-emerald-500">Reporte enviado, gracias</span>;
+  if (done) return <span className="text-xs font-semibold text-success">Reporte enviado, gracias</span>;
 
   return (
     <div className="relative inline-block">
       <button
         onClick={() => (user ? setOpen((v) => !v) : router.push('/login'))}
-        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-red-500 transition"
+        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-danger transition"
       >
         <Flag className="h-3.5 w-3.5" /> Reportar
       </button>
@@ -446,7 +446,7 @@ export function ReportButton({ targetType, targetId }: { targetType: string; tar
         <div className="absolute right-0 z-30 mt-2 w-72 rounded-xl border border-border bg-popover p-3 shadow-xl">
           <p className="mb-2 text-xs font-bold">¿Por qué reportas este contenido?</p>
           <Textarea value={reason} onChange={(e) => setReason(e.target.value)} className="min-h-[70px] text-xs" placeholder="Describe el problema (mínimo 10 caracteres)" />
-          {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+          {error && <p className="mt-1 text-xs text-danger">{error}</p>}
           <div className="mt-2 flex justify-end gap-2">
             <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button size="sm" variant="destructive" disabled={busy || reason.trim().length < 10} onClick={submit}>

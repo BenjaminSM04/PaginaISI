@@ -106,7 +106,7 @@ export default function RankingPage() {
           {rulesQuery.isLoading ? (
             <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Cargando reglas…</p>
           ) : rulesQuery.isError ? (
-            <p role="alert" className="text-sm text-red-500">No se pudieron consultar las reglas de puntuación.</p>
+            <p role="alert" className="text-sm text-danger">No se pudieron consultar las reglas de puntuación.</p>
           ) : (rulesQuery.data?.length ?? 0) === 0 ? (
             <p className="text-sm text-muted-foreground">No hay reglas de puntuación activas.</p>
           ) : (
@@ -120,7 +120,7 @@ export default function RankingPage() {
                       <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{rule.category}</span>
                     </span>
                   </span>
-                  <span className={cn('shrink-0 text-sm font-extrabold', rule.points >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500')}>
+                  <span className={cn('shrink-0 text-sm font-extrabold', rule.points >= 0 ? 'text-success' : 'text-danger')}>
                     {rule.points >= 0 ? '+' : ''}{rule.points} pts
                   </span>
                 </li>
@@ -133,7 +133,7 @@ export default function RankingPage() {
       {isLoading ? (
         <div role="status" className="flex justify-center py-16"><Loader2 aria-hidden="true" className="h-6 w-6 animate-spin text-primary" /><span className="sr-only">Cargando ranking</span></div>
       ) : isError ? (
-        <div role="alert" className="mx-auto max-w-3xl rounded-xl border border-red-500/30 bg-red-500/10 p-5 text-sm text-red-600 dark:text-red-400">
+        <div role="alert" className="mx-auto max-w-3xl rounded-xl border border-danger/30 bg-danger/10 p-5 text-sm text-danger">
           <div className="flex items-start gap-3">
             <AlertTriangle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />
             <div>
@@ -155,7 +155,7 @@ export default function RankingPage() {
                   href={`/perfil/${r.username}`}
                   className={cn(
                     'group relative flex flex-col items-center rounded-2xl border bg-card p-6 text-center shadow-sm transition hover:-translate-y-1 hover:shadow-lg',
-                    isFirst ? 'border-gold/60 sm:scale-105 sm:pb-10' : r.position === 2 ? 'border-slate-400/50' : 'border-amber-700/50',
+                    isFirst ? 'border-gold/60 sm:scale-105 sm:pb-10' : r.position === 2 ? 'border-slate-400/50' : 'border-warning/50',
                   )}
                 >
                   <span className="absolute right-3 top-3 font-mono text-[9px] uppercase tracking-widest text-muted-foreground/50">
@@ -164,7 +164,7 @@ export default function RankingPage() {
                   {isFirst ? (
                     <Crown className="mb-2 h-6 w-6 text-gold" />
                   ) : (
-                    <Medal className={cn('mb-2 h-5 w-5', r.position === 2 ? 'text-slate-400' : 'text-amber-700')} />
+                    <Medal className={cn('mb-2 h-5 w-5', r.position === 2 ? 'text-slate-400' : 'text-warning')} />
                   )}
                   <Avatar src={r.avatarUrl} name={r.fullName} className={cn('mb-3', isFirst ? 'h-20 w-20 text-xl' : 'h-16 w-16 text-lg')} />
                   <div className="font-serif-heading text-lg font-bold transition group-hover:text-primary">{r.fullName}</div>
@@ -209,7 +209,7 @@ export default function RankingPage() {
         <SectionHeader kicker="Colecciónalas todas" title="Insignias del portal" />
         {badgesQuery.isLoading && <div role="status" className="flex justify-center py-10"><Loader2 aria-hidden="true" className="h-5 w-5 animate-spin text-primary" /><span className="sr-only">Cargando insignias</span></div>}
         {badgesQuery.isError && (
-          <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-600 dark:text-red-400">
+          <p role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger">
             No se pudo cargar el catálogo de insignias. <button type="button" className="font-bold underline" onClick={() => void badgesQuery.refetch()}>Reintentar</button>
           </p>
         )}
@@ -221,7 +221,7 @@ export default function RankingPage() {
             <div key={b.id} className="rounded-xl border border-border bg-card p-4 text-center shadow-sm">
               <div
                 className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-full border"
-                style={{ backgroundColor: `${b.color ?? '#0C447C'}22`, borderColor: `${b.color ?? '#0C447C'}55`, color: b.color ?? '#0C447C' }}
+                style={{ backgroundColor: 'color-mix(in srgb, ' + (b.color ?? 'hsl(var(--primary))') + ' 13%, transparent)', borderColor: 'color-mix(in srgb, ' + (b.color ?? 'hsl(var(--primary))') + ' 33%, transparent)', color: b.color ?? 'hsl(var(--primary))' }}
               >
                 <BadgeIcon icon={b.icon} label={b.name} />
               </div>

@@ -16,7 +16,8 @@ export function setSessionExpiredHandler(handler: (() => void) | null) {
   sessionExpiredHandler = handler;
 }
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+// Browser requests always use the public origin; the server owns API routing.
+const BASE = '';
 
 export class ApiError extends Error {
   status: number;

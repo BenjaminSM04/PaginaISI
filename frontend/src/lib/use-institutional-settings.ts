@@ -14,6 +14,8 @@ export function useInstitutionalSettings() {
     queryKey: institutionalSettingsQueryKey,
     queryFn: () => api.get<InstitutionalSettings>('/institution/public'),
     staleTime: 60_000,
+    refetchOnMount: 'always',
+    refetchInterval: 60_000,
     retry: 1,
   });
 

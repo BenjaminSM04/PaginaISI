@@ -118,7 +118,7 @@ function NuevoProyectoForm() {
         <Info className="h-5 w-5 shrink-0 text-accent" />
         <p>
           Tu proyecto quedará <strong>pendiente de aprobación</strong> y no será visible públicamente hasta que el docente
-          revisor lo apruebe. Al aprobarse ganas <PointReward reason="PROYECTO_APROBADO" suffix="Dev Points" className="text-emerald-500" /> y podrás cumplir reglas de insignias activas.
+          revisor lo apruebe. Al aprobarse ganas <PointReward reason="PROYECTO_APROBADO" suffix="Dev Points" className="text-success" /> y podrás cumplir reglas de insignias activas.
         </p>
       </div>
 
@@ -126,19 +126,19 @@ function NuevoProyectoForm() {
         <div className="space-y-1.5">
           <Label>Título *</Label>
           <Input placeholder="Sistema de gestión de laboratorios" {...register('title')} />
-          {errors.title && <p className="text-xs text-red-500">{errors.title.message}</p>}
+          {errors.title && <p className="text-xs text-danger">{errors.title.message}</p>}
         </div>
 
         <div className="space-y-1.5">
           <Label>Resumen corto *</Label>
           <Input placeholder="Una frase que describa qué hace y para quién" {...register('summary')} />
-          {errors.summary && <p className="text-xs text-red-500">{errors.summary.message}</p>}
+          {errors.summary && <p className="text-xs text-danger">{errors.summary.message}</p>}
         </div>
 
         <div className="space-y-1.5">
           <Label>Descripción completa *</Label>
           <Textarea rows={6} placeholder="Problema, solución, arquitectura, resultados…" {...register('description')} />
-          {errors.description && <p className="text-xs text-red-500">{errors.description.message}</p>}
+          {errors.description && <p className="text-xs text-danger">{errors.description.message}</p>}
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
@@ -157,7 +157,7 @@ function NuevoProyectoForm() {
               onCreate={pendingCatalog('TECHNOLOGY')}
               placeholder="Busca o crea una tecnología"
             />
-            {errors.technologies && <p className="text-xs text-red-500">{errors.technologies.message}</p>}
+            {errors.technologies && <p className="text-xs text-danger">{errors.technologies.message}</p>}
           </div>
           <div className="space-y-1.5">
             <input type="hidden" {...register('tags')} />
@@ -177,12 +177,12 @@ function NuevoProyectoForm() {
           <div className="space-y-1.5">
             <Label>Repositorio (GitHub)</Label>
             <Input placeholder="https://github.com/usuario/repo" {...register('repoUrl')} />
-            {errors.repoUrl && <p className="text-xs text-red-500">{errors.repoUrl.message}</p>}
+            {errors.repoUrl && <p className="text-xs text-danger">{errors.repoUrl.message}</p>}
           </div>
           <div className="space-y-1.5">
             <Label>Demo desplegada</Label>
             <Input placeholder="https://mi-demo.vercel.app" {...register('demoUrl')} />
-            {errors.demoUrl && <p className="text-xs text-red-500">{errors.demoUrl.message}</p>}
+            {errors.demoUrl && <p className="text-xs text-danger">{errors.demoUrl.message}</p>}
           </div>
           <div className="space-y-1.5">
             <Label>Video corto (YouTube u otro)</Label>
@@ -191,7 +191,7 @@ function NuevoProyectoForm() {
           <div className="space-y-1.5">
             <Label>Imagen de portada (URL)</Label>
             <Input placeholder="https://…/captura.png" {...register('coverUrl')} />
-            {errors.coverUrl && <p className="text-xs text-red-500">{errors.coverUrl.message}</p>}
+            {errors.coverUrl && <p className="text-xs text-danger">{errors.coverUrl.message}</p>}
             <MediaUploadButton
               kind="image"
               disabled={isSubmitting}
@@ -238,7 +238,7 @@ function NuevoProyectoForm() {
               }}
               placeholder="Escribe al menos 2 caracteres"
             />
-            {errors.reviewerUsername && <p className="text-xs text-red-500">{errors.reviewerUsername.message}</p>}
+            {errors.reviewerUsername && <p className="text-xs text-danger">{errors.reviewerUsername.message}</p>}
           </div>
           <div className="space-y-1.5">
             <Label>Comunidad asociada</Label>
@@ -266,10 +266,10 @@ function NuevoProyectoForm() {
 
         <div className="flex flex-wrap gap-6 pt-1">
           <label className="flex items-center gap-2 text-sm font-medium">
-            <input type="checkbox" className="h-4 w-4 accent-[#06B6D4]" {...register('isIncubator')} /> Es proyecto de incubadora
+            <input type="checkbox" className="h-4 w-4 accent-accent" {...register('isIncubator')} /> Es proyecto de incubadora
           </label>
           <label className="flex items-center gap-2 text-sm font-medium">
-            <input type="checkbox" className="h-4 w-4 accent-[#06B6D4]" {...register('recruiting')} /> Buscamos integrantes
+            <input type="checkbox" className="h-4 w-4 accent-accent" {...register('recruiting')} /> Buscamos integrantes
           </label>
         </div>
 
@@ -289,7 +289,7 @@ function NuevoProyectoForm() {
           </section>
         )}
 
-        {serverError && <p className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">{serverError}</p>}
+        {serverError && <p className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{serverError}</p>}
 
         <Button type="submit" disabled={isSubmitting} size="lg" className="w-full">
           {isSubmitting ? <Loader2 className="animate-spin" /> : <Rocket />} Enviar a revisión docente

@@ -89,13 +89,13 @@ function PreguntarForm() {
         <div className="space-y-1.5">
           <Label>Título *</Label>
           <Input placeholder="¿Cómo evitar el error N+1 con Prisma en NestJS?" {...register('title')} />
-          {errors.title && <p className="text-xs text-red-500">{errors.title.message}</p>}
+          {errors.title && <p className="text-xs text-danger">{errors.title.message}</p>}
         </div>
 
         <div className="space-y-1.5">
           <Label>Detalle del problema *</Label>
           <Textarea rows={8} placeholder="Contexto, código relevante, error exacto y qué intentaste…" {...register('body')} />
-          {errors.body && <p className="text-xs text-red-500">{errors.body.message}</p>}
+          {errors.body && <p className="text-xs text-danger">{errors.body.message}</p>}
         </div>
 
         <div className="space-y-1.5">
@@ -144,7 +144,7 @@ function PreguntarForm() {
           <ForumImagePicker value={images} onChange={setImages} disabled={isSubmitting} />
         </div>
 
-        {serverError && <p className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">{serverError}</p>}
+        {serverError && <p className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{serverError}</p>}
 
         <Button type="submit" disabled={isSubmitting} size="lg" className="w-full">
           {isSubmitting ? <Loader2 className="animate-spin" /> : <MessageSquarePlus />} Publicar pregunta

@@ -34,7 +34,7 @@ function RevisionIdeasContent() {
       {query.isLoading ? (
         <div className="flex justify-center py-16" role="status"><Loader2 className="h-6 w-6 animate-spin text-purple-500" /><span className="sr-only">Cargando ideas pendientes</span></div>
       ) : query.isError ? (
-        <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-500">{query.error.message}</p>
+        <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 p-4 text-sm text-danger">{query.error.message}</p>
       ) : !query.data?.items.length ? (
         <EmptyState title="No hay ideas pendientes" subtitle="La bandeja de revisión está al día." />
       ) : (

@@ -208,7 +208,7 @@ export function MediaUploadButton({
           <button
             type="button"
             disabled={disabled || uploading}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-400"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-danger/30 px-3 py-2 text-xs font-semibold text-danger transition hover:bg-danger/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:text-danger"
             onClick={remove}
           >
             <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -216,8 +216,8 @@ export function MediaUploadButton({
           </button>
         )}
       </div>
-      {result && <p role="status" className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400"><CheckCircle2 className="h-3.5 w-3.5" /> {result}</p>}
-      {error && <p role="alert" className="text-xs text-red-500">{error}</p>}
+      {result && <p role="status" className="flex items-center gap-1 text-xs text-success"><CheckCircle2 className="h-3.5 w-3.5" /> {result}</p>}
+      {error && <p role="alert" className="text-xs text-danger">{error}</p>}
     </div>
   );
 }

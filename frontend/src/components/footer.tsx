@@ -8,14 +8,12 @@ export function Footer() {
       <div className="container grid gap-8 py-10 md:grid-cols-4">
         <div className="space-y-3 md:col-span-2">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-white p-0.5">
-              <InstitutionalLogo className="h-full w-full" />
-            </div>
+            <InstitutionalLogo />
             <div>
               <div className="font-serif-heading font-bold text-primary"><InstitutionalText field="institutionName" /></div>
               <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground"><InstitutionalText field="careerName" /></div>
             </div>
-            <InstitutionalLogo kind="career" className="hidden h-11 w-11 rounded-lg border border-border bg-white p-0.5 sm:block" />
+            <InstitutionalLogo kind="career" className="hidden sm:block" />
           </div>
           <p className="max-w-md text-sm text-muted-foreground">
             <InstitutionalText field="careerName" /> en <InstitutionalText field="shortName" />: proyectos, investigación estudiantil, comunidades técnicas y gamificación académica.
@@ -51,7 +49,7 @@ export function Footer() {
           <span>© {new Date().getFullYear()} <InstitutionalText field="institutionName" /> · <InstitutionalText field="careerName" />.</span>
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:justify-end">
             <span className="flex items-center gap-1"><FlaskConical className="h-3.5 w-3.5 text-accent" /> Hecho por estudiantes de Ingeniería de Sistemas</span>
-            <span className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> Entorno académico de demostración</span>
+            <span className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-success" /> Entorno académico de demostración</span>
           </div>
         </div>
       </div>

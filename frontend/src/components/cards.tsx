@@ -30,7 +30,7 @@ export function ProjectCard({ project }: { project: Project | any }) {
         ) : (
           <CoverPlaceholder label={project.title?.[0]} accent={project.community?.accentColor} />
         )}
-        <div className="absolute right-3 top-3 flex items-center gap-1 rounded-md border border-white/20 bg-primary/90 px-2 py-1 text-[11px] font-bold text-white backdrop-blur-sm">
+        <div className="absolute right-3 top-3 flex items-center gap-1 rounded-md border border-white/20 bg-primary/90 px-2 py-1 text-[11px] font-bold text-primary-foreground backdrop-blur-sm">
           <ThumbsUp className="h-3 w-3 text-cyan-300" /> {project.likesCount ?? 0}
         </div>
         {project.isFeatured && (
@@ -121,7 +121,7 @@ export function EventCard({ event, registered }: { event: EventItem; registered?
           {EVENT_CATEGORIES[event.category] ?? event.category}
         </div>
         {registered && (
-          <div className="absolute right-3 top-3 flex items-center gap-1 rounded-md bg-emerald-500 px-2 py-1 text-[10px] font-bold text-white">
+          <div className="absolute right-3 top-3 flex items-center gap-1 rounded-md bg-success px-2 py-1 text-[10px] font-bold text-success-foreground">
             <CheckCircle2 className="h-3 w-3" /> Inscrito
           </div>
         )}
@@ -141,7 +141,7 @@ export function EventCard({ event, registered }: { event: EventItem; registered?
             {event.isOnline ? <Video className="h-3.5 w-3.5" /> : <MapPin className="h-3.5 w-3.5" />}
             {event.isOnline ? 'En línea' : event.location ?? 'Campus'}
           </span>
-          <span className="flex shrink-0 items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
+          <span className="flex shrink-0 items-center gap-1 font-semibold text-success">
             <Users className="h-3.5 w-3.5" /> {event._count?.registrations ?? 0} inscritos
           </span>
         </div>
@@ -227,7 +227,7 @@ export function QuestionCard({ question }: { question: Question }) {
           <div className="text-sm font-bold">{question.votesScore}</div>
           <div className="text-[9px] uppercase tracking-wide text-muted-foreground">votos</div>
         </div>
-        <div className={cn('w-full rounded-lg border py-1.5', solved ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'border-border bg-secondary/50')}>
+        <div className={cn('w-full rounded-lg border py-1.5', solved ? 'border-success/50 bg-success/10 text-success' : 'border-border bg-secondary/50')}>
           <div className="text-sm font-bold">{question.answersCount}</div>
           <div className="text-[9px] uppercase tracking-wide opacity-80">resp.</div>
         </div>
@@ -235,7 +235,7 @@ export function QuestionCard({ question }: { question: Question }) {
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-semibold leading-snug transition group-hover:text-primary line-clamp-2">{question.title}</h3>
-          {solved && <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />}
+          {solved && <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />}
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <TagList tags={question.tags} max={4} />
@@ -265,7 +265,7 @@ export function MentorshipCard({ mentorship, enrolled }: { mentorship: Mentorshi
         ? 'Inactiva'
         : 'Próxima';
   const statusClass = mentorship.status === 'IN_PROGRESS'
-    ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+    ? 'border-success/30 bg-success/15 text-success'
     : mentorship.status === 'COMPLETED' || mentorship.status === 'INACTIVE'
       ? 'border-border bg-secondary text-muted-foreground'
       : 'border-cyan-500/30 bg-cyan-500/15 text-cyan-600 dark:text-cyan-400';
@@ -284,7 +284,7 @@ export function MentorshipCard({ mentorship, enrolled }: { mentorship: Mentorshi
           {statusLabel}
         </span>
         {isEnrolled && (
-          <span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-md border border-emerald-300/40 bg-emerald-950/80 px-2 py-1 text-[10px] font-bold text-emerald-200 backdrop-blur">
+          <span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-md border border-success/40 bg-success/80 px-2 py-1 text-[10px] font-bold text-success backdrop-blur">
             <CheckCircle2 className="h-3.5 w-3.5" /> Inscrito
           </span>
         )}

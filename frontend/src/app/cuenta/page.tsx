@@ -119,7 +119,7 @@ function PerfilTab() {
         <Button type="submit" disabled={mutation.isPending}>
           {mutation.isPending ? <Loader2 className="animate-spin" /> : <Save />} Guardar cambios
         </Button>
-        {saved && <span className="flex items-center gap-1 text-sm font-semibold text-emerald-500"><CheckCircle2 className="h-4 w-4" /> Guardado</span>}
+        {saved && <span className="flex items-center gap-1 text-sm font-semibold text-success"><CheckCircle2 className="h-4 w-4" /> Guardado</span>}
       </div>
     </form>
   );
@@ -160,7 +160,7 @@ function ListaContenido({ kind }: { kind: 'proyectos' | 'articulos' }) {
               </div>
               <div className="flex items-center gap-3">
                 <StatusBadge status={item.status} />
-                {item.status === 'APPROVED' && <span className="text-xs font-semibold text-emerald-500">+{kind === 'proyectos' ? 40 : 35} pts</span>}
+                {item.status === 'APPROVED' && <span className="text-xs font-semibold text-success">+{kind === 'proyectos' ? 40 : 35} pts</span>}
               </div>
             </div>
 
@@ -168,7 +168,7 @@ function ListaContenido({ kind }: { kind: 'proyectos' | 'articulos' }) {
               <div className={cn(
                 'flex gap-2 rounded-lg border p-3 text-sm',
                 needsCorrection
-                  ? 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200'
+                  ? 'border-warning/30 bg-warning/10 text-warning'
                   : 'border-border bg-secondary/40 text-muted-foreground',
               )}>
                 {needsCorrection ? <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /> : <MessageSquareText className="mt-0.5 h-4 w-4 shrink-0" />}
@@ -228,7 +228,7 @@ function PuntosTab() {
           { label: 'Total', value: user?.profile?.totalPoints ?? 0, cls: 'text-gold border-gold/40 bg-gold/10' },
           { label: 'Dev', value: user?.profile?.devPoints ?? 0, cls: 'text-accent border-accent/40 bg-accent/10' },
           { label: 'Research', value: user?.profile?.researchPoints ?? 0, cls: 'text-purple-500 border-purple-500/40 bg-purple-500/10' },
-          { label: 'Community', value: user?.profile?.communityPoints ?? 0, cls: 'text-emerald-500 border-emerald-500/40 bg-emerald-500/10' },
+          { label: 'Community', value: user?.profile?.communityPoints ?? 0, cls: 'text-success border-success/40 bg-success/10' },
         ].map((c) => (
           <div key={c.label} className={cn('rounded-xl border p-4 text-center', c.cls)}>
             <div className="font-serif-heading text-2xl font-bold">{c.value}</div>
@@ -246,7 +246,7 @@ function PuntosTab() {
                 <div className="font-semibold">{REASON_LABELS[t.reason] ?? t.reason}</div>
                 <div className="text-xs text-muted-foreground">{formatDate(t.createdAt, true)} · {t.category}</div>
               </div>
-              <span className={cn('font-bold tabular-nums', t.points >= 0 ? 'text-emerald-500' : 'text-red-500')}>
+              <span className={cn('font-bold tabular-nums', t.points >= 0 ? 'text-success' : 'text-danger')}>
                 {t.points >= 0 ? '+' : ''}{t.points}
               </span>
             </div>
@@ -296,7 +296,7 @@ function CuentaContent() {
       )}
 
       {sent && (
-        <p role="status" className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+        <p role="status" className="flex items-center gap-2 rounded-xl border border-success/30 bg-success/10 p-4 text-sm font-semibold text-success">
           <CheckCircle2 className="h-4 w-4" />
           {tab === 'articulos'
             ? 'Artículo enviado correctamente. Ahora está pendiente de revisión docente.'
@@ -305,7 +305,7 @@ function CuentaContent() {
       )}
 
       {updated && (
-        <p role="status" className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+        <p role="status" className="flex items-center gap-2 rounded-xl border border-success/30 bg-success/10 p-4 text-sm font-semibold text-success">
           <CheckCircle2 className="h-4 w-4" />
           Cambios guardados correctamente. Si el contenido requería correcciones, ya fue reenviado a revisión docente.
         </p>

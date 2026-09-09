@@ -65,7 +65,7 @@ export default function AdminUsuariosPage() {
         />
       </form>
 
-      {error && <p className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">{error}</p>}
+      {error && <p className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{error}</p>}
 
       {isLoading ? (
         <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
@@ -78,7 +78,7 @@ export default function AdminUsuariosPage() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 text-sm font-bold">
                     {u.profile?.fullName}
-                    {!u.isActive && <Badge variant="outline" className="text-red-500 border-red-500/40">Desactivado</Badge>}
+                    {!u.isActive && <Badge variant="outline" className="text-danger border-danger/40">Desactivado</Badge>}
                   </div>
                   <div className="truncate text-xs text-muted-foreground">@{u.username} · {u.email} · {u.profile?.totalPoints ?? 0} pts</div>
                 </div>
@@ -93,7 +93,7 @@ export default function AdminUsuariosPage() {
                       'rounded-md border px-2.5 py-1 text-[11px] font-bold transition',
                       u.roles.includes(role)
                         ? role === 'ADMIN'
-                          ? 'border-red-500/50 bg-red-500/15 text-red-500'
+                          ? 'border-danger/50 bg-danger/15 text-danger'
                           : 'border-primary/50 bg-primary/15 text-primary'
                         : 'border-border text-muted-foreground hover:border-primary/40',
                     )}
@@ -106,7 +106,7 @@ export default function AdminUsuariosPage() {
                   variant="ghost"
                   disabled={update.isPending}
                   onClick={() => update.mutate({ id: u.id, roles: u.roles, isActive: !u.isActive })}
-                  className={u.isActive ? 'text-red-500 hover:bg-red-500/10' : 'text-emerald-500 hover:bg-emerald-500/10'}
+                  className={u.isActive ? 'text-danger hover:bg-danger/10' : 'text-success hover:bg-success/10'}
                 >
                   {u.isActive ? <UserX /> : <ShieldCheck />}
                   {u.isActive ? 'Desactivar' : 'Reactivar'}

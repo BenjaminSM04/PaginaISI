@@ -99,11 +99,11 @@ export function CommunityJoinButton({
         <p className="text-xs text-muted-foreground">Inicia sesión para unirte; volverás a esta comunidad al terminar.</p>
       )}
       {message && (
-        <p role="status" className="flex items-start gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+        <p role="status" className="flex items-start gap-1.5 text-xs font-semibold text-success">
           <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" /> {message}
         </p>
       )}
-      {error && <p role="alert" className="text-xs font-semibold text-red-500">{error}</p>}
+      {error && <p role="alert" className="text-xs font-semibold text-danger">{error}</p>}
     </div>
   );
 }

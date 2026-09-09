@@ -202,23 +202,23 @@ export function IdeaForm({ initial }: { initial?: IdeaProposal }) {
         <div className="space-y-1.5">
           <Label htmlFor="idea-title">Título *</Label>
           <Input id="idea-title" placeholder="Plataforma para optimizar…" {...register('title')} />
-          {errors.title && <p className="text-xs text-red-500">{errors.title.message}</p>}
+          {errors.title && <p className="text-xs text-danger">{errors.title.message}</p>}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="idea-description">Descripción de la idea *</Label>
           <Textarea id="idea-description" rows={5} placeholder="Explica el alcance y quién se beneficiaría…" {...register('description')} />
-          {errors.description && <p className="text-xs text-red-500">{errors.description.message}</p>}
+          {errors.description && <p className="text-xs text-danger">{errors.description.message}</p>}
         </div>
         <div className="grid gap-5 md:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="idea-problem">Problema que busca resolver *</Label>
             <Textarea id="idea-problem" rows={6} placeholder="Situación actual, impacto y evidencia…" {...register('problem')} />
-            {errors.problem && <p className="text-xs text-red-500">{errors.problem.message}</p>}
+            {errors.problem && <p className="text-xs text-danger">{errors.problem.message}</p>}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="idea-solution">Propuesta de solución *</Label>
             <Textarea id="idea-solution" rows={6} placeholder="Cómo funcionaría y qué resultado produciría…" {...register('proposedSolution')} />
-            {errors.proposedSolution && <p className="text-xs text-red-500">{errors.proposedSolution.message}</p>}
+            {errors.proposedSolution && <p className="text-xs text-danger">{errors.proposedSolution.message}</p>}
           </div>
         </div>
         <div className="space-y-1.5">
@@ -314,7 +314,7 @@ export function IdeaForm({ initial }: { initial?: IdeaProposal }) {
         <div className="space-y-1.5">
           <Label htmlFor="idea-attachment-url">Enlace externo de respaldo (opcional)</Label>
           <Input id="idea-attachment-url" type="url" placeholder="https://…" {...register('attachmentUrl')} />
-          {errors.attachmentUrl && <p className="text-xs text-red-500">{errors.attachmentUrl.message}</p>}
+          {errors.attachmentUrl && <p className="text-xs text-danger">{errors.attachmentUrl.message}</p>}
         </div>
       </fieldset>
 
@@ -334,27 +334,27 @@ export function IdeaForm({ initial }: { initial?: IdeaProposal }) {
             <div className="space-y-1.5">
               <Label htmlFor="idea-client-name">Nombre o razón social *</Label>
               <Input id="idea-client-name" {...register('clientName')} />
-              {errors.clientName && <p className="text-xs text-red-500">{errors.clientName.message}</p>}
+              {errors.clientName && <p className="text-xs text-danger">{errors.clientName.message}</p>}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="idea-contact-name">Persona de contacto *</Label>
               <Input id="idea-contact-name" {...register('clientContactName')} />
-              {errors.clientContactName && <p className="text-xs text-red-500">{errors.clientContactName.message}</p>}
+              {errors.clientContactName && <p className="text-xs text-danger">{errors.clientContactName.message}</p>}
             </div>
             <div className="space-y-1.5 md:col-span-2">
               <Label htmlFor="idea-contact">Medio de contacto *</Label>
               <Input id="idea-contact" placeholder="Correo, teléfono u otro canal autorizado" {...register('clientContact')} />
-              {errors.clientContact && <p className="text-xs text-red-500">{errors.clientContact.message}</p>}
+              {errors.clientContact && <p className="text-xs text-danger">{errors.clientContact.message}</p>}
             </div>
             <div className="space-y-1.5 md:col-span-2">
               <Label htmlFor="idea-client-need">Necesidad planteada *</Label>
               <Textarea id="idea-client-need" rows={4} {...register('clientNeed')} />
-              {errors.clientNeed && <p className="text-xs text-red-500">{errors.clientNeed.message}</p>}
+              {errors.clientNeed && <p className="text-xs text-danger">{errors.clientNeed.message}</p>}
             </div>
             <div className="space-y-1.5 md:col-span-2">
               <Label htmlFor="idea-client-authorization">Autorización o respaldo (opcional)</Label>
               <Input id="idea-client-authorization" type="url" placeholder="https://…" {...register('clientAuthorizationUrl')} />
-              {errors.clientAuthorizationUrl && <p className="text-xs text-red-500">{errors.clientAuthorizationUrl.message}</p>}
+              {errors.clientAuthorizationUrl && <p className="text-xs text-danger">{errors.clientAuthorizationUrl.message}</p>}
             </div>
           </div>
         ) : (
@@ -365,7 +365,7 @@ export function IdeaForm({ initial }: { initial?: IdeaProposal }) {
       </fieldset>
 
       {serverError && (
-        <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
           {serverError}
         </p>
       )}

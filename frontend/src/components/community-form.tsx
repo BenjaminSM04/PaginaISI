@@ -367,12 +367,12 @@ export function CommunityForm({
         <div className="space-y-1.5">
           <Label htmlFor="community-name">Nombre *</Label>
           <Input id="community-name" {...register('name')} />
-          {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
+          {errors.name && <p className="text-xs text-danger">{errors.name.message}</p>}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="community-description">Descripción breve *</Label>
           <Textarea id="community-description" rows={3} {...register('description')} />
-          {errors.description && <p className="text-xs text-red-500">{errors.description.message}</p>}
+          {errors.description && <p className="text-xs text-danger">{errors.description.message}</p>}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="community-long-description">Presentación completa</Label>
@@ -397,7 +397,7 @@ export function CommunityForm({
               onRemove={() => setValue('logoUrl', '', { shouldDirty: true, shouldValidate: true })}
             />
             <Input id="community-logo-url" aria-label="URL del logotipo" placeholder="O pega una URL HTTPS…" {...register('logoUrl')} />
-            {errors.logoUrl && <p className="text-xs text-red-500">{errors.logoUrl.message}</p>}
+            {errors.logoUrl && <p className="text-xs text-danger">{errors.logoUrl.message}</p>}
           </div>
           <div className="space-y-2 rounded-xl border border-border bg-secondary/20 p-4">
             <Label htmlFor="community-cover-url">Portada</Label>
@@ -410,7 +410,7 @@ export function CommunityForm({
               onRemove={() => setValue('coverUrl', '', { shouldDirty: true, shouldValidate: true })}
             />
             <Input id="community-cover-url" aria-label="URL de la portada" placeholder="O pega una URL HTTPS…" {...register('coverUrl')} />
-            {errors.coverUrl && <p className="text-xs text-red-500">{errors.coverUrl.message}</p>}
+            {errors.coverUrl && <p className="text-xs text-danger">{errors.coverUrl.message}</p>}
           </div>
         </div>
         <div className="max-w-sm space-y-1.5">
@@ -419,7 +419,7 @@ export function CommunityForm({
             <Input id="community-color" type="color" className="w-14 p-1" {...register('accentColor')} />
             <Input aria-label="Color hexadecimal" {...register('accentColor')} />
           </div>
-          {errors.accentColor && <p className="text-xs text-red-500">{errors.accentColor.message}</p>}
+          {errors.accentColor && <p className="text-xs text-danger">{errors.accentColor.message}</p>}
         </div>
       </section>
 
@@ -459,7 +459,7 @@ export function CommunityForm({
                     <Button type="button" variant="ghost" size="icon" aria-label={`Bajar enlace ${index + 1}`} disabled={index === links.length - 1} onClick={() => moveLink(index, 1)}>
                       <ArrowDown />
                     </Button>
-                    <Button type="button" variant="ghost" size="icon" aria-label={`Eliminar enlace ${index + 1}`} onClick={() => removeLink(link.clientId)} className="text-red-500 hover:text-red-600">
+                    <Button type="button" variant="ghost" size="icon" aria-label={`Eliminar enlace ${index + 1}`} onClick={() => removeLink(link.clientId)} className="text-danger hover:text-danger">
                       <Trash2 />
                     </Button>
                   </div>
@@ -484,7 +484,7 @@ export function CommunityForm({
                         onChange={(event) => updateLink(link.clientId, { customPlatform: event.target.value })}
                       />
                     )}
-                    {errorsForLink?.platform && <p className="text-xs text-red-500">{errorsForLink.platform}</p>}
+                    {errorsForLink?.platform && <p className="text-xs text-danger">{errorsForLink.platform}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor={`community-link-label-${link.clientId}`}>Etiqueta visible</Label>
@@ -495,7 +495,7 @@ export function CommunityForm({
                       placeholder="Ej. Grupo principal"
                       onChange={(event) => updateLink(link.clientId, { label: event.target.value })}
                     />
-                    {errorsForLink?.label && <p className="text-xs text-red-500">{errorsForLink.label}</p>}
+                    {errorsForLink?.label && <p className="text-xs text-danger">{errorsForLink.label}</p>}
                   </div>
                   <div className="space-y-1.5 md:col-span-2">
                     <Label htmlFor={`community-link-url-${link.clientId}`}>URL *</Label>
@@ -507,13 +507,13 @@ export function CommunityForm({
                       placeholder="https://…"
                       onChange={(event) => updateLink(link.clientId, { url: event.target.value })}
                     />
-                    {errorsForLink?.url && <p className="text-xs text-red-500">{errorsForLink.url}</p>}
+                    {errorsForLink?.url && <p className="text-xs text-danger">{errorsForLink.url}</p>}
                   </div>
                 </div>
                 <label className="mt-4 flex w-fit items-center gap-2 text-sm font-semibold">
                   <input
                     type="checkbox"
-                    className="h-4 w-4 accent-[#06B6D4]"
+                    className="h-4 w-4 accent-accent"
                     checked={link.isActive}
                     onChange={(event) => updateLink(link.clientId, { isActive: event.target.checked })}
                   />
@@ -557,10 +557,10 @@ export function CommunityForm({
             emptyMessage="No se encontraron líderes elegibles."
             requestKey={initial?.id ?? 'new-community'}
           />
-          {teacherError && <p role="alert" className="text-sm text-red-500">{teacherError}</p>}
+          {teacherError && <p role="alert" className="text-sm text-danger">{teacherError}</p>}
           {editing && (
             <label className="flex items-center gap-2 text-sm font-semibold">
-              <input type="checkbox" className="h-4 w-4 accent-[#06B6D4]" {...register('isActive')} />
+              <input type="checkbox" className="h-4 w-4 accent-accent" {...register('isActive')} />
               Comunidad activa y visible públicamente
             </label>
           )}
@@ -571,7 +571,7 @@ export function CommunityForm({
         </p>
       ) : null}
 
-      {serverError && <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">{serverError}</p>}
+      {serverError && <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{serverError}</p>}
       <div className="flex flex-col gap-3 sm:flex-row">
         <Button type="submit" size="lg" className="flex-1" disabled={isSubmitting || deactivating}>
           {isSubmitting ? <Loader2 className="animate-spin" /> : <Save />} {isSubmitting ? 'Guardando…' : editing ? 'Guardar cambios' : 'Crear comunidad'}

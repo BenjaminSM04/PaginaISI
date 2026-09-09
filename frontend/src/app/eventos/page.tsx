@@ -60,7 +60,7 @@ export default async function EventosPage({ searchParams }: { searchParams: Prom
 
       {/* Evento principal con cuenta regresiva */}
       {featured && (
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#0C447C] via-[#093561] to-[#071426] text-white shadow-xl">
+        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-hero via-hero to-hero-end text-white shadow-xl">
           <div className="grid-bg absolute inset-0 opacity-40" />
           <div className="relative grid gap-8 p-7 md:p-10 lg:grid-cols-2 lg:items-center">
             <div className="space-y-4">

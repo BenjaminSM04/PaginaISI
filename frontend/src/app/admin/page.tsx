@@ -18,7 +18,7 @@ export default function AdminDashboardPage() {
     { label: 'Artículos aprobados', value: c.articles, icon: FileText, href: '/articulos', color: 'text-sky-500' },
     { label: 'Preguntas en el foro', value: c.questions, icon: MessageSquare, href: '/foro', color: 'text-pink-500' },
     { label: 'Eventos', value: c.events, icon: Newspaper, href: '/eventos', color: 'text-orange-500' },
-    { label: 'Comunidades', value: c.communities, icon: Users, href: '/comunidades?vista=comunidades', color: 'text-emerald-500' },
+    { label: 'Comunidades', value: c.communities, icon: Users, href: '/comunidades?vista=comunidades', color: 'text-success' },
   ];
 
   return (
@@ -30,24 +30,24 @@ export default function AdminDashboardPage() {
 
       {/* Pendientes */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <Link href="/revision" className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-5 transition hover:border-amber-500">
+        <Link href="/revision" className="rounded-xl border border-warning/40 bg-warning/10 p-5 transition hover:border-warning">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-bold text-amber-600 dark:text-amber-400">Proyectos pendientes</span>
-            <AlertCircle className="h-4 w-4 text-amber-500" />
+            <span className="text-sm font-bold text-warning">Proyectos pendientes</span>
+            <AlertCircle className="h-4 w-4 text-warning" />
           </div>
           <div className="mt-1 font-serif-heading text-3xl font-bold">{c.pendingProjects ?? 0}</div>
         </Link>
-        <Link href="/revision" className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-5 transition hover:border-amber-500">
+        <Link href="/revision" className="rounded-xl border border-warning/40 bg-warning/10 p-5 transition hover:border-warning">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-bold text-amber-600 dark:text-amber-400">Artículos pendientes</span>
-            <AlertCircle className="h-4 w-4 text-amber-500" />
+            <span className="text-sm font-bold text-warning">Artículos pendientes</span>
+            <AlertCircle className="h-4 w-4 text-warning" />
           </div>
           <div className="mt-1 font-serif-heading text-3xl font-bold">{c.pendingArticles ?? 0}</div>
         </Link>
-        <Link href="/admin/reportes" className="rounded-xl border border-red-500/40 bg-red-500/10 p-5 transition hover:border-red-500">
+        <Link href="/admin/reportes" className="rounded-xl border border-danger/40 bg-danger/10 p-5 transition hover:border-danger">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-bold text-red-500">Reportes sin resolver</span>
-            <Flag className="h-4 w-4 text-red-500" />
+            <span className="text-sm font-bold text-danger">Reportes sin resolver</span>
+            <Flag className="h-4 w-4 text-danger" />
           </div>
           <div className="mt-1 font-serif-heading text-3xl font-bold">{c.pendingReports ?? 0}</div>
         </Link>
@@ -80,7 +80,7 @@ export default function AdminDashboardPage() {
                 <span className="font-semibold">{t.user?.profile?.fullName}</span>
                 <span className="text-muted-foreground"> · {t.reason} · {formatDate(t.createdAt, true)}</span>
               </div>
-              <span className={cn('font-bold', t.points >= 0 ? 'text-emerald-500' : 'text-red-500')}>
+              <span className={cn('font-bold', t.points >= 0 ? 'text-success' : 'text-danger')}>
                 {t.points >= 0 ? '+' : ''}{t.points}
               </span>
             </div>

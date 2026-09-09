@@ -62,9 +62,9 @@ export default function OlvideContrasenaPage() {
             <Label htmlFor="recovery-email">Correo de tu cuenta</Label>
             <Input id="recovery-email" type="email" autoComplete="email" placeholder="avargas@est.isi.edu.bo" value={email} onChange={(event) => setEmail(event.target.value)} required maxLength={254} />
           </div>
-          {error && <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">{error}</p>}
+          {error && <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{error}</p>}
           {result && (
-            <div role="status" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
+            <div role="status" className="rounded-lg border border-success/30 bg-success/10 p-3 text-sm text-success">
               <p>{result.message}</p>
               {previewUrl && (
                 <p className="mt-2">

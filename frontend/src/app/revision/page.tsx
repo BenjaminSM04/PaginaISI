@@ -59,7 +59,7 @@ function ReviewList({ kind }: { kind: 'projects' | 'articles' }) {
 
   if (isError) {
     return (
-      <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-5 text-sm text-red-600 dark:text-red-400">
+      <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-5 text-sm text-danger">
         <div className="flex items-start gap-3">
           <AlertTriangle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />
           <div>
@@ -85,7 +85,7 @@ function ReviewList({ kind }: { kind: 'projects' | 'articles' }) {
           </div>
         )}
         {previewQuery.isError && (
-          <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-5 text-sm text-red-600 dark:text-red-400">
+          <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-5 text-sm text-danger">
             <p className="font-bold">No se pudo cargar la versión sometida.</p>
             <Button type="button" size="sm" variant="outline" className="mt-3" onClick={() => void previewQuery.refetch()}>Reintentar</Button>
           </div>
@@ -104,12 +104,12 @@ function ReviewList({ kind }: { kind: 'projects' | 'articles' }) {
                   value={comments[preview.id] ?? ''}
                   onChange={(event) => setComments((current) => ({ ...current, [preview.id]: event.target.value }))}
                 />
-                {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
+                {error && <p role="alert" className="text-sm text-danger">{error}</p>}
                 <div className="flex flex-wrap gap-2">
                   <Button
                     onClick={() => review.mutate({ id: preview.id, decision: 'APPROVED', expectedVersion: preview.version })}
                     disabled={review.isPending}
-                    className="bg-emerald-600 text-white hover:bg-emerald-700"
+                    className="bg-success text-success-foreground hover:bg-success-hover active:bg-success-active"
                   >
                     <Check /> Aprobar versión
                   </Button>
@@ -117,7 +117,7 @@ function ReviewList({ kind }: { kind: 'projects' | 'articles' }) {
                     variant="outline"
                     onClick={() => review.mutate({ id: preview.id, decision: 'OBSERVED', expectedVersion: preview.version })}
                     disabled={review.isPending || !(comments[preview.id] ?? '').trim()}
-                    className="border-amber-500/50 text-amber-700 dark:text-amber-300"
+                    className="border-warning/50 text-warning"
                   >
                     Observar / solicitar cambios
                   </Button>
@@ -125,7 +125,7 @@ function ReviewList({ kind }: { kind: 'projects' | 'articles' }) {
                     variant="outline"
                     onClick={() => review.mutate({ id: preview.id, decision: 'REJECTED', expectedVersion: preview.version })}
                     disabled={review.isPending || !(comments[preview.id] ?? '').trim()}
-                    className="border-red-500/50 text-red-600 dark:text-red-400"
+                    className="border-danger/50 text-danger"
                   >
                     <X /> Rechazar
                   </Button>
@@ -141,12 +141,12 @@ function ReviewList({ kind }: { kind: 'projects' | 'articles' }) {
   return (
     <div className="space-y-4">
       {error && (
-        <p className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">
+        <p className="flex items-center gap-2 rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
           <AlertTriangle className="h-4 w-4" /> {error}
         </p>
       )}
       {(data ?? []).map((item) => (
-        <div key={item.id} className="space-y-3 rounded-xl border border-amber-500/30 bg-card p-5 shadow-sm">
+        <div key={item.id} className="space-y-3 rounded-xl border border-warning/30 bg-card p-5 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
@@ -246,7 +246,7 @@ function ReviewList({ kind }: { kind: 'projects' | 'articles' }) {
               size="sm"
               onClick={() => review.mutate({ id: item.id, decision: 'APPROVED', expectedVersion: kind === 'projects' ? item.version : undefined })}
               disabled={review.isPending}
-              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              className="bg-success text-success-foreground hover:bg-success-hover active:bg-success-active"
             >
               <Check /> Aprobar <PointReward reason={kind === 'projects' ? 'PROYECTO_APROBADO' : 'ARTICULO_APROBADO'} suffix="pts al autor" parentheses />
             </Button>
@@ -255,7 +255,7 @@ function ReviewList({ kind }: { kind: 'projects' | 'articles' }) {
               variant="outline"
               onClick={() => review.mutate({ id: item.id, decision: 'OBSERVED', expectedVersion: kind === 'projects' ? item.version : undefined })}
               disabled={review.isPending || !(comments[item.id] ?? '').trim()}
-              className="border-amber-500/50 text-amber-600 hover:bg-amber-500/10 dark:text-amber-400"
+              className="border-warning/50 text-warning hover:bg-warning/10 dark:text-warning"
             >
               Observar
             </Button>
@@ -264,7 +264,7 @@ function ReviewList({ kind }: { kind: 'projects' | 'articles' }) {
               variant="outline"
               onClick={() => review.mutate({ id: item.id, decision: 'REJECTED', expectedVersion: kind === 'projects' ? item.version : undefined })}
               disabled={review.isPending || !(comments[item.id] ?? '').trim()}
-              className="border-red-500/50 text-red-500 hover:bg-red-500/10"
+              className="border-danger/50 text-danger hover:bg-danger/10"
             >
               <X /> Rechazar
             </Button>

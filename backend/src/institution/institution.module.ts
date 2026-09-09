@@ -22,7 +22,7 @@ import {
 } from '@nestjs/swagger';
 import { RoleName } from '@prisma/client';
 import { Throttle } from '@nestjs/throttler';
-import { IsOptional, IsString, Matches, MaxLength, MinLength, ValidateIf } from 'class-validator';
+import { IsInt, IsIn, IsObject, Min, Max, IsOptional, IsString, Matches, MaxLength, MinLength, ValidateIf } from 'class-validator';
 import { AuditService } from '../audit/audit.service';
 import { AuthUser, CurrentUser, Public, Roles } from '../common/decorators';
 import { PrismaService } from '../prisma/prisma.service';
@@ -38,10 +38,37 @@ const INSTITUTION_SELECT = {
   careerName: true,
   institutionalLogoUrl: true,
   careerLogoUrl: true,
+  institutionalLogoDarkUrl: true,
+  careerLogoDarkUrl: true,
+  faviconUrl: true,
+  logoMaxHeight: true,
+  logoMaxWidth: true,
+  logoObjectFit: true,
+  theme: true,
   updatedAt: true,
 } as const;
 
-export type InstitutionLogoKind = 'institutional' | 'career';
+export const LOGO_FIELDS = {
+  institutional: 'institutionalLogoUrl', career: 'careerLogoUrl',
+  'institutional-dark': 'institutionalLogoDarkUrl', 'career-dark': 'careerLogoDarkUrl', favicon: 'faviconUrl',
+} as const;
+export type InstitutionLogoKind = keyof typeof LOGO_FIELDS;
+
+export function normalizeTheme(value: unknown): Record<string, Record<string, string>> {
+  if (value === null) return {};
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new BadRequestException('El tema debe ser un objeto');
+  const allowed = new Set(['primary', 'secondary', 'accent', 'background', 'surface', 'text', 'muted', 'border', 'success', 'warning', 'danger', 'info', 'gold']);
+  const result: Record<string, Record<string, string>> = {};
+  for (const [mode, palette] of Object.entries(value)) {
+    if (!['light', 'dark'].includes(mode) || !palette || typeof palette !== 'object' || Array.isArray(palette)) throw new BadRequestException('Usa paletas light y dark');
+    result[mode] = {};
+    for (const [name, color] of Object.entries(palette)) {
+      if (!allowed.has(name) || typeof color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(color)) throw new BadRequestException('Color o token no válido: ' + name);
+      result[mode][name] = color.toLowerCase();
+    }
+  }
+  return result;
+}
 
 export function normalizeSafeLogoUrl(value: string | null | undefined) {
   if (value === undefined || value === null) return value;
@@ -81,6 +108,25 @@ export function normalizeInstitutionLabel(value: string, label: string, maxLengt
 }
 
 export class UpdateInstitutionDto {
+  @IsOptional() @IsObject()
+  theme?: Record<string, Record<string, string>> | null;
+
+  @ValidateIf((_object, value) => value !== undefined) @IsInt() @Min(24) @Max(96)
+  logoMaxHeight?: number;
+
+  @ValidateIf((_object, value) => value !== undefined) @IsInt() @Min(48) @Max(240)
+  logoMaxWidth?: number;
+
+  @ValidateIf((_object, value) => value !== undefined) @IsIn(['contain', 'scale-down'])
+  logoObjectFit?: 'contain' | 'scale-down';
+
+  @IsOptional() @IsString() @MaxLength(2048)
+  institutionalLogoDarkUrl?: string | null;
+  @IsOptional() @IsString() @MaxLength(2048)
+  careerLogoDarkUrl?: string | null;
+  @IsOptional() @IsString() @MaxLength(2048)
+  faviconUrl?: string | null;
+
   @ApiPropertyOptional({ example: 'Universidad Privada del Valle' })
   @ValidateIf((_object, value) => value !== undefined)
   @IsString()
@@ -136,6 +182,13 @@ export class InstitutionService {
   }
 
   private normalizeUpdate(dto: UpdateInstitutionDto) {
+    const extra: Partial<Pick<UpdateInstitutionDto, 'institutionalLogoDarkUrl' | 'careerLogoDarkUrl' | 'faviconUrl'>> = {};
+    for (const field of ['institutionalLogoDarkUrl', 'careerLogoDarkUrl', 'faviconUrl'] as const) {
+      if (dto[field] === undefined) continue;
+      const normalized = normalizeSafeLogoUrl(dto[field]);
+      if (dto[field] !== null && !normalized) throw new BadRequestException('URL de imagen no válida');
+      extra[field] = normalized;
+    }
     const institutionalLogoUrl = normalizeSafeLogoUrl(dto.institutionalLogoUrl);
     const careerLogoUrl = normalizeSafeLogoUrl(dto.careerLogoUrl);
     if (dto.institutionalLogoUrl !== undefined && dto.institutionalLogoUrl !== null && !institutionalLogoUrl) {
@@ -145,6 +198,11 @@ export class InstitutionService {
       throw new BadRequestException('La URL del logo de la carrera no es válida');
     }
     return {
+      ...extra,
+      ...(dto.theme === undefined ? {} : { theme: normalizeTheme(dto.theme) }),
+      ...(dto.logoMaxHeight === undefined ? {} : { logoMaxHeight: dto.logoMaxHeight }),
+      ...(dto.logoMaxWidth === undefined ? {} : { logoMaxWidth: dto.logoMaxWidth }),
+      ...(dto.logoObjectFit === undefined ? {} : { logoObjectFit: dto.logoObjectFit }),
       ...(dto.institutionName === undefined
         ? {}
         : { institutionName: normalizeInstitutionLabel(dto.institutionName, 'El nombre institucional', 160) }),
@@ -171,7 +229,7 @@ export class InstitutionService {
         update: {},
         select: INSTITUTION_SELECT,
       });
-      const changed = Object.entries(data).some(([key, value]) => before[key as keyof typeof before] !== value);
+      const changed = Object.entries(data).some(([key, value]) => JSON.stringify(before[key as keyof typeof before]) !== JSON.stringify(value));
       if (!changed) throw new BadRequestException('Los datos enviados no contienen cambios efectivos');
       const settings = await tx.institutionalSettings.update({
         where: { id: SETTINGS_ID },
@@ -191,8 +249,8 @@ export class InstitutionService {
   }
 
   async uploadLogo(actor: AuthUser, kind: string, file?: Express.Multer.File) {
-    if (!['institutional', 'career'].includes(kind)) {
-      throw new BadRequestException('El tipo de logo debe ser "institutional" o "career"');
+    if (!Object.prototype.hasOwnProperty.call(LOGO_FIELDS, kind)) {
+      throw new BadRequestException('Tipo de imagen institucional no válido');
     }
     if (!file) throw new BadRequestException('Archivo requerido (campo "file")');
     if (!LOGO_IMAGE_MIMES.includes(file.mimetype)) {
@@ -201,9 +259,7 @@ export class InstitutionService {
 
     const asset = await this.storage.upload(actor, file);
     try {
-      return await this.update(actor, kind === 'institutional'
-        ? { institutionalLogoUrl: asset.url }
-        : { careerLogoUrl: asset.url });
+      return await this.update(actor, { [LOGO_FIELDS[kind as InstitutionLogoKind]]: asset.url });
     } catch (error) {
       await this.storage.removeRecordAndObject(asset.id).catch(() => undefined);
       throw error;

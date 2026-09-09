@@ -9,9 +9,9 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
       <section
         role="alert"
         aria-labelledby="global-error-title"
-        className="w-full max-w-lg rounded-2xl border border-red-500/30 bg-card p-8 text-center shadow-sm"
+        className="w-full max-w-lg rounded-2xl border border-danger/30 bg-card p-8 text-center shadow-sm"
       >
-        <AlertTriangle aria-hidden="true" className="mx-auto h-10 w-10 text-red-500" />
+        <AlertTriangle aria-hidden="true" className="mx-auto h-10 w-10 text-danger" />
         <h1 id="global-error-title" className="mt-4 font-serif-heading text-2xl font-bold text-primary">
           No pudimos cargar esta página
         </h1>

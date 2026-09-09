@@ -193,7 +193,7 @@ export function MentorshipDetail({ initial }: { initial: Mentorship }) {
                 <Video /> Ver grabaciones
               </ExternalResourceLink>
             )}
-            {query.isError && <p role="alert" className="text-xs text-red-500">No se pudo actualizar tu acceso. Se muestran los datos públicos.</p>}
+            {query.isError && <p role="alert" className="text-xs text-danger">No se pudo actualizar tu acceso. Se muestran los datos públicos.</p>}
           </section>
 
           <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
@@ -202,7 +202,7 @@ export function MentorshipDetail({ initial }: { initial: Mentorship }) {
               {(mentorship.mentors?.length ? mentorship.mentors.map((entry) => entry.user) : mentorship.mentor ? [mentorship.mentor] : []).map((mentor) => (
                 <Link key={mentor.id ?? mentor.username} href={`/perfil/${mentor.username}`} className="flex items-center gap-3 rounded-lg p-1 transition hover:bg-secondary">
                   <Avatar src={mentor.profile?.avatarUrl} name={mentor.profile?.fullName} className="h-10 w-10" />
-                  <span><span className="block text-sm font-bold">{mentor.profile?.fullName ?? mentor.username}</span><span className="flex items-center gap-1 text-xs text-emerald-500"><CheckCircle2 className="h-3 w-3" /> Docente verificado</span></span>
+                  <span><span className="block text-sm font-bold">{mentor.profile?.fullName ?? mentor.username}</span><span className="flex items-center gap-1 text-xs text-success"><CheckCircle2 className="h-3 w-3" /> Docente verificado</span></span>
                 </Link>
               ))}
             </div>

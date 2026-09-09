@@ -199,7 +199,7 @@ export class StorageService implements OnModuleInit {
       this.prisma.profile.count({ where: { avatarUrl: url } }),
       this.prisma.community.count({ where: { OR: [{ logoUrl: url }, { coverUrl: url }] } }),
       this.prisma.institutionalSettings.count({
-        where: { OR: [{ institutionalLogoUrl: url }, { careerLogoUrl: url }] },
+        where: { OR: [{ institutionalLogoUrl: url }, { careerLogoUrl: url }, { institutionalLogoDarkUrl: url }, { careerLogoDarkUrl: url }, { faviconUrl: url }] },
       }),
       this.prisma.incubatorClient.count({ where: { logoUrl: url } }),
       this.prisma.news.count({ where: { coverUrl: url } }),

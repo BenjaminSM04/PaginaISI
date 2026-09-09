@@ -1,5 +1,7 @@
 # Preparación para producción del Portal ISI
 
+Actualización de identidad y conectividad (9 de septiembre de 2026): consultar [IDENTIDAD-Y-DESPLIEGUE.md](IDENTIDAD-Y-DESPLIEGUE.md). La evidencia de julio que sigue es histórica; no certifica el estado actual del servidor.
+
 Estado al 13 de julio de 2026: la plataforma está lista para validación con cliente y demostración local. El código compila, las migraciones se aplican, Docker queda saludable y los controles automatizados pasan. Publicarla en Internet requiere completar la operación institucional descrita aquí; no son páginas faltantes que deban simularse.
 
 ## Evidencia disponible hoy
@@ -27,7 +29,7 @@ Estado al 13 de julio de 2026: la plataforma está lista para validación con cl
 
 - Elegir dominio definitivo y emitir certificados TLS con renovación automática.
 - Colocar web/API detrás de un proxy o plataforma administrada; exponer únicamente 443.
-- Configurar `WEB_ORIGIN`, `PUBLIC_WEB_URL`, `PUBLIC_API_URL` y `NEXT_PUBLIC_API_URL` con URLs HTTPS exactas.
+- Configurar `WEB_ORIGIN` y `PUBLIC_WEB_URL` con el dominio HTTPS exacto. Compose deriva `PUBLIC_API_URL` y `NEXT_PUBLIC_SITE_URL` de `PUBLIC_WEB_URL`; el cliente usa `/api` y ya no lee `NEXT_PUBLIC_API_URL`. Fuera de Compose, establecer también `PUBLIC_API_URL` en el backend y `API_INTERNAL_URL` en Next.
 - Ajustar `TRUST_PROXY_HOPS` al número real de proxies confiables; no usar un valor genérico.
 - Mantener PostgreSQL y storage sin acceso público y limitar salida/entrada por red.
 - Aplicar rate limiting también en el borde y documentar los límites esperados.

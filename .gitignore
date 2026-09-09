@@ -18,3 +18,5 @@ backend/uploads/
 .DS_Store
 Thumbs.db
 mockups/
+docs/
+docs

@@ -38,7 +38,7 @@ function NewsInlineContent({ item, expanded }: { item: News; expanded: boolean }
   }
   if (details.isError) {
     return (
-      <p role="alert" className="text-sm text-red-500">
+      <p role="alert" className="text-sm text-danger">
         No se pudo cargar el contenido. Usa el enlace permanente o vuelve a intentarlo.
       </p>
     );

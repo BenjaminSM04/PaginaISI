@@ -78,10 +78,10 @@ export const STATUS_LABELS: Record<string, string> = {
 
 export const STATUS_COLORS: Record<string, string> = {
   DRAFT: 'bg-muted text-muted-foreground border-border',
-  PENDING: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
-  APPROVED: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+  PENDING: 'bg-warning/15 text-warning border-warning/30',
+  APPROVED: 'bg-success/15 text-success border-success/30',
   OBSERVED: 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30',
-  REJECTED: 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30',
+  REJECTED: 'bg-danger/15 text-danger border-danger/30',
   ARCHIVED: 'bg-muted text-muted-foreground border-border',
 };
 

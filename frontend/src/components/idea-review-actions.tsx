@@ -44,7 +44,7 @@ export function IdeaReviewActions({
   };
 
   return (
-    <section className="space-y-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-5">
+    <section className="space-y-4 rounded-xl border border-warning/30 bg-warning/5 p-5">
       <div>
         <h2 className="font-serif-heading text-lg font-bold text-primary">Decisión docente</h2>
         <p className="mt-1 text-xs text-muted-foreground">La decisión se audita y se notificará a la persona postulante.</p>
@@ -61,7 +61,7 @@ export function IdeaReviewActions({
         />
         <p className="text-right text-[11px] text-muted-foreground">{comment.length}/1000</p>
       </div>
-      {error && <p role="alert" className="text-sm font-semibold text-red-500">{error}</p>}
+      {error && <p role="alert" className="text-sm font-semibold text-danger">{error}</p>}
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="outline" disabled={Boolean(decision)} onClick={() => void review('OBSERVED')}>
           {decision === 'OBSERVED' ? <Loader2 className="animate-spin" /> : <MessageSquareWarning />} Observar

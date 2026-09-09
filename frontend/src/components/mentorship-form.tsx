@@ -254,18 +254,18 @@ export function MentorshipForm({ initial, mode }: { initial?: Mentorship; mode: 
         <div className="space-y-1.5">
           <Label htmlFor="mentorship-title">Título *</Label>
           <Input id="mentorship-title" placeholder="Introducción práctica a Docker" {...register('title')} />
-          {errors.title && <p className="text-xs text-red-500">{errors.title.message}</p>}
+          {errors.title && <p className="text-xs text-danger">{errors.title.message}</p>}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="mentorship-description">Resumen y descripción *</Label>
           <Textarea id="mentorship-description" rows={5} placeholder="Objetivos, dinámica y resultados de aprendizaje…" {...register('description')} />
-          {errors.description && <p className="text-xs text-red-500">{errors.description.message}</p>}
+          {errors.description && <p className="text-xs text-danger">{errors.description.message}</p>}
         </div>
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="mentorship-area">Área *</Label>
             <Input id="mentorship-area" placeholder="DevOps, IA, Programación…" {...register('area')} />
-            {errors.area && <p className="text-xs text-red-500">{errors.area.message}</p>}
+            {errors.area && <p className="text-xs text-danger">{errors.area.message}</p>}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="mentorship-difficulty">Nivel *</Label>
@@ -280,7 +280,7 @@ export function MentorshipForm({ initial, mode }: { initial?: Mentorship; mode: 
           <Label htmlFor="mentorship-syllabus">Temario</Label>
           <Textarea id="mentorship-syllabus" rows={6} placeholder={'Un punto por línea\nFundamentos y preparación\nLaboratorio guiado\nProyecto final'} {...register('syllabus')} />
           <p className="text-[11px] text-muted-foreground">Un punto por línea, máximo 50.</p>
-          {errors.syllabus && <p className="text-xs text-red-500">{errors.syllabus.message}</p>}
+          {errors.syllabus && <p className="text-xs text-danger">{errors.syllabus.message}</p>}
         </div>
       </fieldset>
 
@@ -290,12 +290,12 @@ export function MentorshipForm({ initial, mode }: { initial?: Mentorship; mode: 
           <div className="space-y-1.5">
             <Label htmlFor="mentorship-start">Inicio *</Label>
             <Input id="mentorship-start" type="datetime-local" {...register('startsAt')} />
-            {errors.startsAt && <p className="text-xs text-red-500">{errors.startsAt.message}</p>}
+            {errors.startsAt && <p className="text-xs text-danger">{errors.startsAt.message}</p>}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="mentorship-end">Fin (opcional)</Label>
             <Input id="mentorship-end" type="datetime-local" {...register('endsAt')} />
-            {errors.endsAt && <p className="text-xs text-red-500">{errors.endsAt.message}</p>}
+            {errors.endsAt && <p className="text-xs text-danger">{errors.endsAt.message}</p>}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="mentorship-modality">Modalidad *</Label>
@@ -309,31 +309,31 @@ export function MentorshipForm({ initial, mode }: { initial?: Mentorship; mode: 
             <Label htmlFor="mentorship-capacity">Capacidad</Label>
             <Input id="mentorship-capacity" type="number" min={1} step={1} placeholder="30" {...register('capacity')} />
             <p className="text-[11px] text-muted-foreground">{students.length} estudiante(s) seleccionado(s){capacity ? ` de ${capacity}` : ''}.</p>
-            {errors.capacity && <p className="text-xs text-red-500">{errors.capacity.message}</p>}
+            {errors.capacity && <p className="text-xs text-danger">{errors.capacity.message}</p>}
           </div>
           {(modality === 'IN_PERSON' || modality === 'HYBRID') && (
             <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="mentorship-location">Lugar *</Label>
               <Input id="mentorship-location" placeholder="Laboratorio, aula o dirección" {...register('location')} />
-              {errors.location && <p className="text-xs text-red-500">{errors.location.message}</p>}
+              {errors.location && <p className="text-xs text-danger">{errors.location.message}</p>}
             </div>
           )}
           {(modality === 'ONLINE' || modality === 'HYBRID') && (
             <div className="space-y-1.5">
               <Label htmlFor="mentorship-meeting-url">Enlace de sesión *</Label>
               <Input id="mentorship-meeting-url" type="url" placeholder="https://meet.example/…" {...register('meetingUrl')} />
-              {errors.meetingUrl && <p className="text-xs text-red-500">{errors.meetingUrl.message}</p>}
+              {errors.meetingUrl && <p className="text-xs text-danger">{errors.meetingUrl.message}</p>}
             </div>
           )}
           <div className="space-y-1.5">
             <Label htmlFor="mentorship-teams-url">Canal de Teams (opcional)</Label>
             <Input id="mentorship-teams-url" type="url" placeholder="https://teams.microsoft.com/…" {...register('teamsUrl')} />
-            {errors.teamsUrl && <p className="text-xs text-red-500">{errors.teamsUrl.message}</p>}
+            {errors.teamsUrl && <p className="text-xs text-danger">{errors.teamsUrl.message}</p>}
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="mentorship-youtube-url">Grabación o lista de sesiones (opcional)</Label>
             <Input id="mentorship-youtube-url" type="url" placeholder="https://youtube.com/…" {...register('youtubeUrl')} />
-            {errors.youtubeUrl && <p className="text-xs text-red-500">{errors.youtubeUrl.message}</p>}
+            {errors.youtubeUrl && <p className="text-xs text-danger">{errors.youtubeUrl.message}</p>}
           </div>
         </div>
       </fieldset>
@@ -415,7 +415,7 @@ export function MentorshipForm({ initial, mode }: { initial?: Mentorship; mode: 
               onRemove={() => void removeCover()}
             />
             <input type="hidden" {...register('coverUrl')} />
-            {errors.coverUrl && <p className="text-xs text-red-500">{errors.coverUrl.message}</p>}
+            {errors.coverUrl && <p className="text-xs text-danger">{errors.coverUrl.message}</p>}
           </div>
           <div className="space-y-3">
             <h3 className="text-sm font-bold">Agregar a la galería</h3>
@@ -453,7 +453,7 @@ export function MentorshipForm({ initial, mode }: { initial?: Mentorship; mode: 
       </fieldset>
 
       {serverError && (
-        <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400">{serverError}</p>
+        <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{serverError}</p>
       )}
       <div className="flex flex-col-reverse gap-3 border-t border-border pt-6 sm:flex-row sm:justify-end">
         <Link href={editing ? '/mentorias/gestionar' : '/mentorias'} className={cn(buttonVariants({ variant: 'outline' }), 'w-full sm:w-auto')}>Cancelar</Link>

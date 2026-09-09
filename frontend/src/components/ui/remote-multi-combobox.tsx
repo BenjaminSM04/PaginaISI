@@ -327,13 +327,13 @@ export function RemoteMultiCombobox<T>({
           {statusContent && (
             <p
               role={error ? 'alert' : 'status'}
-              className={cn('px-3 py-3 text-center text-xs text-muted-foreground', error && 'text-red-500')}
+              className={cn('px-3 py-3 text-center text-xs text-muted-foreground', error && 'text-danger')}
             >
               {loading && <Loader2 className="mr-1 inline h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
               {statusContent}
             </p>
           )}
-          {createError && <p role="alert" className="px-3 py-2 text-xs text-red-500">{createError}</p>}
+          {createError && <p role="alert" className="px-3 py-2 text-xs text-danger">{createError}</p>}
           {hasMore && !belowMinimum && !reachedLimit && (
             <button
               type="button"

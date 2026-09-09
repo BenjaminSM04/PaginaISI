@@ -137,7 +137,7 @@ export function AccountSecurity() {
             </div>
           </div>
           {user?.emailVerifiedAt ? (
-            <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+            <span className="flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1.5 text-xs font-bold text-success">
               <CheckCircle2 className="h-3.5 w-3.5" /> Verificado
             </span>
           ) : (
@@ -147,12 +147,12 @@ export function AccountSecurity() {
           )}
         </div>
         {verification.isError && (
-          <p role="alert" className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">
+          <p role="alert" className="mt-4 rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
             {errorMessage(verification.error)}
           </p>
         )}
         {verification.data && (
-          <div role="status" className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
+          <div role="status" className="mt-4 rounded-lg border border-success/30 bg-success/10 p-3 text-sm text-success">
             <p>{verification.data.message}</p>
             {previewUrl && (
               <p className="mt-2">
@@ -166,7 +166,7 @@ export function AccountSecurity() {
 
       <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="mb-5 flex gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning/10 text-warning">
             <KeyRound className="h-5 w-5" />
           </div>
           <div>
@@ -192,7 +192,7 @@ export function AccountSecurity() {
               {password.isPending ? <Loader2 className="animate-spin" /> : <ShieldCheck />} Actualizar contraseña
             </Button>
             {(passwordMessage || password.isError) && (
-              <p role={password.isError ? 'alert' : 'status'} className={password.isError ? 'text-sm text-red-500' : 'text-sm text-emerald-500'}>
+              <p role={password.isError ? 'alert' : 'status'} className={password.isError ? 'text-sm text-danger' : 'text-sm text-success'}>
                 {password.isError ? errorMessage(password.error) : passwordMessage}
               </p>
             )}
@@ -219,7 +219,7 @@ export function AccountSecurity() {
         {sessions.isLoading ? (
           <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
         ) : sessions.isError ? (
-          <p role="alert" className="text-sm text-red-500">{errorMessage(sessions.error)}</p>
+          <p role="alert" className="text-sm text-danger">{errorMessage(sessions.error)}</p>
         ) : (
           <div className="divide-y divide-border overflow-hidden rounded-xl border border-border">
             {(sessions.data ?? []).map((session) => (
@@ -229,7 +229,7 @@ export function AccountSecurity() {
                   <div className="min-w-0">
                     <p className="font-semibold">
                       {deviceName(session.userAgent)}
-                      {session.isCurrent && <span className="ml-2 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-500">Esta sesión</span>}
+                      {session.isCurrent && <span className="ml-2 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-bold text-success">Esta sesión</span>}
                     </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       Última actividad: {formatDate(session.lastUsedAt, true)}{session.ipAddress ? ` · IP ${session.ipAddress}` : ''}
@@ -237,7 +237,7 @@ export function AccountSecurity() {
                     <p className="mt-0.5 text-[11px] text-muted-foreground">Expiración máxima: {formatDate(session.absoluteExpiresAt, true)}</p>
                   </div>
                 </div>
-                <Button variant="ghost" size="sm" className="text-red-500" disabled={revoke.isPending} onClick={() => revoke.mutate(session)}>
+                <Button variant="ghost" size="sm" className="text-danger" disabled={revoke.isPending} onClick={() => revoke.mutate(session)}>
                   <LogOut /> Cerrar
                 </Button>
               </div>

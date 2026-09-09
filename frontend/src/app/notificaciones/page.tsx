@@ -37,7 +37,7 @@ const ICONS: Record<NotificationType, typeof Bell> = {
 const ICON_STYLES: Record<NotificationType, string> = {
   CONTENT_REVIEW: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
   FORUM_ANSWER: 'bg-pink-500/10 text-pink-600 dark:text-pink-400',
-  FORUM_ACCEPTED: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+  FORUM_ACCEPTED: 'bg-success/10 text-success',
   EVENT_REGISTRATION: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
   MENTORSHIP_ENROLLMENT: 'bg-teal-500/10 text-teal-600 dark:text-teal-400',
   SYSTEM: 'bg-primary/10 text-primary',

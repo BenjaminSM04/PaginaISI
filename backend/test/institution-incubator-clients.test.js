@@ -281,6 +281,13 @@ test('la identidad devuelve el contrato acordado y el fallback oficial', async (
     careerName: 'Carrera de Ingeniería de Sistemas',
     institutionalLogoUrl: '/branding/univalle-logo.png',
     careerLogoUrl: null,
+    institutionalLogoDarkUrl: null,
+    careerLogoDarkUrl: null,
+    faviconUrl: null,
+    logoMaxHeight: 48,
+    logoMaxWidth: 160,
+    logoObjectFit: 'contain',
+    theme: {},
     updatedAt: new Date(),
   };
   const service = new InstitutionService(

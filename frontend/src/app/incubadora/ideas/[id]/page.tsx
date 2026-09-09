@@ -74,7 +74,7 @@ export default function IdeaDetailPage() {
   if (query.isError || !idea) {
     return (
       <div className="container max-w-xl space-y-5 py-20 text-center">
-        <AlertTriangle className="mx-auto h-9 w-9 text-amber-500" />
+        <AlertTriangle className="mx-auto h-9 w-9 text-warning" />
         <h1 className="font-serif-heading text-2xl font-bold text-primary">Idea no disponible</h1>
         <p className="text-sm text-muted-foreground">No existe, no está publicada o tu cuenta no tiene acceso a esta postulación.</p>
         <div className="flex justify-center gap-2">
@@ -96,7 +96,7 @@ export default function IdeaDetailPage() {
             </Link>
           )}
           {canArchive && (
-            <Button type="button" variant="ghost" size="sm" className="text-red-500 hover:bg-red-500/10" disabled={archive.isPending} onClick={confirmArchive}>
+            <Button type="button" variant="ghost" size="sm" className="text-danger hover:bg-danger/10" disabled={archive.isPending} onClick={confirmArchive}>
               {archive.isPending ? <Loader2 className="animate-spin" /> : <Trash2 />} Retirar
             </Button>
           )}
@@ -219,7 +219,7 @@ export default function IdeaDetailPage() {
           }}
         />
       )}
-      {archive.error && <p role="alert" className="text-sm font-semibold text-red-500">{archive.error.message}</p>}
+      {archive.error && <p role="alert" className="text-sm font-semibold text-danger">{archive.error.message}</p>}
     </div>
   );
 }

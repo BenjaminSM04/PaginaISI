@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useTheme } from 'next-themes';
+import { DEFAULT_INSTITUTIONAL_SETTINGS } from '@/lib/institution';
 import { cn } from '@/lib/utils';
 import { useInstitutionalSettings } from '@/lib/use-institutional-settings';
 
-const LOCAL_INSTITUTIONAL_LOGO = '/branding/univalle-logo.png';
+const LOCAL_INSTITUTIONAL_LOGO = DEFAULT_INSTITUTIONAL_SETTINGS.institutionalLogoUrl;
 
 interface InstitutionalLogoProps {
   kind?: 'institutional' | 'career';
@@ -35,8 +37,11 @@ export function InstitutionalLogo({
 }: InstitutionalLogoProps) {
   const { settings } = useInstitutionalSettings();
   const [failedUrls, setFailedUrls] = useState<string[]>([]);
+  const { resolvedTheme } = useTheme();
   const configuredUrl = kind === 'career' ? settings.careerLogoUrl : settings.institutionalLogoUrl;
+  const darkUrl = kind === 'career' ? settings.careerLogoDarkUrl : settings.institutionalLogoDarkUrl;
   const candidates = [
+    ...(resolvedTheme === 'dark' ? [darkUrl] : []),
     configuredUrl,
     ...(kind === 'institutional' || fallbackToInstitutional
       ? [settings.institutionalLogoUrl, LOCAL_INSTITUTIONAL_LOGO]
@@ -54,7 +59,8 @@ export function InstitutionalLogo({
     <img
       src={url}
       alt={kind === 'career' && configuredUrl ? `Logo de ${settings.careerName}` : `Logo de ${settings.institutionName}`}
-      className={cn('object-contain', className)}
+      className={cn('block h-auto w-auto shrink-0', className)}
+      style={{ maxHeight: settings.logoMaxHeight, maxWidth: `min(${settings.logoMaxWidth}px, 30vw)`, objectFit: settings.logoObjectFit }}
       referrerPolicy="no-referrer"
       onError={() => setFailedUrls((current) => current.includes(url) ? current : [...current, url])}
     />

@@ -93,8 +93,8 @@ export function EventAttendees({ slug, organizerUsername }: { slug: string; orga
       {open && (
         <div className="mt-4 space-y-3 border-t border-border pt-4">
           {isLoading && <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>}
-          {error && <p className="text-sm text-red-500">{error instanceof Error ? error.message : 'No tienes permiso para ver esta lista.'}</p>}
-          {actionError && <p role="alert" className="text-sm text-red-500">{actionError}</p>}
+          {error && <p className="text-sm text-danger">{error instanceof Error ? error.message : 'No tienes permiso para ver esta lista.'}</p>}
+          {actionError && <p role="alert" className="text-sm text-danger">{actionError}</p>}
           {data && (
             <>
               <div className="flex items-center justify-between gap-2">

@@ -69,24 +69,24 @@ export default function RegistroPage() {
     <div className="container flex min-h-[70vh] items-center justify-center py-10">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-accent text-white shadow-md">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-accent text-accent-foreground shadow-md">
             <Sparkles className="h-5 w-5" />
           </div>
           <h1 className="font-serif-heading text-2xl font-bold text-primary">Únete a Ingeniería de Sistemas</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Crea tu cuenta, verifica tu correo y gana <PointReward reason="REGISTRO_COMPLETO" suffix="puntos" className="text-emerald-500" /> de bienvenida.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Crea tu cuenta, verifica tu correo y gana <PointReward reason="REGISTRO_COMPLETO" suffix="puntos" className="text-success" /> de bienvenida.</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
           <div className="space-y-1.5">
             <Label>Nombre completo</Label>
             <Input placeholder="Andrea Vargas" {...register('fullName')} />
-            {errors.fullName && <p className="text-xs text-red-500">{errors.fullName.message}</p>}
+            {errors.fullName && <p className="text-xs text-danger">{errors.fullName.message}</p>}
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Usuario</Label>
               <Input placeholder="avargas" {...register('username')} />
-              {errors.username && <p className="text-xs text-red-500">{errors.username.message}</p>}
+              {errors.username && <p className="text-xs text-danger">{errors.username.message}</p>}
             </div>
             <div className="space-y-1.5">
               <Label>Semestre</Label>
@@ -101,19 +101,19 @@ export default function RegistroPage() {
           <div className="space-y-1.5">
             <Label>Email</Label>
             <Input type="email" placeholder="avargas@est.isi.edu.bo" {...register('email')} />
-            {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
+            {errors.email && <p className="text-xs text-danger">{errors.email.message}</p>}
           </div>
           <div className="space-y-1.5">
             <Label>Contraseña</Label>
             <Input type="password" placeholder="Mínimo 8 caracteres" autoComplete="new-password" {...register('password')} />
-            {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
+            {errors.password && <p className="text-xs text-danger">{errors.password.message}</p>}
           </div>
           <div className="space-y-1.5">
             <Label>Confirmar contraseña</Label>
             <Input type="password" placeholder="Repite tu contraseña" autoComplete="new-password" {...register('confirm')} />
-            {errors.confirm && <p className="text-xs text-red-500">{errors.confirm.message}</p>}
+            {errors.confirm && <p className="text-xs text-danger">{errors.confirm.message}</p>}
           </div>
-          {serverError && <p className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">{serverError}</p>}
+          {serverError && <p className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{serverError}</p>}
           <Button type="submit" disabled={isSubmitting || authLoading} className="w-full" size="lg" variant="accent">
             {isSubmitting || authLoading ? <Loader2 className="animate-spin" /> : <UserPlus />} Crear mi cuenta
           </Button>

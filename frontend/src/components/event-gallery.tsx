@@ -128,8 +128,8 @@ export function EventGallery({ eventId, slug, title, initialImages = [] }: { eve
         )}
       </div>
 
-      {error && <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">{error}</p>}
-      {result && <p role="status" className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-600 dark:text-emerald-400"><CheckCircle2 className="h-4 w-4" /> {result}</p>}
+      {error && <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{error}</p>}
+      {result && <p role="status" className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 p-3 text-sm text-success"><CheckCircle2 className="h-4 w-4" /> {result}</p>}
 
       {images.length ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -148,7 +148,7 @@ export function EventGallery({ eventId, slug, title, initialImages = [] }: { eve
                   aria-label={`Eliminar foto ${index + 1}`}
                   disabled={deletingId === image.id}
                   onClick={() => void removeImage(image)}
-                  className="absolute left-2 top-2 rounded-md bg-red-600/90 p-1.5 text-white opacity-0 shadow transition hover:bg-red-600 focus:opacity-100 disabled:opacity-70 group-hover:opacity-100"
+                  className="absolute left-2 top-2 rounded-md bg-danger/90 p-1.5 text-danger-foreground opacity-0 shadow transition hover:bg-danger-hover active:bg-danger-active focus:opacity-100 disabled:opacity-70 group-hover:opacity-100"
                 >
                   {deletingId === image.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                 </button>

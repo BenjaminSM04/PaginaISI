@@ -55,7 +55,7 @@ export default function AdminReportesPage() {
         ))}
       </div>
 
-      {error && <p className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">{error}</p>}
+      {error && <p className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{error}</p>}
 
       {isLoading ? (
         <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
@@ -65,7 +65,7 @@ export default function AdminReportesPage() {
             <div key={r.id} className="space-y-3 rounded-xl border border-border bg-card p-5 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <Flag className="h-4 w-4 text-red-500" />
+                  <Flag className="h-4 w-4 text-danger" />
                   <Badge variant="outline">{r.targetType}</Badge>
                   <span className="font-mono text-xs text-muted-foreground">{r.targetId}</span>
                 </div>
@@ -77,10 +77,10 @@ export default function AdminReportesPage() {
               {r.resolutionNote && <p className="text-xs text-muted-foreground">Resolución: {r.resolutionNote}</p>}
               {r.status === 'PENDING' && (
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" onClick={() => resolve.mutate({ id: r.id, decision: 'VALID' })} disabled={resolve.isPending} className="bg-emerald-600 text-white hover:bg-emerald-700">
+                  <Button size="sm" onClick={() => resolve.mutate({ id: r.id, decision: 'VALID' })} disabled={resolve.isPending} className="bg-success text-success-foreground hover:bg-success-hover active:bg-success-active">
                     <Check /> Válido <PointReward reason="REPORTE_VALIDO" suffix="al reportante" parentheses />
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => resolve.mutate({ id: r.id, decision: 'VALID', penalize: true })} disabled={resolve.isPending} className="border-red-500/50 text-red-500 hover:bg-red-500/10">
+                  <Button size="sm" variant="outline" onClick={() => resolve.mutate({ id: r.id, decision: 'VALID', penalize: true })} disabled={resolve.isPending} className="border-danger/50 text-danger hover:bg-danger/10">
                     Válido + penalizar autor <PointReward reason="PENALIZACION_SPAM" parentheses />
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => resolve.mutate({ id: r.id, decision: 'DISMISSED' })} disabled={resolve.isPending}>

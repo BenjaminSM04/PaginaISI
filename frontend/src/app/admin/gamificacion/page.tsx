@@ -18,6 +18,7 @@ import {
   X,
 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { DEFAULT_THEME } from '@/lib/theme';
 import type { Badge as BadgeType, BadgeRuleType, Paged, PointRule } from '@/lib/types';
 import { BADGE_RULE_OPTIONS, badgeRuleExplanation, badgeRuleLabel } from '@/lib/badge-rules';
 import { BADGE_ICON_OPTIONS, BadgeIcon, isGeneratedBadgeIcon } from '@/components/badge-icon';
@@ -56,7 +57,7 @@ const EMPTY_BADGE: BadgeDraft = {
   name: '',
   description: '',
   icon: 'award',
-  color: '#0C447C',
+  color: DEFAULT_THEME.light.primary,
   ruleType: '',
   targetValue: '',
   isActive: true,
@@ -237,7 +238,7 @@ export default function AdminGamificacionPage() {
       name: badge.name,
       description: badge.description,
       icon: badge.icon || 'award',
-      color: badge.color || '#0C447C',
+      color: badge.color || DEFAULT_THEME.light.primary,
       ruleType: badge.ruleType || '',
       targetValue: badge.targetValue ? String(badge.targetValue) : '',
       isActive: badge.isActive ?? true,
@@ -320,12 +321,12 @@ export default function AdminGamificacionPage() {
 
       <div aria-live="polite" className="space-y-2">
         {message && (
-          <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
+          <p className="rounded-lg border border-success/30 bg-success/10 p-3 text-sm text-success">
             {message}
           </p>
         )}
         {error && (
-          <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400">
+          <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
             {error}
           </p>
         )}
@@ -405,7 +406,7 @@ export default function AdminGamificacionPage() {
             </div>
           )}
           {badgesQuery.isError && (
-            <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-600 dark:text-red-400">
+            <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger">
               <p>No se pudo cargar el catálogo administrativo.</p>
               <Button size="sm" variant="outline" className="mt-3" onClick={() => void badgesQuery.refetch()}>
                 <RefreshCw /> Reintentar
@@ -431,9 +432,9 @@ export default function AdminGamificacionPage() {
                     <div
                       className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border"
                       style={{
-                        backgroundColor: `${badge.color || '#0C447C'}22`,
-                        borderColor: `${badge.color || '#0C447C'}55`,
-                        color: badge.color || '#0C447C',
+                        backgroundColor: `color-mix(in srgb, ${badge.color || 'hsl(var(--primary))'} 13%, transparent)`,
+                        borderColor: `color-mix(in srgb, ${badge.color || 'hsl(var(--primary))'} 33%, transparent)`,
+                        color: badge.color || 'hsl(var(--primary))',
                       }}
                     >
                       <BadgeIcon icon={badge.icon} label={badge.name} className="h-5 w-5" />
@@ -764,7 +765,7 @@ export default function AdminGamificacionPage() {
               </Button>
             </div>
             {grantBadgesQuery.isError && (
-              <p role="alert" className="mt-3 text-xs text-red-500">No se pudieron cargar las insignias activas.</p>
+              <p role="alert" className="mt-3 text-xs text-danger">No se pudieron cargar las insignias activas.</p>
             )}
           </div>
         </section>
@@ -792,7 +793,7 @@ export default function AdminGamificacionPage() {
             </div>
           )}
           {rulesQuery.isError && (
-            <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-500">
+            <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger">
               <p>No se pudieron cargar las reglas de puntos.</p>
               <Button size="sm" variant="outline" className="mt-3" onClick={() => void rulesQuery.refetch()}>
                 <RefreshCw /> Reintentar

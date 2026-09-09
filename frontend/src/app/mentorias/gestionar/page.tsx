@@ -46,7 +46,7 @@ function GestionMentoriasContent() {
       </div>
 
       {(error || remove.error) && (
-        <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">
+        <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
           {(remove.error as Error | null)?.message ?? (error as Error | null)?.message ?? 'No se pudieron cargar las mentorías.'}
         </p>
       )}
@@ -107,7 +107,7 @@ function GestionMentoriasContent() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="ml-auto text-red-500 hover:bg-red-500/10"
+                  className="ml-auto text-danger hover:bg-danger/10"
                   disabled={remove.isPending || mentorship.status === 'INACTIVE'}
                   onClick={() => deactivate(mentorship)}
                 >

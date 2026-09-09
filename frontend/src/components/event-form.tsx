@@ -140,12 +140,12 @@ export function EventForm({ initial }: { initial?: EventItem }) {
       <div className="space-y-1.5">
         <Label htmlFor="event-title">Título *</Label>
         <Input id="event-title" placeholder="CTF ISI 2026" {...register('title')} />
-        {errors.title && <p className="text-xs text-red-500">{errors.title.message}</p>}
+        {errors.title && <p className="text-xs text-danger">{errors.title.message}</p>}
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="event-description">Descripción *</Label>
         <Textarea id="event-description" rows={5} {...register('description')} />
-        {errors.description && <p className="text-xs text-red-500">{errors.description.message}</p>}
+        {errors.description && <p className="text-xs text-danger">{errors.description.message}</p>}
       </div>
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="space-y-1.5">
@@ -154,7 +154,7 @@ export function EventForm({ initial }: { initial?: EventItem }) {
             <option value="">Selecciona…</option>
             {Object.entries(EVENT_CATEGORIES).map(([key, value]) => <option key={key} value={key}>{value}</option>)}
           </Select>
-          {errors.category && <p className="text-xs text-red-500">{errors.category.message}</p>}
+          {errors.category && <p className="text-xs text-danger">{errors.category.message}</p>}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="event-community">Comunidad organizadora</Label>
@@ -166,7 +166,7 @@ export function EventForm({ initial }: { initial?: EventItem }) {
         <div className="space-y-1.5">
           <Label htmlFor="event-start">Inicio *</Label>
           <Input id="event-start" type="datetime-local" {...register('startsAt')} />
-          {errors.startsAt && <p className="text-xs text-red-500">{errors.startsAt.message}</p>}
+          {errors.startsAt && <p className="text-xs text-danger">{errors.startsAt.message}</p>}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="event-end">Fin (opcional)</Label>
@@ -183,12 +183,12 @@ export function EventForm({ initial }: { initial?: EventItem }) {
         <div className="space-y-1.5">
           <Label htmlFor="event-rules">Bases / reglamento (URL)</Label>
           <Input id="event-rules" placeholder="https://…/bases.pdf" {...register('rulesUrl')} />
-          {errors.rulesUrl && <p className="text-xs text-red-500">{errors.rulesUrl.message}</p>}
+          {errors.rulesUrl && <p className="text-xs text-danger">{errors.rulesUrl.message}</p>}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="event-meeting">Enlace de reunión</Label>
           <Input id="event-meeting" placeholder="https://teams.microsoft.com/…" {...register('meetingUrl')} />
-          {errors.meetingUrl && <p className="text-xs text-red-500">{errors.meetingUrl.message}</p>}
+          {errors.meetingUrl && <p className="text-xs text-danger">{errors.meetingUrl.message}</p>}
         </div>
       </div>
 
@@ -203,19 +203,19 @@ export function EventForm({ initial }: { initial?: EventItem }) {
           <span className="text-xs text-muted-foreground">Se convierte a WebP, sin metadatos y máximo 1920 px.</span>
         </div>
         <Input aria-label="URL de portada" placeholder="O pega una URL https://…" {...register('coverUrl')} />
-        {errors.coverUrl && <p className="text-xs text-red-500">{errors.coverUrl.message}</p>}
+        {errors.coverUrl && <p className="text-xs text-danger">{errors.coverUrl.message}</p>}
         {coverUrl && <img src={coverUrl} alt="Vista previa de portada" className="h-36 w-full rounded-lg border border-border object-cover" />}
       </div>
 
       <div className="flex flex-wrap gap-6">
         <label className="flex items-center gap-2 text-sm font-medium">
-          <input type="checkbox" className="h-4 w-4 accent-[#06B6D4]" {...register('isOnline')} /> Evento en línea
+          <input type="checkbox" className="h-4 w-4 accent-accent" {...register('isOnline')} /> Evento en línea
         </label>
         <label className="flex items-center gap-2 text-sm font-medium">
-          <input type="checkbox" className="h-4 w-4 accent-[#06B6D4]" {...register('isFeatured')} /> Destacar como evento principal
+          <input type="checkbox" className="h-4 w-4 accent-accent" {...register('isFeatured')} /> Destacar como evento principal
         </label>
       </div>
-      {serverError && <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">{serverError}</p>}
+      {serverError && <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{serverError}</p>}
       <div className="flex flex-col gap-3 sm:flex-row">
         <Button type="submit" disabled={isSubmitting || coverUploading || deleting} size="lg" className="flex-1">
           {isSubmitting ? <Loader2 className="animate-spin" /> : editing ? <Save /> : <CalendarPlus />}

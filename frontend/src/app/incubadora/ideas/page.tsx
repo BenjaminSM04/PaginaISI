@@ -85,7 +85,7 @@ export default function IdeasIncubadoraPage() {
           {Array.from({ length: 6 }, (_, index) => <div key={index} className="h-80 animate-pulse rounded-xl border border-border bg-secondary/50" />)}
         </div>
       ) : query.isError ? (
-        <div role="alert" className="flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-5 text-sm text-red-600 dark:text-red-400">
+        <div role="alert" className="flex items-start gap-3 rounded-xl border border-danger/30 bg-danger/10 p-5 text-sm text-danger">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
           <div>
             <p className="font-bold">No pudimos cargar las ideas.</p>

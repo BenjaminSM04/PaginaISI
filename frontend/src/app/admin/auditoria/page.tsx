@@ -63,7 +63,7 @@ function DeliveryBadge({ delivery }: { delivery: ProjectAuditEntry['delivery'] }
     <span
       title={delivery.status === 'FAILED' && delivery.lastError ? delivery.lastError : undefined}
       className={delivery.status === 'FAILED'
-        ? 'rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400'
+        ? 'rounded-full border border-danger/30 bg-danger/10 px-2 py-0.5 text-[10px] font-bold text-danger'
         : 'rounded-full border border-border bg-secondary px-2 py-0.5 text-[10px] font-bold text-muted-foreground'}
     >
       {labels[delivery.status]}
@@ -103,8 +103,8 @@ export default function AdminProjectAuditPage() {
 
       {isLoading && <div role="status" className="flex min-h-48 items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin text-primary" /> Cargando auditoría…</div>}
       {isError && (
-        <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-5 text-sm">
-          <p className="font-bold text-red-600 dark:text-red-400">No se pudo cargar el registro.</p>
+        <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-5 text-sm">
+          <p className="font-bold text-danger">No se pudo cargar el registro.</p>
           <p className="mt-1 text-muted-foreground">{error instanceof Error ? error.message : 'Intenta nuevamente.'}</p>
           <Button size="sm" variant="outline" className="mt-3" onClick={() => void refetch()}>Reintentar</Button>
         </div>
@@ -130,7 +130,7 @@ export default function AdminProjectAuditPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="font-bold">{entry.project?.title ?? entry.entityType ?? 'Sistema'}</h2>
                     <span className="rounded-full border border-border bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase">{actionLabel(entry.action)}</span>
-                    {risks.length > 0 && <span className="inline-flex items-center gap-1 rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400"><AlertTriangle className="h-3 w-3" /> {risks.join(', ')}</span>}
+                    {risks.length > 0 && <span className="inline-flex items-center gap-1 rounded-full border border-danger/30 bg-danger/10 px-2 py-0.5 text-[10px] font-bold text-danger"><AlertTriangle className="h-3 w-3" /> {risks.join(', ')}</span>}
                     <DeliveryBadge delivery={entry.delivery} />
                   </div>
                   <p className="text-sm">

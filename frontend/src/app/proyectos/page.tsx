@@ -38,7 +38,7 @@ export default async function ProyectosPage({ searchParams }: { searchParams: Pr
       </div>
       <p className="max-w-2xl text-sm text-muted-foreground">
         Todos los proyectos pasaron por revisión docente. Publica el tuyo: al ser aprobado ganas{' '}
-        <PointReward reason="PROYECTO_APROBADO" suffix="Dev Points" className="text-emerald-500" /> y entra a la vitrina pública.
+        <PointReward reason="PROYECTO_APROBADO" suffix="Dev Points" className="text-success" /> y entra a la vitrina pública.
       </p>
 
       <FiltersBar

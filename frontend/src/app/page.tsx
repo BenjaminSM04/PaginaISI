@@ -45,15 +45,15 @@ export default async function HomePage() {
     <div className="space-y-16 pb-12">
       {/* HERO */}
       <section className="container min-w-0 pt-6">
-        <div className="relative min-w-0 max-w-full overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#0C447C] via-[#093561] to-[#082F54] text-white shadow-xl">
+        <div className="relative min-w-0 max-w-full overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-hero via-hero to-hero-end text-white shadow-xl">
           <div className="grid-bg absolute inset-0 opacity-40" />
           <div className="relative grid min-w-0 grid-cols-1 items-center gap-10 px-6 py-12 md:py-16 lg:grid-cols-12 lg:px-10">
             <div className="min-w-0 space-y-6 lg:col-span-7">
-              <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-cyan-300 backdrop-blur-sm">
+              <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-hero-accent backdrop-blur-sm">
                 <Sparkles className="h-4 w-4" /> <InstitutionalText field="institutionName" />
               </div>
               <h1 className="break-words font-serif-heading text-3xl font-bold leading-tight tracking-tight min-[420px]:text-4xl sm:text-5xl">
-                <InstitutionalText field="careerName" compact className="break-words" />: <span className="block text-cyan-400 sm:inline">innovación y comunidad<span className="text-white">.</span></span>
+                <InstitutionalText field="careerName" compact className="break-words" />: <span className="block text-hero-accent sm:inline">innovación y comunidad<span className="text-white">.</span></span>
               </h1>
               <p className="max-w-2xl text-base leading-relaxed text-white/85 sm:text-lg">
                 Bienvenido al portal de la <strong className="text-white"><InstitutionalText field="careerName" /></strong> de <InstitutionalText field="shortName" />:
@@ -75,27 +75,25 @@ export default async function HomePage() {
 
             <div className="min-w-0 lg:col-span-5">
               <div className="glass relative min-w-0 space-y-4 overflow-hidden rounded-2xl p-4 shadow-2xl sm:p-6">
-                <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rotate-12 rounded-2xl border-2 border-cyan-400/25" />
-                <div className="pointer-events-none absolute -bottom-10 -left-10 h-40 w-40 -rotate-6 rounded-2xl border-2 border-amber-300/20" />
+                <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rotate-12 rounded-2xl border-2 border-hero-accent/25" />
+                <div className="pointer-events-none absolute -bottom-10 -left-10 h-40 w-40 -rotate-6 rounded-2xl border-2 border-warning/20" />
                 <div className="relative flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
                   <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg bg-white p-0.5">
-                      <InstitutionalLogo className="h-full w-full" />
-                    </div>
+                    <InstitutionalLogo />
                     <div className="min-w-0">
                       <div className="text-sm font-bold">Ecosistema <InstitutionalText field="shortName" /></div>
-                      <div className="text-xs text-cyan-300">Datos publicados en el portal</div>
+                      <div className="text-xs text-hero-accent">Datos publicados en el portal</div>
                     </div>
                   </div>
-                  <span className="rounded-full border border-emerald-400/30 bg-emerald-500/20 px-2.5 py-1 text-xs font-semibold text-emerald-300">● En vivo</span>
+                  <span className="rounded-full border border-success/30 bg-success/20 px-2.5 py-1 text-xs font-semibold text-success">● En vivo</span>
                 </div>
                 <div className="relative grid grid-cols-2 gap-3 text-center">
                   <div className="rounded-xl border border-white/10 bg-white/5 p-3.5">
-                    <div className="text-2xl font-bold text-cyan-400">{totalMembers}</div>
+                    <div className="text-2xl font-bold text-hero-accent">{totalMembers}</div>
                     <div className="text-[11px] uppercase tracking-wider text-white/75">Miembros en comunidades</div>
                   </div>
                   <div className="rounded-xl border border-white/10 bg-white/5 p-3.5">
-                    <div className="text-2xl font-bold text-amber-300">{projects.total}</div>
+                    <div className="text-2xl font-bold text-warning">{projects.total}</div>
                     <div className="text-[11px] uppercase tracking-wider text-white/75">Proyectos publicados</div>
                   </div>
                 </div>
@@ -103,7 +101,7 @@ export default async function HomePage() {
                   <Link href={`/eventos/${featuredEvent.slug}`} className="relative block space-y-2 rounded-xl border border-white/10 bg-white/5 p-3.5 transition hover:bg-white/10">
                     <div className="flex min-w-0 justify-between gap-2 text-xs font-semibold">
                       <span className="min-w-0 line-clamp-1">{featuredEvent.title}</span>
-                      <span className="shrink-0 text-cyan-300">{formatDate(featuredEvent.startsAt)}</span>
+                      <span className="shrink-0 text-hero-accent">{formatDate(featuredEvent.startsAt)}</span>
                     </div>
                     {featuredEvent.capacity && (
                       <div
@@ -115,7 +113,7 @@ export default async function HomePage() {
                         aria-valuenow={featuredEvent._count?.registrations ?? 0}
                       >
                         <div
-                          className="h-full bg-gradient-to-r from-cyan-400 to-amber-300"
+                          className="h-full bg-gradient-to-r from-hero-accent to-gold"
                           style={{ width: `${Math.min(100, ((featuredEvent._count?.registrations ?? 0) / featuredEvent.capacity) * 100)}%` }}
                         />
                       </div>
@@ -128,7 +126,7 @@ export default async function HomePage() {
                 )}
                 <div className="relative flex items-center justify-between pt-1 text-xs text-white/80">
                   <span>¿Tienes dudas técnicas?</span>
-                  <Link href="/foro" className="font-semibold text-cyan-300 underline hover:text-white">Ir al foro Q&A →</Link>
+                  <Link href="/foro" className="font-semibold text-hero-accent underline hover:text-white">Ir al foro Q&A →</Link>
                 </div>
               </div>
             </div>
@@ -143,7 +141,7 @@ export default async function HomePage() {
             { icon: Users, value: `${totalMembers}`, label: 'Membresías en comunidades', color: 'text-primary' },
             { icon: Rocket, value: `${projects.total}`, label: 'Proyectos y demos', color: 'text-gold' },
             { icon: ShieldCheck, value: `${communities.length}`, label: 'Comunidades activas', color: 'text-accent' },
-            { icon: Trophy, value: `${ranking.length > 0 ? ranking[0].points : 0}`, label: 'Puntos del líder actual', color: 'text-emerald-500' },
+            { icon: Trophy, value: `${ranking.length > 0 ? ranking[0].points : 0}`, label: 'Puntos del líder actual', color: 'text-success' },
           ].map((s) => (
             <div key={s.label} className="flex items-center gap-4 rounded-xl border border-border bg-card p-5 shadow-sm transition hover:border-primary/50">
               <div className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-secondary', s.color)}>

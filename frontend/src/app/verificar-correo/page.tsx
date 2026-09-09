@@ -50,8 +50,8 @@ function VerifyEmailContent() {
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
         {state.status === 'idle' && <MailCheck className="mx-auto h-10 w-10 text-primary" />}
         {state.status === 'loading' && <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />}
-        {state.status === 'success' && <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-500" />}
-        {state.status === 'error' && <XCircle className="mx-auto h-10 w-10 text-red-500" />}
+        {state.status === 'success' && <CheckCircle2 className="mx-auto h-10 w-10 text-success" />}
+        {state.status === 'error' && <XCircle className="mx-auto h-10 w-10 text-danger" />}
         <h1 className="mt-4 font-serif-heading text-2xl font-bold text-primary">
           {state.status === 'idle' ? 'Verificar correo' : state.status === 'loading' ? 'Verificando correo' : state.status === 'success' ? 'Correo verificado' : 'No pudimos verificarlo'}
         </h1>

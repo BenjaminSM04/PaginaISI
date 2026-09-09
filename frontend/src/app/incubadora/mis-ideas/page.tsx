@@ -48,7 +48,7 @@ function MisIdeasContent() {
       </div>
 
       {(query.error || archive.error) && (
-        <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">
+        <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
           {(archive.error as Error | null)?.message ?? (query.error as Error | null)?.message}
         </p>
       )}
@@ -98,7 +98,7 @@ function MisIdeasContent() {
                         type="button"
                         size="sm"
                         variant="ghost"
-                        className="ml-auto text-red-500 hover:bg-red-500/10"
+                        className="ml-auto text-danger hover:bg-danger/10"
                         disabled={archive.isPending}
                         onClick={() => remove(idea)}
                       >

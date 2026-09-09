@@ -4,6 +4,8 @@
 
 Portal académico **gamificado** de la carrera: página institucional, sociedad científica, comunidades, vitrina de proyectos con aprobación docente, artículos científicos, eventos/CTF con inscripción, foro Q&A tipo Stack Overflow, sistema de puntos e insignias, rankings y panel de administración.
 
+Institución: **Universidad Privada del Valle (Univalle), Bolivia**. La identidad visual se administra en `/admin/institucion`: nombres, logos claros/oscuros, favicon, dimensiones y paletas. Consulta [identidad paramétrica y despliegue](docs/IDENTIDAD-Y-DESPLIEGUE.md) para aplicar la migración y corregir la API de producción.
+
 <picture>
   <source media="(max-width: 640px)" srcset="./home-mobile.png">
   <img src="./home-desktop.png" alt="Inicio responsivo del Portal Académico ISI" width="100%">
@@ -62,8 +64,10 @@ docker compose up --build
 Eso levanta:
 
 - **Web**: http://localhost:3000
-- **API**: http://localhost:4000/api
-- **Health/readiness**: http://localhost:4000/api/health
+- **API desde el navegador**: http://localhost:3000/api
+- **Health/readiness por el proxy**: http://localhost:3000/api/health
+
+El puerto API `127.0.0.1:4000` permanece disponible para diagnóstico y Nginx del host. El navegador usa rutas relativas `/api` y `/uploads`; el destino interno `http://api:4000` solo lo conoce el servidor Next. `NEXT_PUBLIC_API_URL` ya no se utiliza, incluso si permanece en un `.env` antiguo.
 
 El API aplica las migraciones versionadas con `prisma migrate deploy`. PostgreSQL solo está disponible dentro de la red Docker; no se publica en el host. Swagger está desactivado en el contenedor de producción salvo que definas `ENABLE_SWAGGER=true`.
 

@@ -12,11 +12,16 @@ import {
 import { institutionalSettingsQueryKey } from '@/lib/use-institutional-settings';
 import { Button } from '@/components/ui/button';
 import { Input, Label } from '@/components/ui/input';
+import { IdentityAppearanceForm } from '@/components/identity-appearance-form';
 
 const ADMIN_QUERY_KEY = ['institution', 'admin'] as const;
 const LOGO_MIMES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 const LOGO_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp', '.gif'];
 const MAX_LOGO_SIZE = 8 * 1024 * 1024;
+const LOGO_FIELDS = {
+  institutional: 'institutionalLogoUrl', career: 'careerLogoUrl',
+  'institutional-dark': 'institutionalLogoDarkUrl', 'career-dark': 'careerLogoDarkUrl', favicon: 'faviconUrl',
+} as const;
 
 function formatMegabytes(bytes: number) {
   return `${Math.round(bytes / 1024 / 1024)} MB`;
@@ -29,7 +34,7 @@ function LogoEditor({
   savedUrl,
   alt,
 }: {
-  kind: 'institutional' | 'career';
+  kind: keyof typeof LOGO_FIELDS;
   title: string;
   description: string;
   savedUrl: string | null;
@@ -67,7 +72,7 @@ function LogoEditor({
     onSuccess: (settings) => {
       releaseObjectUrl();
       setFile(null);
-      setPreviewUrl(kind === 'institutional' ? settings.institutionalLogoUrl : settings.careerLogoUrl);
+      setPreviewUrl(settings[LOGO_FIELDS[kind]]);
       setMessage('Logo guardado y publicado correctamente.');
       setError(null);
       if (inputRef.current) inputRef.current.value = '';
@@ -85,13 +90,13 @@ function LogoEditor({
 
   const restore = useMutation({
     mutationFn: () => api.patch<InstitutionalSettings>('/institution/admin', {
-      [kind === 'institutional' ? 'institutionalLogoUrl' : 'careerLogoUrl']:
+      [LOGO_FIELDS[kind]]:
         kind === 'institutional' ? DEFAULT_INSTITUTIONAL_SETTINGS.institutionalLogoUrl : null,
     }),
     onSuccess: (settings) => {
       releaseObjectUrl();
       setFile(null);
-      setPreviewUrl(kind === 'institutional' ? settings.institutionalLogoUrl : settings.careerLogoUrl);
+      setPreviewUrl(settings[LOGO_FIELDS[kind]]);
       setMessage(kind === 'institutional' ? 'Se restauró el logo institucional oficial.' : 'Se retiró la imagen de la carrera.');
       setError(null);
       if (inputRef.current) inputRef.current.value = '';
@@ -179,8 +184,8 @@ function LogoEditor({
       <p className="text-xs text-muted-foreground">
         PNG, JPG, WebP o GIF · máximo {formatMegabytes(MAX_LOGO_SIZE)}. La imagen actual se conserva si la carga falla.
       </p>
-      {message && <p role="status" className="flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400"><CheckCircle2 className="h-4 w-4" /> {message}</p>}
-      {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
+      {message && <p role="status" className="flex items-center gap-1.5 text-sm text-success"><CheckCircle2 className="h-4 w-4" /> {message}</p>}
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
     </section>
   );
 }
@@ -246,8 +251,8 @@ function IdentityNamesForm({ settings }: { settings: InstitutionalSettings }) {
         {mutation.isPending ? <Loader2 className="animate-spin" /> : <Save />}
         Guardar nombres
       </Button>
-      {message && <p role="status" className="flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400"><CheckCircle2 className="h-4 w-4" /> {message}</p>}
-      {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
+      {message && <p role="status" className="flex items-center gap-1.5 text-sm text-success"><CheckCircle2 className="h-4 w-4" /> {message}</p>}
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
     </form>
   );
 }
@@ -264,7 +269,7 @@ export default function InstitutionSettingsPage() {
 
   if (query.isError) {
     return (
-      <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-5 text-sm text-red-600 dark:text-red-300">
+      <div className="rounded-xl border border-danger/30 bg-danger/10 p-5 text-sm text-danger">
         <p>No se pudo cargar la configuración institucional.</p>
         <Button type="button" variant="ghost" className="mt-3" onClick={() => query.refetch()}>Reintentar</Button>
       </div>
@@ -284,6 +289,7 @@ export default function InstitutionSettingsPage() {
       </header>
 
       <IdentityNamesForm settings={settings} />
+      <IdentityAppearanceForm settings={settings} />
 
       <div className="grid gap-5 xl:grid-cols-2">
         <LogoEditor
@@ -300,6 +306,11 @@ export default function InstitutionSettingsPage() {
           savedUrl={settings.careerLogoUrl}
           alt={`Imagen actual de ${settings.careerName}`}
         />
+      </div>
+      <div className="grid gap-5 xl:grid-cols-3">
+        <LogoEditor kind="institutional-dark" title="Logo institucional oscuro" description="Opcional: reemplaza el principal en modo oscuro." savedUrl={settings.institutionalLogoDarkUrl} alt="Logo institucional oscuro" />
+        <LogoEditor kind="career-dark" title="Logo de carrera oscuro" description="Opcional: versión para fondos oscuros." savedUrl={settings.careerLogoDarkUrl} alt="Logo de carrera oscuro" />
+        <LogoEditor kind="favicon" title="Icono del navegador" description="Usa una imagen cuadrada PNG de al menos 192 px. También se utiliza al instalar el portal." savedUrl={settings.faviconUrl} alt="Icono del portal" />
       </div>
     </div>
   );

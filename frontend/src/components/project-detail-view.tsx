@@ -29,7 +29,7 @@ export function ProjectDetailView({
     <div className="grid gap-8 lg:grid-cols-3">
       <div className="space-y-6 lg:col-span-2">
         {preview && (
-          <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+          <div className="rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">
             Estás viendo exactamente la versión sometida a revisión. La publicación vigente no cambia hasta aprobarla.
           </div>
         )}
@@ -156,9 +156,9 @@ export function ProjectDetailView({
             </ExternalResourceLink>
           )}
           {project.recruiting && (
-            <div className="mt-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-center">
-              <UserPlus className="mx-auto mb-1 h-5 w-5 text-emerald-500" />
-              <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            <div className="mt-2 rounded-lg border border-success/30 bg-success/10 p-3 text-center">
+              <UserPlus className="mx-auto mb-1 h-5 w-5 text-success" />
+              <p className="text-xs font-semibold text-success">
                 Este equipo busca integrantes — contáctalos por su comunidad o el foro.
               </p>
             </div>

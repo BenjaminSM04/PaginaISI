@@ -62,7 +62,7 @@ function AccessSummary({ detail }: { detail: ProjectManagementDetail }) {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-border bg-secondary/40 px-4 py-3 text-xs">
       <span className="flex items-center gap-1.5 font-bold text-primary">
-        {detail.access.isAdmin ? <ShieldCheck className="h-4 w-4 text-orange-500" /> : <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+        {detail.access.isAdmin ? <ShieldCheck className="h-4 w-4 text-orange-500" /> : <CheckCircle2 className="h-4 w-4 text-success" />}
         Acceso: {role === 'ADMIN' ? 'Administrador' : role}
       </span>
       <span className="text-muted-foreground">Versión {detail.version}</span>
@@ -188,7 +188,7 @@ function DataTab({ detail, refresh }: { detail: ProjectManagementDetail; refresh
   return (
     <form onSubmit={handleSubmit(submit)} className="space-y-5 rounded-2xl border border-border bg-card p-5 shadow-sm md:p-7">
       {detail.publicStatus === 'APPROVED' && (
-        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200">
+        <p className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
           La publicación actual seguirá visible. Estos cambios crearán una versión separada que requiere aprobación.
         </p>
       )}
@@ -263,8 +263,8 @@ function DataTab({ detail, refresh }: { detail: ProjectManagementDetail; refresh
         )}
       </div>
       <div className="flex flex-wrap gap-5 text-sm">
-        <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4 accent-[#06B6D4]" {...register('recruiting')} /> Busca integrantes</label>
-        <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4 accent-[#06B6D4]" {...register('isIncubator')} /> Proyecto de incubadora</label>
+        <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4 accent-accent" {...register('recruiting')} /> Busca integrantes</label>
+        <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4 accent-accent" {...register('isIncubator')} /> Proyecto de incubadora</label>
       </div>
       {isIncubator && (
         <section className="space-y-3 rounded-xl border border-purple-500/25 bg-purple-500/5 p-4">
@@ -386,7 +386,7 @@ function CalendarTab({ detail, refresh }: { detail: ProjectManagementDetail; ref
             <Field label="Lugar"><Input maxLength={160} placeholder="Laboratorio, sala virtual…" {...register('location')} /></Field>
             <Field className="sm:col-span-2" label="Enlace"><Input type="url" placeholder="https://…" {...register('url')} /></Field>
           </div>
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4 accent-[#06B6D4]" {...register('allDay')} /> Es un evento de todo el día</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="h-4 w-4 accent-accent" {...register('allDay')} /> Es un evento de todo el día</label>
           <OperationResult error={error} />
           <Button type="submit" disabled={isSubmitting}>{isSubmitting ? <Loader2 className="animate-spin" /> : <Save />} {editing ? 'Guardar hito' : 'Crear hito'}</Button>
         </form>
@@ -424,7 +424,7 @@ function CalendarTab({ detail, refresh }: { detail: ProjectManagementDetail; ref
               </div>
               <div className="flex gap-1">
                 <Button size="sm" variant="outline" onClick={() => edit(milestone)}><Pencil /> Editar</Button>
-                <Button size="icon" variant="ghost" className="text-red-500" aria-label={`Eliminar ${milestone.title}`} onClick={() => void remove(milestone)}><Trash2 /></Button>
+                <Button size="icon" variant="ghost" className="text-danger" aria-label={`Eliminar ${milestone.title}`} onClick={() => void remove(milestone)}><Trash2 /></Button>
               </div>
             </article>
           ))}
@@ -514,7 +514,7 @@ function NewsTab({ detail, refreshProject }: { detail: ProjectManagementDetail; 
       {!showForm && error && <OperationResult error={error} />}
       {isLoading && <LoadingLabel text="Cargando noticias…" />}
       {isError && !isLoading && (
-        <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm"><p>No se pudieron cargar las noticias del proyecto.</p><Button className="mt-3" size="sm" variant="outline" onClick={() => void refetch()}><RefreshCcw /> Reintentar</Button></div>
+        <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm"><p>No se pudieron cargar las noticias del proyecto.</p><Button className="mt-3" size="sm" variant="outline" onClick={() => void refetch()}><RefreshCcw /> Reintentar</Button></div>
       )}
       {!isLoading && !isError && news.length === 0 && <EmptyState icon={Newspaper} title="Sin noticias todavía" text="Publica el primer avance del proyecto." />}
       {!isLoading && !isError && news.length > 0 && (
@@ -628,7 +628,7 @@ function GalleryTab({ detail, refresh }: { detail: ProjectManagementDetail; refr
               </div>
               <figcaption className="flex flex-wrap items-center justify-between gap-2 p-3">
                 <span className="text-[11px] text-muted-foreground">{asset.width && asset.height ? `${asset.width}×${asset.height}` : 'Imagen optimizada'}</span>
-                <div className="flex gap-1"><Button size="sm" variant="outline" disabled={detail.coverUrl === asset.url} onClick={() => void setAsCover(asset)}>{detail.coverUrl === asset.url ? 'Es portada' : 'Usar de portada'}</Button><Button size="icon" variant="ghost" className="text-red-500" aria-label={`Eliminar imagen ${index + 1}`} onClick={() => void remove(asset)}><Trash2 /></Button></div>
+                <div className="flex gap-1"><Button size="sm" variant="outline" disabled={detail.coverUrl === asset.url} onClick={() => void setAsCover(asset)}>{detail.coverUrl === asset.url ? 'Es portada' : 'Usar de portada'}</Button><Button size="icon" variant="ghost" className="text-danger" aria-label={`Eliminar imagen ${index + 1}`} onClick={() => void remove(asset)}><Trash2 /></Button></div>
               </figcaption>
             </figure>
           ))}
@@ -657,7 +657,7 @@ function AuditDeliveryBadge({ delivery }: { delivery: ProjectAuditEntry['deliver
       className={cn(
         'rounded-full border px-2 py-0.5 text-[10px] font-bold',
         isFailure
-          ? 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400'
+          ? 'border-danger/30 bg-danger/10 text-danger'
           : 'border-border bg-secondary text-muted-foreground',
       )}
     >
@@ -703,7 +703,7 @@ function HistoryTab({ detail, refreshProject, highlightedAuditId }: { detail: Pr
 
   if (!detail.access.isAdmin) return null;
   if (isLoading) return <LoadingLabel text="Cargando historial protegido…" />;
-  if (isError) return <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm">No se pudo cargar el historial.<Button size="sm" variant="outline" className="mt-3" onClick={() => void refetch()}><RefreshCcw /> Reintentar</Button></div>;
+  if (isError) return <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm">No se pudo cargar el historial.<Button size="sm" variant="outline" className="mt-3" onClick={() => void refetch()}><RefreshCcw /> Reintentar</Button></div>;
   return (
     <div className="space-y-4">
       <div><h2 className="flex items-center gap-2 font-serif-heading text-xl font-bold text-primary"><ShieldCheck className="h-5 w-5 text-orange-500" /> Registro de ediciones</h2><p className="text-sm text-muted-foreground">Vista privada para administradores. Identifica quién cambió qué y permite revertir ediciones compatibles.</p></div>
@@ -730,7 +730,7 @@ function HistoryTab({ detail, refreshProject, highlightedAuditId }: { detail: Pr
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <div className="flex flex-wrap items-center gap-2"><span className="font-bold">{entry.summary || entry.action}</span>{(entry.entityType || entry.section) && <span className="rounded-full border border-border bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase">{entry.entityType || entry.section}</span>}{risks.length > 0 && <span className="rounded-full border border-red-500/30 bg-red-500/10 px-2 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400">Riesgo: {risks.join(', ')}</span>}<AuditDeliveryBadge delivery={entry.delivery} /></div>
+                    <div className="flex flex-wrap items-center gap-2"><span className="font-bold">{entry.summary || entry.action}</span>{(entry.entityType || entry.section) && <span className="rounded-full border border-border bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase">{entry.entityType || entry.section}</span>}{risks.length > 0 && <span className="rounded-full border border-danger/30 bg-danger/10 px-2 py-0.5 text-[10px] font-bold text-danger">Riesgo: {risks.join(', ')}</span>}<AuditDeliveryBadge delivery={entry.delivery} /></div>
                     <p className="mt-1 text-sm">
                       <span className="font-semibold">{actorName}</span>
                       {entry.actorDeleted && <span className="ml-2 rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">cuenta eliminada</span>}
@@ -768,7 +768,7 @@ function AuditValues({ label, value }: { label: string; value?: Record<string, u
 }
 
 function OperationResult({ message, error }: { message?: string | null; error?: string | null }) {
-  return <>{message && <p role="status" className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">{message}</p>}{error && <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400">{error}</p>}</>;
+  return <>{message && <p role="status" className="rounded-lg border border-success/30 bg-success/10 p-3 text-sm text-success">{message}</p>}{error && <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{error}</p>}</>;
 }
 
 function LoadingLabel({ text }: { text: string }) {
@@ -799,7 +799,7 @@ export function ProjectManagementPanel({ projectId, initialTab = 'data' }: { pro
   if (isError || !detail) {
     return (
       <main className="container max-w-4xl py-16">
-        <div role="alert" className="rounded-2xl border border-red-500/30 bg-red-500/10 p-7 text-center">
+        <div role="alert" className="rounded-2xl border border-danger/30 bg-danger/10 p-7 text-center">
           <h1 className="font-serif-heading text-2xl font-bold text-primary">No se pudo abrir este proyecto</h1>
           <p className="mt-2 text-sm text-muted-foreground">{error instanceof ApiError && [403, 404].includes(error.status) ? 'No está asociado a tu cuenta o ya no tienes permisos para gestionarlo.' : errorMessage(error)}</p>
           <div className="mt-5 flex justify-center gap-2"><Link href="/proyectos/gestionar" className={buttonVariants({ variant: 'outline' })}><ArrowLeft /> Volver</Link><Button onClick={() => void refetch()}><RefreshCcw /> Reintentar</Button></div>

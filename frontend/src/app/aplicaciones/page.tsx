@@ -60,7 +60,7 @@ export default function AplicacionesPage() {
       )}
 
       {applicationsQuery.isError && (
-        <div role="alert" className="mx-auto max-w-2xl rounded-xl border border-red-500/30 bg-red-500/10 p-5 text-sm text-red-600 dark:text-red-400">
+        <div role="alert" className="mx-auto max-w-2xl rounded-xl border border-danger/30 bg-danger/10 p-5 text-sm text-danger">
           <p className="font-bold">No pudimos cargar las aplicaciones.</p>
           <p className="mt-1">Comprueba la conexión y vuelve a intentarlo.</p>
           <Button type="button" size="sm" variant="outline" className="mt-3" onClick={() => void applicationsQuery.refetch()}>

@@ -256,12 +256,12 @@ export default function AdminAplicacionesPage() {
 
       <div aria-live="polite" className="space-y-2">
         {message && (
-          <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-700 dark:text-emerald-300">
+          <p className="rounded-lg border border-success/30 bg-success/10 p-3 text-sm text-success">
             {message}
           </p>
         )}
         {error && (
-          <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400">
+          <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
             {error}
           </p>
         )}
@@ -333,7 +333,7 @@ export default function AdminAplicacionesPage() {
               />
               <p id="application-url-help" className={cn(
                 'text-[11px]',
-                draft.url && !validApplicationUrl(draft.url) ? 'text-red-500' : 'text-muted-foreground',
+                draft.url && !validApplicationUrl(draft.url) ? 'text-danger' : 'text-muted-foreground',
               )}>
                 Solo HTTPS externo o rutas internas que empiecen por una barra. No se permiten credenciales ni URLs relativas ambiguas.
               </p>
@@ -480,7 +480,7 @@ export default function AdminAplicacionesPage() {
         </div>
       )}
       {applicationsQuery.isError && (
-        <div role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-5 text-sm text-red-600 dark:text-red-400">
+        <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-5 text-sm text-danger">
           <p>No se pudo cargar el listado administrativo.</p>
           <Button size="sm" variant="outline" className="mt-3" onClick={() => void applicationsQuery.refetch()}>
             <RefreshCw /> Reintentar

@@ -33,7 +33,7 @@ function CommunityManagementContent() {
       </div>
 
       {isLoading && <div className="flex justify-center rounded-xl border border-border py-16"><Loader2 className="animate-spin text-primary" /></div>}
-      {error && <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-500">{error instanceof Error ? error.message : 'No se pudo cargar el panel'}</p>}
+      {error && <p role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger">{error instanceof Error ? error.message : 'No se pudo cargar el panel'}</p>}
       {data && !data.length && <div className="rounded-xl border border-dashed border-border py-14 text-center text-sm text-muted-foreground">No tienes comunidades asignadas para gestionar.</div>}
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {(data ?? []).map((community) => (

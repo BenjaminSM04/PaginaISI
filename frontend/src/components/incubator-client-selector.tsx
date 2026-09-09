@@ -174,7 +174,7 @@ export function IncubatorClientSelector({
                 <button
                   type="button"
                   aria-label={`Quitar ${client.name}`}
-                  className="rounded-md p-1 text-muted-foreground transition hover:bg-red-500/10 hover:text-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="rounded-md p-1 text-muted-foreground transition hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   onClick={() => onChange(value.filter((item) => item.id !== client.id))}
                 >
                   <X className="h-4 w-4" />
@@ -250,7 +250,7 @@ export function IncubatorClientSelector({
               onRemove={removeLogo}
             />
           </div>
-          {error && <p role="alert" className="text-sm font-semibold text-red-500">{error}</p>}
+          {error && <p role="alert" className="text-sm font-semibold text-danger">{error}</p>}
           <div className="flex justify-end">
             <Button type="button" disabled={creating || name.trim().length < 2 || !logo} onClick={() => void create()}>
               {creating ? <Loader2 className="animate-spin" /> : <Plus />}
@@ -261,7 +261,7 @@ export function IncubatorClientSelector({
       )}
 
       {message && (
-        <p role="status" className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+        <p role="status" className="flex items-center gap-1.5 text-xs font-semibold text-success">
           <CheckCircle2 className="h-4 w-4" /> {message}
         </p>
       )}

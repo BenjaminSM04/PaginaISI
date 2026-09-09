@@ -100,7 +100,7 @@ export function Countdown({ target }: { target: string }) {
     return () => clearInterval(id);
   }, [target]);
 
-  if (!left) return <span className="font-mono text-sm font-bold text-emerald-400">¡En curso o finalizado!</span>;
+  if (!left) return <span className="font-mono text-sm font-bold text-success">¡En curso o finalizado!</span>;
 
   const cell = (value: number, label: string) => (
     <div className="flex flex-col items-center rounded-lg border border-white/20 bg-white/10 px-3 py-2 backdrop-blur-sm min-w-[60px]">

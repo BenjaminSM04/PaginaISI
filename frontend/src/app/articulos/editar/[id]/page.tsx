@@ -147,7 +147,7 @@ function EditarArticuloForm() {
           <Select {...register('reviewerUsername')}><option value="">Selecciona un docente</option>{(teachers ?? []).map((teacher) => <option key={teacher.username} value={teacher.username}>{teacher.profile?.fullName ?? teacher.username}</option>)}</Select>
         </Field>
 
-        {serverError && <p className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">{serverError}</p>}
+        {serverError && <p className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{serverError}</p>}
         <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
           {isSubmitting ? <Loader2 className="animate-spin" /> : <FileCheck2 />} {needsCorrection ? 'Guardar y reenviar a revisión' : 'Guardar cambios'}
         </Button>
@@ -157,7 +157,7 @@ function EditarArticuloForm() {
 }
 
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return <div className="space-y-1.5"><Label>{label}</Label>{children}{error && <p className="text-xs text-red-500">{error}</p>}</div>;
+  return <div className="space-y-1.5"><Label>{label}</Label>{children}{error && <p className="text-xs text-danger">{error}</p>}</div>;
 }
 
 export default function EditarArticuloPage() {

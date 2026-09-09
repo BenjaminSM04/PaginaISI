@@ -44,9 +44,7 @@ export default function LoginPage() {
     <div className="container flex min-h-[70vh] items-center justify-center py-10">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-border bg-white p-1 shadow-md">
-            <InstitutionalLogo className="h-full w-full" />
-          </div>
+          <InstitutionalLogo className="mx-auto mb-4" />
           <h1 className="font-serif-heading text-2xl font-bold text-primary">Bienvenido de vuelta</h1>
           <p className="mt-1 text-sm text-muted-foreground"><InstitutionalText field="careerName" /> · <InstitutionalText field="institutionName" /></p>
         </div>
@@ -55,7 +53,7 @@ export default function LoginPage() {
           <div className="space-y-1.5">
             <Label>Email o usuario</Label>
             <Input placeholder="avargas@est.isi.edu.bo" autoComplete="username" {...register('identifier')} />
-            {errors.identifier && <p className="text-xs text-red-500">{errors.identifier.message}</p>}
+            {errors.identifier && <p className="text-xs text-danger">{errors.identifier.message}</p>}
           </div>
           <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-3">
@@ -63,9 +61,9 @@ export default function LoginPage() {
               <Link href="/olvide-contrasena" className="text-xs font-semibold text-primary hover:underline">¿La olvidaste?</Link>
             </div>
             <Input type="password" placeholder="••••••••" autoComplete="current-password" {...register('password')} />
-            {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
+            {errors.password && <p className="text-xs text-danger">{errors.password.message}</p>}
           </div>
-          {serverError && <p className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">{serverError}</p>}
+          {serverError && <p className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{serverError}</p>}
           <Button type="submit" disabled={isSubmitting || authLoading} className="w-full" size="lg">
             {isSubmitting || authLoading ? <Loader2 className="animate-spin" /> : <LogIn />} Iniciar sesión
           </Button>

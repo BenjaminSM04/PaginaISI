@@ -228,7 +228,7 @@ function EditarProyectoForm() {
                 {version.reviewComment && <p className="mt-2 text-xs text-foreground/80">Comentario: {version.reviewComment}</p>}
               </div>
               {project.pendingVersion?.id === version.id && (
-                <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                <span className="rounded-full border border-warning/30 bg-warning/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-warning">
                   Versión de trabajo
                 </span>
               )}
@@ -293,7 +293,7 @@ function EditarProyectoForm() {
               }}
               placeholder="Escribe al menos 2 caracteres"
             />
-            {errors.reviewerUsername && <p className="text-xs text-red-500">{errors.reviewerUsername.message}</p>}
+            {errors.reviewerUsername && <p className="text-xs text-danger">{errors.reviewerUsername.message}</p>}
           </div>
           <Field label="Comunidad">
             <Select {...register('communitySlug')}><option value="">Ninguna</option>{(communities ?? []).map((community) => <option key={community.slug} value={community.slug}>{community.name}</option>)}</Select>
@@ -344,8 +344,8 @@ function EditarProyectoForm() {
         </div>
 
         <div className="flex flex-wrap gap-6">
-          <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" className="h-4 w-4 accent-[#06B6D4]" {...register('isIncubator')} /> Proyecto de incubadora</label>
-          <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" className="h-4 w-4 accent-[#06B6D4]" {...register('recruiting')} /> Busca integrantes</label>
+          <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" className="h-4 w-4 accent-accent" {...register('isIncubator')} /> Proyecto de incubadora</label>
+          <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" className="h-4 w-4 accent-accent" {...register('recruiting')} /> Busca integrantes</label>
         </div>
 
         {isIncubator && (
@@ -364,7 +364,7 @@ function EditarProyectoForm() {
           </section>
         )}
 
-        {serverError && <p className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">{serverError}</p>}
+        {serverError && <p className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{serverError}</p>}
         <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
           {isSubmitting ? <Loader2 className="animate-spin" /> : <Save />} {needsCorrection ? 'Guardar y reenviar a revisión' : 'Guardar cambios'}
         </Button>
@@ -374,7 +374,7 @@ function EditarProyectoForm() {
 }
 
 function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
-  return <div className="space-y-1.5"><Label>{label}</Label>{children}{error && <p className="text-xs text-red-500">{error}</p>}</div>;
+  return <div className="space-y-1.5"><Label>{label}</Label>{children}{error && <p className="text-xs text-danger">{error}</p>}</div>;
 }
 
 export default function EditarProyectoPage() {

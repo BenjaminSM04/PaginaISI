@@ -34,7 +34,7 @@ async function CommunitiesDirectory() {
       <SectionHeader kicker="Encuentra tu tribu técnica" title="Comunidades de la carrera" />
       <p className="max-w-2xl text-sm text-muted-foreground">
         Cada comunidad tiene docentes asesores, responsables estudiantiles y canales oficiales. Unirte suma{' '}
-        <PointReward reason="UNIRSE_COMUNIDAD" suffix="puntos" className="text-emerald-500" /> y te conecta con proyectos, eventos y mentorías de esa área.
+        <PointReward reason="UNIRSE_COMUNIDAD" suffix="puntos" className="text-success" /> y te conecta con proyectos, eventos y mentorías de esa área.
       </p>
       <CommunityManagementShortcut />
       {communities.length === 0 ? (

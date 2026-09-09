@@ -33,7 +33,7 @@ export function ReviewFeedback({ status, approvals = [] }: { status: string; app
     <section className={cn(
       'space-y-3 rounded-xl border p-4',
       ['OBSERVED', 'REJECTED'].includes(status)
-        ? 'border-amber-500/40 bg-amber-500/10'
+        ? 'border-warning/40 bg-warning/10'
         : 'border-border bg-secondary/40',
     )}>
       <div className="flex flex-wrap items-center gap-2">
