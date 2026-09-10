@@ -121,8 +121,10 @@ try {
       -ContentType 'application/json' `
       -Body (@{ identifier = $AdminIdentifier; password = $AdminPassword } | ConvertTo-Json) `
       -TimeoutSec 20
+    if ($script:login.requiresTwoFactor) { throw 'Esta cuenta usa 2FA. Verifica el acceso desde el portal; este script no omite el segundo factor.' }
     if (-not $script:login.accessToken) { throw 'La API no devolvió access token.' }
     $script:loggedIn = $true
+    if ($script:login.user.mustChangePassword) { throw 'Completa el cambio obligatorio de contraseña desde el portal y vuelve a ejecutar con DEMO_ADMIN_PASSWORD actualizado.' }
   }
 
   $authHeaders = @{ Authorization = "Bearer $($script:login.accessToken)"; Origin = $WebUrl }

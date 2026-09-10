@@ -196,6 +196,7 @@ async function main() {
         email,
         username,
         passwordHash: hash,
+        mustChangePassword: true,
         emailVerifiedAt: new Date(),
         roles: { create: roleList.map((r) => ({ roleId: roles[r].id })) },
         profile: {
@@ -1273,8 +1274,8 @@ async function main() {
       {
         userId: admin.id,
         type: 'SYSTEM',
-        title: 'Portal de demostración listo',
-        body: 'La base demo, las migraciones y los módulos principales se cargaron correctamente.',
+        title: 'Portal disponible',
+        body: 'La configuración inicial del portal se completó correctamente.',
         href: '/admin',
         dedupeKey: 'demo-system-ready',
         createdAt: days(-1),
@@ -1301,7 +1302,7 @@ async function main() {
         userId: admin.id,
         type: 'SYSTEM',
         title: 'Actividad colaborativa disponible para auditar',
-        body: 'La demo incluye ediciones de calendario, noticias y galería con correo del actor y snapshots de rollback.',
+        body: 'Consulta el historial de cambios del calendario, las noticias y la galería del proyecto.',
         href: '/admin/auditoria',
         dedupeKey: 'demo-collaboration-audit-ready',
         createdAt: days(-1),
@@ -1404,7 +1405,7 @@ async function main() {
   console.log(`  ${auditCount} entradas de auditoría y ${pointsCount} movimientos de puntos`);
   console.log('Ranking sembrado:');
   for (const t of totals) console.log(`  ${t.fullName}: ${t.totalPoints} pts`);
-  console.log('Seed completado. Credenciales demo: admin@isi.edu.bo / password123 (todos los usuarios usan la misma contraseña).');
+  console.log('Seed completado. Las cuentas predefinidas requieren cambiar su contraseña.');
 }
 
 main()

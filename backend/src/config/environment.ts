@@ -13,6 +13,7 @@ export interface EnvironmentVariables {
   TRUST_PROXY_HOPS: number;
   JWT_ACCESS_SECRET: string;
   JWT_REFRESH_SECRET: string;
+  TOTP_ENCRYPTION_KEY?: string;
   JWT_ACCESS_TTL: string;
   JWT_REFRESH_TTL: string;
   JWT_REFRESH_TTL_MS: number;
@@ -253,6 +254,13 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     throw new Error('Configuracion invalida: SECURITY_ALERT_WEBHOOK_SECRET requiere SECURITY_ALERT_WEBHOOK_URL');
   }
   const storageDriver = optionalString(config, 'STORAGE_DRIVER') ?? 'local';
+  const totpKey = optionalString(config, 'TOTP_ENCRYPTION_KEY');
+  if (totpKey && (!/^[a-fA-F0-9]{64}$/.test(totpKey) || totpKey === accessSecret || totpKey === refreshSecret)) {
+    throw new Error('Configuracion invalida: TOTP_ENCRYPTION_KEY requiere 32 bytes hexadecimales y debe ser independiente de los secretos JWT');
+  }
+  if (nodeEnvironment === 'production' && !totpKey) {
+    throw new Error('Configuracion invalida: TOTP_ENCRYPTION_KEY es obligatorio en produccion');
+  }
   if (!['local', 's3'].includes(storageDriver)) {
     throw new Error('Configuracion invalida: STORAGE_DRIVER debe ser local o s3');
   }
@@ -333,5 +341,6 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     AUTH_EMAIL_WEBHOOK_SECRET: authEmailWebhookSecret,
     SECURITY_ALERT_WEBHOOK_URL: securityAlertWebhookUrl,
     SECURITY_ALERT_WEBHOOK_SECRET: securityAlertWebhookSecret,
+    TOTP_ENCRYPTION_KEY: totpKey,
   };
 }

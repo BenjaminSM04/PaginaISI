@@ -30,9 +30,9 @@ export class RegisterDto {
   @MaxLength(80)
   fullName: string;
 
-  @ApiProperty({ example: 'UnaClaveLarga-2026', minLength: 8, maxLength: 72 })
+  @ApiProperty({ minLength: 12, maxLength: 72, format: 'password' })
   @IsString()
-  @MinLength(8)
+  @MinLength(12)
   @MaxLength(72)
   @Matches(/\S/, { message: 'La contraseña no puede contener solo espacios' })
   password: string;
@@ -46,7 +46,7 @@ export class RegisterDto {
 }
 
 export class LoginDto {
-  @ApiProperty({ example: 'admin@isi.edu.bo', description: 'Email o nombre de usuario' })
+  @ApiProperty({ description: 'Email o nombre de usuario' })
   @Transform(normalizeIdentifier)
   @IsString()
   @MinLength(3)
@@ -54,7 +54,7 @@ export class LoginDto {
   @Matches(/^\S+$/, { message: 'El identificador no puede contener espacios' })
   identifier: string;
 
-  @ApiProperty({ example: 'UnaClaveLarga-2026', maxLength: 72 })
+  @ApiProperty({ maxLength: 72, format: 'password' })
   @IsString()
   @MinLength(1)
   @MaxLength(72)
@@ -79,9 +79,9 @@ export class ResetPasswordDto {
   @Matches(TOKEN_PATTERN, { message: 'Token inválido' })
   token: string;
 
-  @ApiProperty({ minLength: 8, maxLength: 72 })
+  @ApiProperty({ minLength: 12, maxLength: 72 })
   @IsString()
-  @MinLength(8)
+  @MinLength(12)
   @MaxLength(72)
   @Matches(/\S/, { message: 'La contraseña no puede contener solo espacios' })
   newPassword: string;
@@ -103,9 +103,9 @@ export class ChangePasswordDto {
   @MaxLength(72)
   currentPassword: string;
 
-  @ApiProperty({ minLength: 8, maxLength: 72 })
+  @ApiProperty({ minLength: 12, maxLength: 72 })
   @IsString()
-  @MinLength(8)
+  @MinLength(12)
   @MaxLength(72)
   @Matches(/\S/, { message: 'La contraseña no puede contener solo espacios' })
   newPassword: string;

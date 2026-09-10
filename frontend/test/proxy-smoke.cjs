@@ -93,3 +93,17 @@ test('production browser chunks contain no localhost API destination', () => {
     assert.ok(!fs.readFileSync(file, 'utf8').includes('http://localhost:4000'), file);
   }
 });
+
+test('el frontend compilado incluye campos profesionales y no expone las credenciales del seed', async () => {
+  const response = await fetch(origin + '/login');
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  // GuestOnly waits for session restoration before rendering the login form.
+  // Check the shipped client bundle too, where that form actually lives.
+  const files = directory => fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => entry.isDirectory() ? files(path.join(directory, entry.name)) : [path.join(directory, entry.name)]);
+  const scripts = files(path.join(__dirname, '../.next/static')).filter(file => file.endsWith('.js')).map(file => fs.readFileSync(file, 'utf8')).join('\n');
+  assert.ok(scripts.includes('Correo o usuario'));
+  assert.ok(!scripts.includes('password123')); assert.ok(!scripts.includes('admin@isi.edu.bo'));
+  assert.ok(!html.includes('password123')); assert.ok(!html.includes('admin@isi.edu.bo'));
+  assert.ok(!html.includes('Datos de prueba')); assert.ok(!html.includes('Cuentas demo'));
+});

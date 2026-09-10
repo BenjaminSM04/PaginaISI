@@ -27,7 +27,7 @@ const schema = z
       .string()
       .optional()
       .refine((value) => !value || SEMESTERS.includes(Number(value)), 'Selecciona un semestre entre 1º y 8º'),
-    password: z.string().min(8, 'Mínimo 8 caracteres'),
+    password: z.string().min(12, 'Mínimo 12 caracteres').max(72),
     confirm: z.string(),
   })
   .refine((d) => d.password === d.confirm, { message: 'Las contraseñas no coinciden', path: ['confirm'] });
@@ -100,12 +100,12 @@ export default function RegistroPage() {
           </div>
           <div className="space-y-1.5">
             <Label>Email</Label>
-            <Input type="email" placeholder="avargas@est.isi.edu.bo" {...register('email')} />
+            <Input type="email" placeholder="Correo electrónico" {...register('email')} />
             {errors.email && <p className="text-xs text-danger">{errors.email.message}</p>}
           </div>
           <div className="space-y-1.5">
             <Label>Contraseña</Label>
-            <Input type="password" placeholder="Mínimo 8 caracteres" autoComplete="new-password" {...register('password')} />
+            <Input type="password" placeholder="Mínimo 12 caracteres" autoComplete="new-password" {...register('password')} />
             {errors.password && <p className="text-xs text-danger">{errors.password.message}</p>}
           </div>
           <div className="space-y-1.5">

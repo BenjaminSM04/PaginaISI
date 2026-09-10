@@ -15,6 +15,7 @@ const validEnvironment = (overrides = {}) => ({
   WEB_ORIGIN: 'https://portal.example.edu',
   JWT_ACCESS_SECRET: '0123456789abcdef'.repeat(4),
   JWT_REFRESH_SECRET: 'fedcba9876543210'.repeat(4),
+  TOTP_ENCRYPTION_KEY: 'a1b2c3d4e5f60789'.repeat(4),
   AUTH_EMAIL_WEBHOOK_URL: 'https://mailer.example.edu/auth-links',
   AUTH_EMAIL_WEBHOOK_SECRET: '0123456789abcdef0123456789abcdef',
   STORAGE_DRIVER: 'local',
@@ -40,6 +41,13 @@ test('la configuración permite HTTP solo para el loopback local', () => {
     () => validateEnvironment(validEnvironment({ WEB_ORIGIN: 'http://portal.example.edu' })),
     /deben usar HTTPS/,
   );
+});
+
+test('producción exige una clave TOTP independiente de 32 bytes hexadecimales', () => {
+  for (const value of [undefined, 'corta', 'z'.repeat(64), validEnvironment().JWT_ACCESS_SECRET]) {
+    assert.throws(() => validateEnvironment(validEnvironment({ TOTP_ENCRYPTION_KEY: value })), /TOTP_ENCRYPTION_KEY/);
+  }
+  assert.equal(validateEnvironment(validEnvironment()).TOTP_ENCRYPTION_KEY, validEnvironment().TOTP_ENCRYPTION_KEY);
 });
 
 test('los enlaces de autenticación para demo solo se habilitan en un origen local', () => {

@@ -49,7 +49,7 @@ export function Footer() {
           <span>© {new Date().getFullYear()} <InstitutionalText field="institutionName" /> · <InstitutionalText field="careerName" />.</span>
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:justify-end">
             <span className="flex items-center gap-1"><FlaskConical className="h-3.5 w-3.5 text-accent" /> Hecho por estudiantes de Ingeniería de Sistemas</span>
-            <span className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-success" /> Entorno académico de demostración</span>
+            <span className="flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-success" /> Portal académico de Univalle</span>
           </div>
         </div>
       </div>

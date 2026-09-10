@@ -13,6 +13,8 @@ export interface UserLite {
 }
 
 export interface Me {
+  mustChangePassword: boolean;
+  twoFactorEnabled: boolean;
   id: string;
   email: string;
   emailVerifiedAt?: string | null;

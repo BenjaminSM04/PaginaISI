@@ -1,13 +1,13 @@
 /** Default palette only. ADMIN overrides are persisted in InstitutionalSettings.theme. */
 export const DEFAULT_THEME = {
   light: {
-    primary: '#0c447d', secondary: '#f1f5f9', accent: '#087e8b',
-    background: '#f8fafc', surface: '#ffffff', text: '#1d293a', muted: '#64748b', border: '#cbd5e1',
+    primary: '#7b1113', secondary: '#f5f5f5', accent: '#6b1d2f',
+    background: '#fafafa', surface: '#ffffff', text: '#242424', muted: '#636363', border: '#cccccc',
     success: '#15803d', warning: '#a16207', danger: '#dc2626', info: '#0369a1', gold: '#86640b',
   },
   dark: {
-    primary: '#3abff8', secondary: '#1d293a', accent: '#22d3ee',
-    background: '#0b111e', surface: '#111827', text: '#f8fafc', muted: '#9caec5', border: '#475569',
+    primary: '#f6b5b6', secondary: '#292929', accent: '#efb3c3',
+    background: '#121212', surface: '#1c1c1c', text: '#fafafa', muted: '#b4b4b4', border: '#575757',
     success: '#4ade80', warning: '#facc15', danger: '#f87171', info: '#7dd3fc', gold: '#facc15',
   },
 };

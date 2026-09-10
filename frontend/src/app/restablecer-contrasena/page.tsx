@@ -36,7 +36,7 @@ function ResetPasswordContent() {
     event.preventDefault();
     setError(null);
     if (!token) return setError('El enlace no contiene un token válido. Solicita uno nuevo.');
-    if (password.length < 8) return setError('La contraseña debe tener al menos 8 caracteres.');
+    if (password.length < 12) return setError('La contraseña debe tener al menos 12 caracteres.');
     if (password !== confirm) return setError('Las contraseñas no coinciden.');
     setLoading(true);
     try {
@@ -75,11 +75,11 @@ function ResetPasswordContent() {
             {token === '' && <p role="alert" className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">Este enlace está incompleto. Solicita una nueva recuperación.</p>}
             <div className="space-y-1.5">
               <Label htmlFor="reset-password">Nueva contraseña</Label>
-              <Input id="reset-password" type="password" autoComplete="new-password" minLength={8} maxLength={72} value={password} onChange={(event) => setPassword(event.target.value)} required />
+              <Input id="reset-password" type="password" autoComplete="new-password" minLength={12} maxLength={72} value={password} onChange={(event) => setPassword(event.target.value)} required />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="reset-confirm">Confirmar contraseña</Label>
-              <Input id="reset-confirm" type="password" autoComplete="new-password" minLength={8} maxLength={72} value={confirm} onChange={(event) => setConfirm(event.target.value)} required />
+              <Input id="reset-confirm" type="password" autoComplete="new-password" minLength={12} maxLength={72} value={confirm} onChange={(event) => setConfirm(event.target.value)} required />
             </div>
             {error && <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{error}</p>}
             <Button type="submit" className="w-full" size="lg" disabled={loading || token === null || token === ''}>

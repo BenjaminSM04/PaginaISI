@@ -1,5 +1,4 @@
 import type { AnchorHTMLAttributes, ReactNode } from 'react';
-import { cn } from '@/lib/utils';
 
 function isDemoPlaceholder(href: string) {
   try {
@@ -26,17 +25,7 @@ interface ExternalResourceLinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchor
 /** Evita abrir enlaces ilustrativos del seed que intencionalmente no existen. */
 export function ExternalResourceLink({ href, children, className, 'aria-label': ariaLabel, ...props }: ExternalResourceLinkProps) {
   if (isDemoPlaceholder(href)) {
-    return (
-      <span
-        aria-disabled="true"
-        aria-label={ariaLabel}
-        title="Enlace ilustrativo del entorno de demostración"
-        className={cn(className, 'cursor-not-allowed opacity-70')}
-      >
-        {children}
-        <span className="rounded bg-current/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider">demo</span>
-      </span>
-    );
+    return null;
   }
 
   return (

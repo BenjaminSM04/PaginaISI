@@ -21,6 +21,8 @@ import {
   REFRESH_TOKEN_TYPE,
 } from '../config/environment';
 import { AuthUser } from '../common/decorators';
+import { TwoFactorService } from './two-factor.service';
+import { assertNewPassword } from './password-policy';
 import { ChangePasswordDto, LoginDto, RegisterDto, ResetPasswordDto } from './auth.dto';
 
 interface RefreshTokenPayload {
@@ -72,6 +74,7 @@ export class AuthService {
     private jwt: JwtService,
     private gamification: GamificationService,
     private config: ConfigService<EnvironmentVariables, true>,
+    private twoFactor: TwoFactorService,
   ) {}
 
   private sanitizeMetadata(metadata: AuthRequestMetadata): AuthRequestMetadata {
@@ -80,11 +83,6 @@ export class AuthService {
     return { userAgent, ipAddress };
   }
 
-  private assertPasswordFitsBcrypt(password: string) {
-    if (Buffer.byteLength(password, 'utf8') > 72) {
-      throw new BadRequestException('La contraseña no puede superar 72 bytes UTF-8');
-    }
-  }
 
   private signAccessToken(userId: string, securityVersion: number, sessionId: string) {
     const issuer = this.config.getOrThrow('JWT_ISSUER', { infer: true });
@@ -396,7 +394,7 @@ export class AuthService {
   }
 
   async register(dto: RegisterDto, metadata: AuthRequestMetadata = {}) {
-    this.assertPasswordFitsBcrypt(dto.password);
+    assertNewPassword(dto.password);
     const email = dto.email.trim().toLowerCase();
     const username = dto.username.trim().toLowerCase();
     const exists = await this.prisma.user.findFirst({
@@ -444,8 +442,23 @@ export class AuthService {
     if (!user || !user.isActive || !passwordMatches) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
+    if (user.twoFactorEnabled) return this.twoFactor.challenge(user);
     const tokens = await this.createSession(user.id, user.securityVersion, metadata);
     return { user: await this.me(user.id), ...tokens };
+  }
+
+  async verifyTwoFactor(challengeToken: string, code: string, metadata: AuthRequestMetadata = {}) {
+    const verified = await this.twoFactor.verifyLogin(challengeToken, code);
+    const tokens = await this.createSession(verified.userId, verified.securityVersion, metadata);
+    return { user: await this.me(verified.userId), ...tokens };
+  }
+
+  setupTwoFactor(userId: string, password: string) { return this.twoFactor.beginSetup(userId, password); }
+
+  async updateTwoFactor(userId: string, password: string, code: string, enabled: boolean, metadata: AuthRequestMetadata = {}) {
+    const result = enabled ? await this.twoFactor.confirmSetup(userId, password, code) : await this.twoFactor.disable(userId, password, code);
+    const tokens = await this.createSession(userId, result.securityVersion, metadata);
+    return { ok: true, ...('recoveryCodes' in result ? { recoveryCodes: result.recoveryCodes } : {}), user: await this.me(userId), ...tokens };
   }
 
   async refresh(refreshToken?: string, metadata: AuthRequestMetadata = {}) {
@@ -585,7 +598,7 @@ export class AuthService {
   }
 
   async resetPassword(dto: ResetPasswordDto) {
-    this.assertPasswordFitsBcrypt(dto.newPassword);
+    assertNewPassword(dto.newPassword);
     const now = new Date();
     const tokenHash = hashAuthActionToken(dto.token);
     const actionToken = await this.prisma.authActionToken.findUnique({ where: { tokenHash } });
@@ -627,7 +640,7 @@ export class AuthService {
           passwordHash: targetUser.passwordHash,
           securityVersion: targetUser.securityVersion,
         },
-        data: { passwordHash, securityVersion: { increment: 1 }, refreshTokenHash: null },
+        data: { passwordHash, mustChangePassword: false, securityVersion: { increment: 1 }, refreshTokenHash: null },
       });
       if (changed.count !== 1) {
         throw new ConflictException('La contraseña cambió durante la operación; inténtalo nuevamente');
@@ -640,6 +653,8 @@ export class AuthService {
         where: { userId: actionToken.userId, type: 'PASSWORD_RESET', usedAt: null },
         data: { usedAt: claimAt },
       });
+      await tx.twoFactorCredential.updateMany({ where: { userId: actionToken.userId }, data: { pendingEncrypted: null, pendingExpiresAt: null } });
+      await tx.twoFactorChallenge.deleteMany({ where: { userId: actionToken.userId } });
     });
     return { ok: true, message: 'Contraseña actualizada. Ya puedes iniciar sesión.', userId: actionToken.userId };
   }
@@ -687,7 +702,7 @@ export class AuthService {
   }
 
   async changePassword(userId: string, dto: ChangePasswordDto, metadata: AuthRequestMetadata = {}) {
-    this.assertPasswordFitsBcrypt(dto.newPassword);
+    assertNewPassword(dto.newPassword);
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user || !user.isActive || !(await bcrypt.compare(dto.currentPassword, user.passwordHash))) {
       throw new BadRequestException('La contraseña actual no es correcta');
@@ -706,7 +721,7 @@ export class AuthService {
           passwordHash: user.passwordHash,
           securityVersion: user.securityVersion,
         },
-        data: { passwordHash, securityVersion: { increment: 1 }, refreshTokenHash: null },
+        data: { passwordHash, mustChangePassword: false, securityVersion: { increment: 1 }, refreshTokenHash: null },
       });
       if (changed.count !== 1) {
         throw new ConflictException('La contraseña cambió durante la operación; vuelve a intentarlo');
@@ -716,6 +731,8 @@ export class AuthService {
         where: { userId: user.id, type: 'PASSWORD_RESET', usedAt: null },
         data: { usedAt: now },
       });
+      await tx.twoFactorCredential.updateMany({ where: { userId: user.id }, data: { pendingEncrypted: null, pendingExpiresAt: null } });
+      await tx.twoFactorChallenge.deleteMany({ where: { userId: user.id } });
     });
     const tokens = await this.createSession(user.id, nextSecurityVersion, metadata);
     return { ok: true, message: 'Contraseña actualizada y otras sesiones cerradas.', ...tokens };

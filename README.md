@@ -47,11 +47,11 @@ Decisiones de arquitectura documentadas en [`docs/ADR-001-arquitectura.md`](docs
 
 Requisitos: Docker Desktop.
 
-1. Copia la configuración y genera tres secretos distintos. No uses valores de ejemplo en un despliegue real.
+1. Copia la configuración y genera cuatro secretos distintos. No uses valores de ejemplo en un despliegue real.
 
 ```powershell
 Copy-Item .env.example .env
-# Edita .env y completa POSTGRES_PASSWORD, JWT_ACCESS_SECRET y JWT_REFRESH_SECRET.
+# Completa POSTGRES_PASSWORD, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET y TOTP_ENCRYPTION_KEY.
 # Cada JWT puede generarse con: openssl rand -hex 32
 ```
 
@@ -83,7 +83,7 @@ docker compose exec -e NODE_ENV=development -e SEED_ON_FIRST_RUN=false -e ALLOW_
 
 ## Desarrollo local sin Docker
 
-Requisitos: Node 20+, PostgreSQL 16 corriendo local.
+Requisitos: Node 24 LTS, PostgreSQL 16 corriendo local.
 
 ```bash
 # 1. Backend
@@ -107,7 +107,9 @@ Para crear una migración durante el desarrollo: `cd backend && npm run db:migra
 
 ## Cuentas demo (seed)
 
-Contraseña de **todas** las cuentas: `password123`
+Las cuentas y contraseñas iniciales se conservan en el seed. La migración marca las cuentas predeterminadas con `mustChangePassword`: deben reemplazar su contraseña antes de usar el sistema, incluso si tenían una sesión abierta. Los registros nuevos ya exigen una contraseña segura.
+
+La autenticación TOTP se configura en **Mi cuenta → Seguridad**. Instrucciones, variables, migraciones y recuperación: [seguridad y autenticación](backend/SEGURIDAD.md).
 
 | Usuario | Email | Rol |
 |---|---|---|

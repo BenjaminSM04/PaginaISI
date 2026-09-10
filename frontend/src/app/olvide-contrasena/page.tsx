@@ -60,7 +60,7 @@ export default function OlvideContrasenaPage() {
         <form onSubmit={submit} className="space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
           <div className="space-y-1.5">
             <Label htmlFor="recovery-email">Correo de tu cuenta</Label>
-            <Input id="recovery-email" type="email" autoComplete="email" placeholder="avargas@est.isi.edu.bo" value={email} onChange={(event) => setEmail(event.target.value)} required maxLength={254} />
+            <Input id="recovery-email" type="email" autoComplete="email" placeholder="Correo electrónico" value={email} onChange={(event) => setEmail(event.target.value)} required maxLength={254} />
           </div>
           {error && <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{error}</p>}
           {result && (
@@ -68,7 +68,7 @@ export default function OlvideContrasenaPage() {
               <p>{result.message}</p>
               {previewUrl && (
                 <p className="mt-2">
-                  <a href={previewUrl} className="font-bold underline">Abrir enlace de recuperación de la demo</a>
+                  <a href={previewUrl} className="font-bold underline">Abrir enlace de recuperación</a>
                   <span className="ml-2 text-xs opacity-75">Visible únicamente en localhost.</span>
                 </p>
               )}

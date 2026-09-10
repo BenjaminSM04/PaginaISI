@@ -5,10 +5,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { api, setAccessToken, setSessionExpiredHandler } from './api';
 import type { Me } from './types';
 
+export type LoginResult = { requiresTwoFactor: true; challengeToken: string } | { requiresTwoFactor: false; mustChangePassword: boolean };
+export interface AuthSession { user: Me; accessToken: string; }
+
 interface AuthContextValue {
   user: Me | null;
   loading: boolean;
-  login: (identifier: string, password: string) => Promise<void>;
+  login: (identifier: string, password: string) => Promise<LoginResult>;
+  verifyTwoFactor: (challengeToken: string, code: string) => Promise<Me>;
+  acceptSession: (session: AuthSession) => void;
   register: (data: { email: string; username: string; fullName: string; password: string; semester?: number }) => Promise<{ emailVerificationPreviewUrl?: string }>;
   logout: () => Promise<void>;
   refreshMe: () => Promise<void>;
@@ -18,7 +23,9 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue>({
   user: null,
   loading: true,
-  login: async () => {},
+  login: async () => ({ requiresTwoFactor: false, mustChangePassword: false }),
+  verifyTwoFactor: async () => { throw new Error('Sin proveedor de autenticación'); },
+  acceptSession: () => {},
   register: async () => ({}),
   logout: async () => {},
   refreshMe: async () => {},
@@ -59,12 +66,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [queryClient]);
 
-  const login = useCallback(async (identifier: string, password: string) => {
-    const data = await api.post<{ user: Me; accessToken: string }>('/auth/login', { identifier, password });
-    setAccessToken(data.accessToken);
+  const acceptSession = useCallback((session: AuthSession) => {
+    setAccessToken(session.accessToken);
     queryClient.clear();
-    setUser(data.user);
+    setUser(session.user);
   }, [queryClient]);
+
+  const verifyTwoFactor = useCallback(async (challengeToken: string, code: string) => {
+    const session = await api.post<AuthSession>('/auth/two-factor/verify', { challengeToken, code });
+    acceptSession(session);
+    return session.user;
+  }, [acceptSession]);
+
+  const login = useCallback(async (identifier: string, password: string) => {
+    const data = await api.post<AuthSession | { requiresTwoFactor: true; challengeToken: string }>('/auth/login', { identifier, password });
+    if ('requiresTwoFactor' in data) return data;
+    acceptSession(data);
+    return { requiresTwoFactor: false as const, mustChangePassword: data.user.mustChangePassword };
+  }, [acceptSession]);
 
   const register = useCallback(async (payload: { email: string; username: string; fullName: string; password: string; semester?: number }) => {
     const data = await api.post<{ user: Me; accessToken: string; emailVerificationPreviewUrl?: string }>('/auth/register', payload);
@@ -99,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshMe, hasRole }}>
+    <AuthContext.Provider value={{ user, loading, login, verifyTwoFactor, acceptSession, register, logout, refreshMe, hasRole }}>
       {children}
     </AuthContext.Provider>
   );

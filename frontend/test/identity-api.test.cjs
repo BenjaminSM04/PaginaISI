@@ -79,3 +79,31 @@ test('internal destination reads runtime configuration and refuses paths/credent
     }
   } finally { if (previous === undefined) delete process.env.API_INTERNAL_URL; else process.env.API_INTERNAL_URL = previous; }
 });
+
+test('un código de login incorrecto no renueva ni elimina una sesión del navegador', async () => {
+  const original = global.fetch;
+  const calls = [];
+  global.fetch = async url => { calls.push(url); return Response.json({ message: 'Código incorrecto' }, { status: 401 }); };
+  try {
+    const { api, setAccessToken, getAccessToken, setSessionExpiredHandler } = load('lib/api.ts');
+    setAccessToken('previous'); let expired = false; setSessionExpiredHandler(() => { expired = true; });
+    await assert.rejects(() => api.post('/auth/two-factor/verify', { challengeToken: 'fixture', code: '123456' }), /Código incorrecto/);
+    assert.deepEqual(calls, ['/api/auth/two-factor/verify']);
+    assert.equal(getAccessToken(), 'previous'); assert.equal(expired, false);
+  } finally { global.fetch = original; }
+});
+
+test('la configuración 2FA renueva un bearer vencido pero conserva la sesión ante errores de validación', async () => {
+  const original = global.fetch;
+  let refreshes = 0, expired = false;
+  global.fetch = async (url, options) => {
+    if (url.endsWith('/refresh')) { refreshes++; return Response.json({ accessToken: 'renewed' }); }
+    return Response.json({ message: 'La contraseña actual no es correcta' }, { status: options.headers.Authorization === 'Bearer renewed' ? 400 : 401 });
+  };
+  try {
+    const { api, setAccessToken, getAccessToken, setSessionExpiredHandler } = load('lib/api.ts');
+    setAccessToken('expired'); setSessionExpiredHandler(() => { expired = true; });
+    await assert.rejects(() => api.post('/auth/two-factor/setup', { password: 'incorrecta' }), /contraseña actual/);
+    assert.equal(refreshes, 1); assert.equal(expired, false); assert.equal(getAccessToken(), 'renewed');
+  } finally { global.fetch = original; }
+});

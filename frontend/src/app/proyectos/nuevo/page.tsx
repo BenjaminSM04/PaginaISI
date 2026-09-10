@@ -181,7 +181,7 @@ function NuevoProyectoForm() {
           </div>
           <div className="space-y-1.5">
             <Label>Demo desplegada</Label>
-            <Input placeholder="https://mi-demo.vercel.app" {...register('demoUrl')} />
+            <Input placeholder="URL de la aplicación" {...register('demoUrl')} />
             {errors.demoUrl && <p className="text-xs text-danger">{errors.demoUrl.message}</p>}
           </div>
           <div className="space-y-1.5">

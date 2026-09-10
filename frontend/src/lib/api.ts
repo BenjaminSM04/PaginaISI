@@ -69,7 +69,7 @@ async function request<T>(method: string, path: string, body?: unknown, isRetry 
   });
 
   if (res.status === 401) {
-    const canRefresh = !['/auth/login', '/auth/register', '/auth/refresh'].includes(path);
+    const canRefresh = !['/auth/login', '/auth/register', '/auth/refresh', '/auth/two-factor/verify'].includes(path);
     if (!isRetry && canRefresh) {
       const refreshed = await tryRefresh();
       if (refreshed) return request<T>(method, path, body, true);

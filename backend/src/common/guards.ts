@@ -2,7 +2,7 @@ import { CanActivate, ExecutionContext, ForbiddenException, Injectable, Unauthor
 import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { RoleName } from '@prisma/client';
-import { ALLOW_UNVERIFIED_KEY, AuthUser, IS_PUBLIC_KEY, ROLES_KEY } from './decorators';
+import { ALLOW_PASSWORD_CHANGE_KEY, ALLOW_UNVERIFIED_KEY, AuthUser, IS_PUBLIC_KEY, ROLES_KEY } from './decorators';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
@@ -77,6 +77,17 @@ export class VerifiedEmailGuard implements CanActivate {
     if (!user?.emailVerifiedAt) {
       throw new ForbiddenException('Verifica tu correo antes de realizar esta acción');
     }
+    return true;
+  }
+}
+
+@Injectable()
+export class PasswordChangeGuard implements CanActivate {
+  constructor(private reflector: Reflector) {}
+  canActivate(context: ExecutionContext): boolean {
+    const user = context.switchToHttp().getRequest().user as AuthUser | null;
+    const allowed = this.reflector.getAllAndOverride<boolean>(ALLOW_PASSWORD_CHANGE_KEY, [context.getHandler(), context.getClass()]);
+    if (user?.mustChangePassword && !allowed) throw new ForbiddenException({ code: 'PASSWORD_CHANGE_REQUIRED', message: 'Debes cambiar tu contraseña antes de continuar' });
     return true;
   }
 }

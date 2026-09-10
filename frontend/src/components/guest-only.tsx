@@ -21,7 +21,7 @@ export function GuestOnly({
   useEffect(() => {
     if (loading || !user || redirectStarted.current) return;
     redirectStarted.current = true;
-    router.replace(callbackFromLocation(safeAuthCallback(fallback, '/cuenta')));
+    router.replace(user.mustChangePassword ? '/cambiar-contrasena' : callbackFromLocation(safeAuthCallback(fallback, '/cuenta')));
   }, [fallback, loading, router, user]);
 
   if (loading || user) {

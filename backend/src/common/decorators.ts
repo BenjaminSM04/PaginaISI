@@ -1,6 +1,9 @@
 import { SetMetadata, createParamDecorator, ExecutionContext } from '@nestjs/common';
 import { RoleName } from '@prisma/client';
 
+export const ALLOW_PASSWORD_CHANGE_KEY = 'allowPasswordChange';
+export const AllowPasswordChange = () => SetMetadata(ALLOW_PASSWORD_CHANGE_KEY, true);
+
 export const IS_PUBLIC_KEY = 'isPublic';
 export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
 
@@ -17,6 +20,7 @@ export interface AuthUser {
   roles: RoleName[];
   sessionId: string;
   emailVerifiedAt: Date | null;
+  mustChangePassword?: boolean;
 }
 
 export const CurrentUser = createParamDecorator((_data: unknown, ctx: ExecutionContext): AuthUser | null => {

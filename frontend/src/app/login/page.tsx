@@ -24,19 +24,33 @@ type FormData = z.infer<typeof schema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, loading: authLoading } = useAuth();
+  const { login, verifyTwoFactor, loading: authLoading } = useAuth();
+  const [challengeToken, setChallengeToken] = useState<string | null>(null);
+  const [code, setCode] = useState('');
+  const [verifying, setVerifying] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({ resolver: zodResolver(schema) });
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({ resolver: zodResolver(schema) });
 
   const onSubmit = async (data: FormData) => {
     if (authLoading) return;
     setServerError(null);
     try {
-      await login(data.identifier, data.password);
-      router.replace(callbackFromLocation('/cuenta'));
-    } catch (e: any) {
-      setServerError(e.message);
+      const result = await login(data.identifier, data.password);
+      if (result.requiresTwoFactor) { setChallengeToken(result.challengeToken); reset(); return; }
+      router.replace('mustChangePassword' in result && result.mustChangePassword ? '/cambiar-contrasena' : callbackFromLocation('/cuenta'));
+    } catch (e: unknown) {
+      setServerError(e instanceof Error ? e.message : 'No se pudo iniciar sesión');
     }
+  };
+
+  const verify = async (event: React.FormEvent) => {
+    event.preventDefault(); if (!challengeToken) return;
+    setVerifying(true); setServerError(null);
+    try {
+      const user = await verifyTwoFactor(challengeToken, code);
+      router.replace(user.mustChangePassword ? '/cambiar-contrasena' : callbackFromLocation('/cuenta'));
+    } catch (error) { setServerError(error instanceof Error ? error.message : 'No se pudo verificar el código'); }
+    finally { setVerifying(false); setCode(''); }
   };
 
   return (
@@ -49,35 +63,38 @@ export default function LoginPage() {
           <p className="mt-1 text-sm text-muted-foreground"><InstitutionalText field="careerName" /> · <InstitutionalText field="institutionName" /></p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
+        {challengeToken ? <form onSubmit={verify} className="space-y-4 rounded-2xl border bg-card p-6 shadow-sm">
+          <h2 className="font-semibold">Verificación en dos pasos</h2>
+          <p className="text-sm text-muted-foreground">Ingresa el código de tu aplicación o un código de recuperación. La verificación vence en cinco minutos.</p>
+          <div><Label htmlFor="login-code">Código de autenticación</Label><Input id="login-code" type="text" autoComplete="one-time-code" pattern="(?:[0-9]{6}|[a-fA-F0-9]{20})" maxLength={20} required value={code} onChange={e => setCode(e.target.value.trim())} /></div>
+          {serverError && <p role="alert" className="text-sm text-danger">{serverError}</p>}
+          <Button disabled={verifying} className="w-full">{verifying ? 'Verificando…' : 'Verificar e ingresar'}</Button>
+          <Button type="button" variant="ghost" disabled={verifying} onClick={() => { setChallengeToken(null); setCode(''); setServerError(null); }}>Volver al inicio de sesión</Button>
+        </form> : <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
           <div className="space-y-1.5">
-            <Label>Email o usuario</Label>
-            <Input placeholder="avargas@est.isi.edu.bo" autoComplete="username" {...register('identifier')} />
+            <Label htmlFor="login-identifier">Correo o usuario</Label>
+            <Input id="login-identifier" placeholder="Correo electrónico o nombre de usuario" autoComplete="username" {...register('identifier')} />
             {errors.identifier && <p className="text-xs text-danger">{errors.identifier.message}</p>}
           </div>
           <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-3">
-              <Label>Contraseña</Label>
+              <Label htmlFor="login-password">Contraseña</Label>
               <Link href="/olvide-contrasena" className="text-xs font-semibold text-primary hover:underline">¿La olvidaste?</Link>
             </div>
-            <Input type="password" placeholder="••••••••" autoComplete="current-password" {...register('password')} />
+            <Input id="login-password" type="password" placeholder="••••••••" autoComplete="current-password" {...register('password')} />
             {errors.password && <p className="text-xs text-danger">{errors.password.message}</p>}
           </div>
           {serverError && <p className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{serverError}</p>}
           <Button type="submit" disabled={isSubmitting || authLoading} className="w-full" size="lg">
             {isSubmitting || authLoading ? <Loader2 className="animate-spin" /> : <LogIn />} Iniciar sesión
           </Button>
-        </form>
+        </form>}
 
         <p className="text-center text-sm text-muted-foreground">
           ¿Aún no tienes cuenta?{' '}
           <Link href="/registro" className="font-semibold text-primary hover:underline">Regístrate <PointReward reason="REGISTRO_COMPLETO" parentheses /></Link>
         </p>
-        <div className="rounded-xl border border-border bg-secondary/40 p-4 text-center text-xs text-muted-foreground">
-          <p className="font-semibold">Cuentas demo (seed):</p>
-          <p className="mt-1 font-mono">admin@isi.edu.bo · rmendoza@isi.edu.bo · avargas@est.isi.edu.bo</p>
-          <p className="font-mono">contraseña: password123</p>
-        </div>
+
       </div>
     </div>
     </GuestOnly>

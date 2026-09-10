@@ -1,4 +1,5 @@
-import { Body, ConflictException, Controller, Delete, ForbiddenException, Get, Param, Post, Req, Res } from '@nestjs/common';
+import { AuthNoStoreInterceptor } from './auth-no-store.interceptor';
+import { Body, ConflictException, Controller, Delete, ForbiddenException, Get, UseInterceptors, Param, Post, Req, Res } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -13,14 +14,17 @@ import {
   SessionIdDto,
   VerifyEmailDto,
 } from './auth.dto';
-import { AllowUnverified, CurrentUser, Public, AuthUser } from '../common/decorators';
+import { AllowPasswordChange, AllowUnverified, CurrentUser, Public, AuthUser } from '../common/decorators';
 import { EnvironmentVariables } from '../config/environment';
+
+import { TwoFactorCodeDto, TwoFactorLoginDto, TwoFactorPasswordDto } from './two-factor.dto';
 
 const REFRESH_COOKIE = 'isi_refresh';
 
 @ApiTags('auth')
 @AllowUnverified()
 @Controller('auth')
+@UseInterceptors(AuthNoStoreInterceptor)
 export class AuthController {
   constructor(
     private auth: AuthService,
@@ -107,12 +111,15 @@ export class AuthController {
   ) {
     this.assertTrustedCookieOrigin(req);
     await this.assertAnonymous(currentUser, req);
-    const { refreshToken, ...rest } = await this.auth.login(dto, this.requestMetadata(req));
+    const result = await this.auth.login(dto, this.requestMetadata(req));
+    if ('requiresTwoFactor' in result) return result;
+    const { refreshToken, ...rest } = result;
     this.setRefreshCookie(res, refreshToken);
     return rest;
   }
 
   @Public()
+  @AllowPasswordChange()
   @Post('refresh')
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @ApiOperation({ summary: 'Renueva el access token usando la cookie httpOnly' })
@@ -135,6 +142,7 @@ export class AuthController {
   }
 
   @Public()
+  @AllowPasswordChange()
   @Post('logout')
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @ApiOperation({ summary: 'Cierra sesión e invalida el refresh token' })
@@ -147,6 +155,41 @@ export class AuthController {
     }
   }
 
+  @Public()
+  @Post('two-factor/verify')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  async verifyTwoFactor(@Body() dto: TwoFactorLoginDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    this.assertTrustedCookieOrigin(req);
+    const { refreshToken, ...result } = await this.auth.verifyTwoFactor(dto.challengeToken, dto.code, this.requestMetadata(req));
+    this.setRefreshCookie(res, refreshToken);
+    return result;
+  }
+
+  @Post('two-factor/setup')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  setupTwoFactor(@CurrentUser() user: AuthUser, @Body() dto: TwoFactorPasswordDto) {
+    return this.auth.setupTwoFactor(user.id, dto.password);
+  }
+
+  @Post('two-factor/enable')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  async enableTwoFactor(@CurrentUser() user: AuthUser, @Body() dto: TwoFactorCodeDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    this.assertTrustedCookieOrigin(req);
+    const { refreshToken, ...result } = await this.auth.updateTwoFactor(user.id, dto.password, dto.code, true, this.requestMetadata(req));
+    this.setRefreshCookie(res, refreshToken);
+    return result;
+  }
+
+  @Post('two-factor/disable')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  async disableTwoFactor(@CurrentUser() user: AuthUser, @Body() dto: TwoFactorCodeDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    this.assertTrustedCookieOrigin(req);
+    const { refreshToken, ...result } = await this.auth.updateTwoFactor(user.id, dto.password, dto.code, false, this.requestMetadata(req));
+    this.setRefreshCookie(res, refreshToken);
+    return result;
+  }
+
+  @AllowPasswordChange()
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Usuario autenticado con perfil, roles e insignias' })
@@ -163,6 +206,7 @@ export class AuthController {
   }
 
   @Public()
+  @AllowPasswordChange()
   @Post('password/reset')
   @Throttle({ default: { limit: 5, ttl: 15 * 60_000 } })
   @ApiOperation({ summary: 'Restablece la contraseña con un token de un solo uso' })
@@ -177,6 +221,7 @@ export class AuthController {
     return { ...result, currentSessionInvalidated };
   }
 
+  @AllowPasswordChange()
   @Post('password/change')
   @Throttle({ default: { limit: 5, ttl: 15 * 60_000 } })
   @ApiBearerAuth()

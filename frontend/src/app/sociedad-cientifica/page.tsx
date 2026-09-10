@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { ArrowRight, Award, Cpu, FlaskConical, Globe, MessageCircle, Radar, Rocket, Shield, Target, Users } from 'lucide-react';
+import { ArrowRight, Award, Cpu, MessageCircle, Target, Users } from 'lucide-react';
 import { serverGet } from '@/lib/server-api';
 import type { Community } from '@/lib/types';
 import { buttonVariants } from '@/components/ui/button';
@@ -11,12 +11,6 @@ import { EmptyState } from '@/components/shared';
 export const revalidate = 120;
 export const metadata: Metadata = { title: 'Sociedad Científica' };
 
-const LOGROS = [
-  { year: '2026', title: 'Primer lugar CTF nacional universitario', desc: 'El equipo de HackLab venció a 32 universidades en la final nacional.', icon: Shield },
-  { year: '2026', title: 'Artículo aceptado en congreso internacional', desc: 'Investigación estudiantil sobre detección de retinopatía diabética con CNN.', icon: FlaskConical },
-  { year: '2025', title: 'Sistema de biblioteca en producción', desc: 'Proyecto de la incubadora adoptado oficialmente por la facultad.', icon: Rocket },
-  { year: '2025', title: 'Semillero de programación competitiva', desc: 'Dos equipos clasificados a la regional del ICPC.', icon: Target },
-];
 
 async function SociedadCientificaContent() {
   const communities = await serverGet<Community[]>('/communities', []);
@@ -33,19 +27,16 @@ async function SociedadCientificaContent() {
       {/* Hero cyber */}
       <section className="relative overflow-hidden border-b border-border bg-hero-end text-white">
         <div className="grid-bg absolute inset-0 opacity-60" />
-        <div className="pointer-events-none absolute left-8 top-16 hidden h-28 w-px bg-gradient-to-b from-transparent via-cyan-400/50 to-transparent lg:block" />
-        <div className="pointer-events-none absolute bottom-16 right-8 hidden h-28 w-px bg-gradient-to-b from-transparent via-cyan-400/50 to-transparent lg:block" />
-        <div className="pointer-events-none absolute right-10 top-24 hidden font-mono text-[9px] uppercase tracking-[0.3em] text-hero-accent/30 lg:block">
-          SYS_CORE: STABLE<br />NODE_SYNC: 100%
-        </div>
+        <div className="pointer-events-none absolute left-8 top-16 hidden h-28 w-px bg-gradient-to-b from-transparent via-hero-accent/50 to-transparent lg:block" />
+        <div className="pointer-events-none absolute bottom-16 right-8 hidden h-28 w-px bg-gradient-to-b from-transparent via-hero-accent/50 to-transparent lg:block" />
 
         <div className="container relative py-16 text-center md:py-24">
-          <div className="hud-chip mx-auto mb-8 border-hero-accent/40 bg-cyan-400/10 text-hero-accent">
+          <div className="hud-chip mx-auto mb-8 border-hero-accent/40 bg-hero-accent/10 text-hero-accent">
             <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-400" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-hero-accent opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-hero-accent" />
             </span>
-            Sociedad_Científica // Convocatoria_abierta
+            Sociedad Científica
           </div>
           <h1 className="mx-auto max-w-3xl font-serif-heading text-4xl font-bold leading-tight sm:text-5xl">
             Donde la curiosidad se convierte en <span className="text-hero-accent">investigación aplicada</span>
@@ -60,12 +51,9 @@ async function SociedadCientificaContent() {
               Explorar comunidades
             </Link>
           </div>
-          <div className="mx-auto mt-12 grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="mx-auto mt-12 grid max-w-xs gap-3">
             {[
               { icon: Users, value: communities.length, label: 'Comunidades' },
-              { icon: Radar, value: '12+', label: 'Eventos por año' },
-              { icon: FlaskConical, value: '8+', label: 'Papers estudiantiles' },
-              { icon: Globe, value: '3', label: 'Competencias intl.' },
             ].map((s) => (
               <div key={s.label} className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
                 <s.icon className="mx-auto mb-1.5 h-5 w-5 text-hero-accent" />
@@ -77,11 +65,6 @@ async function SociedadCientificaContent() {
         </div>
       </section>
 
-      <section className="container pt-6" aria-label="Aviso sobre el contenido demostrativo">
-        <p className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-center text-xs text-warning">
-          Presentación demostrativa: los logros e indicadores de esta sección son datos de muestra y deben reemplazarse por información institucional validada antes de una publicación oficial.
-        </p>
-      </section>
 
       {/* Misión */}
       <section className="container grid gap-6 py-14 lg:grid-cols-3">
@@ -121,30 +104,6 @@ async function SociedadCientificaContent() {
             </Link>
           ))}
           {directiva.length === 0 && <p className="col-span-full text-center text-sm text-muted-foreground">La directiva se publicará pronto.</p>}
-        </div>
-      </section>
-
-      {/* Logros */}
-      <section className="border-y border-border bg-secondary/40 py-14">
-        <div className="container space-y-8">
-          <div className="text-center">
-            <span className="section-kicker">Historial</span>
-            <h2 className="mt-1 font-serif-heading text-2xl font-bold text-primary sm:text-3xl">Logros recientes</h2>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            {LOGROS.map((l) => (
-              <div key={l.title} className="flex gap-4 rounded-xl border border-border bg-card p-5 shadow-sm">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-gold/15 text-gold">
-                  <l.icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="font-mono text-[10px] font-bold uppercase tracking-widest text-accent">{l.year}</div>
-                  <h3 className="font-bold">{l.title}</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">{l.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 

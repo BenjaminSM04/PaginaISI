@@ -1,14 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, KeyRound, Laptop, Loader2, LogOut, MailCheck, ShieldCheck, Smartphone } from 'lucide-react';
-import { api, setAccessToken } from '@/lib/api';
+import { CheckCircle2, KeyRound, Laptop, Loader2, LogOut, MailCheck, Smartphone } from 'lucide-react';
+import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { formatDate } from '@/lib/utils';
+import { ChangePasswordForm } from './change-password-form';
+import { TwoFactorSecurity } from './two-factor-security';
 import { Button } from '@/components/ui/button';
-import { Input, Label } from '@/components/ui/input';
 
 interface SessionItem {
   id: string;
@@ -58,11 +58,6 @@ function safePreviewUrl(value?: string) {
 export function AccountSecurity() {
   const { user, logout, refreshMe } = useAuth();
   const queryClient = useQueryClient();
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
-
   const sessions = useQuery({
     queryKey: ['auth-sessions'],
     queryFn: () => api.get<SessionItem[]>('/auth/sessions'),
@@ -71,21 +66,6 @@ export function AccountSecurity() {
   const verification = useMutation({
     mutationFn: () => api.post<ActionResult>('/auth/email/verification'),
     onSuccess: () => void refreshMe(),
-  });
-
-  const password = useMutation({
-    mutationFn: () => api.post<ActionResult & { accessToken: string }>('/auth/password/change', {
-      currentPassword,
-      newPassword,
-    }),
-    onSuccess: async (result) => {
-      setAccessToken(result.accessToken);
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      setPasswordMessage(result.message);
-      await queryClient.invalidateQueries({ queryKey: ['auth-sessions'] });
-    },
   });
 
   const revoke = useMutation({
@@ -104,24 +84,11 @@ export function AccountSecurity() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['auth-sessions'] }),
   });
 
-  const submitPassword = (event: React.FormEvent) => {
-    event.preventDefault();
-    setPasswordMessage(null);
-    if (newPassword.length < 8) {
-      setPasswordMessage('La nueva contraseña debe tener al menos 8 caracteres.');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setPasswordMessage('Las contraseñas nuevas no coinciden.');
-      return;
-    }
-    password.mutate();
-  };
-
   const previewUrl = safePreviewUrl(verification.data?.previewUrl);
 
   return (
     <div className="space-y-5">
+      <TwoFactorSecurity />
       <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex gap-3">
@@ -142,7 +109,7 @@ export function AccountSecurity() {
             </span>
           ) : (
             <Button variant="outline" size="sm" disabled={verification.isPending} onClick={() => verification.mutate()}>
-              {verification.isPending ? <Loader2 className="animate-spin" /> : <MailCheck />} Generar enlace
+              {verification.isPending ? <Loader2 className="animate-spin" /> : <MailCheck />} Enviar verificación
             </Button>
           )}
         </div>
@@ -156,8 +123,7 @@ export function AccountSecurity() {
             <p>{verification.data.message}</p>
             {previewUrl && (
               <p className="mt-2">
-                <Link href={previewUrl} className="font-bold underline">Abrir enlace de verificación de la demo</Link>
-                <span className="ml-2 text-xs opacity-75">Solo aparece en localhost.</span>
+                <Link href={previewUrl} className="font-bold underline">Abrir enlace de verificación</Link>
               </p>
             )}
           </div>
@@ -174,30 +140,7 @@ export function AccountSecurity() {
             <p className="text-sm text-muted-foreground">Al cambiarla se cerrarán automáticamente tus otras sesiones.</p>
           </div>
         </div>
-        <form onSubmit={submitPassword} className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="current-password">Contraseña actual</Label>
-            <Input id="current-password" type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="new-password">Nueva contraseña</Label>
-            <Input id="new-password" type="password" autoComplete="new-password" minLength={8} maxLength={72} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="confirm-password">Confirmar contraseña</Label>
-            <Input id="confirm-password" type="password" autoComplete="new-password" minLength={8} maxLength={72} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required />
-          </div>
-          <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-            <Button type="submit" disabled={password.isPending}>
-              {password.isPending ? <Loader2 className="animate-spin" /> : <ShieldCheck />} Actualizar contraseña
-            </Button>
-            {(passwordMessage || password.isError) && (
-              <p role={password.isError ? 'alert' : 'status'} className={password.isError ? 'text-sm text-danger' : 'text-sm text-success'}>
-                {password.isError ? errorMessage(password.error) : passwordMessage}
-              </p>
-            )}
-          </div>
-        </form>
+        <ChangePasswordForm />
       </section>
 
       <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">

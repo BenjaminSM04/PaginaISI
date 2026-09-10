@@ -17,7 +17,7 @@ import { ReportsModule } from './reports/reports.module';
 import { StorageModule } from './storage/storage.module';
 import { AdminModule } from './admin/admin.module';
 import { SearchModule } from './search/search.module';
-import { JwtAuthGuard, RolesGuard, VerifiedEmailGuard } from './common/guards';
+import { JwtAuthGuard, PasswordChangeGuard, RolesGuard, VerifiedEmailGuard } from './common/guards';
 import { validateEnvironment } from './config/environment';
 import { HealthModule } from './health/health.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -61,6 +61,7 @@ import { IncubatorClientsModule } from './incubator-clients/incubator-clients.mo
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: PasswordChangeGuard },
     { provide: APP_GUARD, useClass: VerifiedEmailGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
   ],
