@@ -23,7 +23,9 @@ before(async () => {
   started = true;
   const port = docker('port', container, '5432/tcp').split(':').at(-1);
   for (let i = 0; i < 100; i++) {
-    try { docker('exec', container, 'pg_isready', '-U', 'postgres'); break; }
+    // The image first starts a temporary Unix-socket server during initdb.
+    // Only TCP readiness indicates that initialization and its restart finished.
+    try { docker('exec', container, 'pg_isready', '-h', '127.0.0.1', '-U', 'postgres', '-d', 'isi_security_test'); break; }
     catch { if (i === 99) throw new Error('PostgreSQL no inició'); await new Promise(r => setTimeout(r, 200)); }
   }
   Object.assign(process.env, {
@@ -34,7 +36,7 @@ before(async () => {
     AUTH_EMAIL_WEBHOOK_URL: '', AUTH_EMAIL_WEBHOOK_SECRET: '', SECURITY_ALERT_WEBHOOK_URL: '', SECURITY_ALERT_WEBHOOK_SECRET: '',
     CLEAN_ORPHAN_UPLOADS_ON_START: 'false', SEED_ON_FIRST_RUN: 'false',
   });
-  execFileSync(process.execPath, [require.resolve('prisma/build/index.js'), 'migrate', 'deploy'], { cwd: root, env: process.env, windowsHide: true, timeout: 120000, stdio: 'pipe' });
+  execFileSync(process.execPath, [require.resolve('prisma/build/index.js'), 'migrate', 'deploy'], { cwd: root, env: process.env, windowsHide: true, timeout: 120000, stdio: 'pipe', encoding: 'utf8' });
   const { NestFactory } = require('@nestjs/core');
   const { ValidationPipe } = require('@nestjs/common');
   const { AppModule } = require('../dist/app.module');
