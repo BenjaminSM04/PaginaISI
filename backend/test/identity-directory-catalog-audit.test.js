@@ -1,6 +1,5 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const bcrypt = require('bcryptjs');
 const { validate } = require('class-validator');
 
 const { AuditService } = require('../dist/audit/audit.service');
@@ -172,7 +171,8 @@ test('AuditService registra snapshots de sistema y lista ambas fuentes sin N+1',
 
 test('inspectSession reconoce refresh vigente sin rotarlo ni escribir la sesión', async () => {
   const refreshToken = 'refresh-token-opaco';
-  const tokenHash = await bcrypt.hash(refreshToken, 4);
+  const { hashRefreshToken } = require('../dist/auth/refresh-token-hash');
+  const tokenHash = hashRefreshToken(refreshToken);
   const sessionId = 'd9428888-122b-4aa5-a2c7-0f5ec2e9d010';
   let writes = 0;
   const prisma = {

@@ -12,18 +12,20 @@ export function SectionHeader({
   href,
   linkLabel,
   className,
+  as: Heading = 'h2',
 }: {
   kicker?: string;
   title: string;
   href?: string;
   linkLabel?: string;
   className?: string;
+  as?: 'h1' | 'h2' | 'h3';
 }) {
   return (
     <div className={cn('flex flex-wrap items-end justify-between gap-3', className)}>
       <div>
         {kicker && <span className="section-kicker">{kicker}</span>}
-        <h2 className="mt-1 font-serif-heading text-2xl font-bold text-primary sm:text-3xl">{title}</h2>
+        <Heading className="mt-1 font-serif-heading text-2xl font-bold text-primary sm:text-3xl">{title}</Heading>
       </div>
       {href && (
         <Link href={href} className="flex items-center gap-1 text-sm font-semibold text-primary hover:underline">

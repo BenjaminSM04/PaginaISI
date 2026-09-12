@@ -33,7 +33,7 @@ export default async function ProyectosPage({ searchParams }: { searchParams: Pr
   return (
     <div className="container space-y-8 py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <SectionHeader kicker="Vitrina de la carrera" title="Proyectos destacados" />
+        <SectionHeader as="h1" kicker="Vitrina de la carrera" title="Proyectos destacados" />
         <Link href="/proyectos/nuevo" className={buttonVariants({ variant: 'accent' })}><Plus /> Publicar mi proyecto</Link>
       </div>
       <p className="max-w-2xl text-sm text-muted-foreground">

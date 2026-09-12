@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import { useState, ReactNode } from 'react';
 import { PasswordChangeGate } from '@/components/password-change-gate';
+import { EmailVerificationGate } from '@/components/email-verification-gate';
 import { AuthProvider } from './auth-context';
 import { InstitutionalTheme } from '@/components/institutional-theme';
 import { InstitutionalSettings } from './institution';
@@ -26,7 +27,7 @@ export function Providers({ children, institution }: { children: ReactNode; inst
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
       <QueryClientProvider client={queryClient}>
         <InstitutionalTheme />
-        <AuthProvider><PasswordChangeGate>{children}</PasswordChangeGate></AuthProvider>
+        <AuthProvider><PasswordChangeGate><EmailVerificationGate>{children}</EmailVerificationGate></PasswordChangeGate></AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );

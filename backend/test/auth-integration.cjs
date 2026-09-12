@@ -5,6 +5,7 @@ const { execFileSync } = require('node:child_process');
 const { randomBytes, createHash } = require('node:crypto');
 const { readFileSync } = require('node:fs');
 const path = require('node:path');
+const http = require('node:http');
 const bcrypt = require('bcryptjs');
 const { createTotp } = require('../dist/auth/two-factor-crypto');
 const { AuthService } = require('../dist/auth/auth.service');
@@ -15,10 +16,21 @@ const root = path.join(__dirname, '..');
 const container = `univalle-auth-test-${randomBytes(6).toString('hex')}`;
 const password = 'Una frase privada para pruebas';
 let app, prisma, auth, factors, origin, started = false;
+let mailServer;
+const deliveries = [];
+const mailSecret = randomBytes(32).toString('hex');
 const docker = (...args) => execFileSync('docker', args, { encoding: 'utf8', windowsHide: true, timeout: 120000 }).trim();
 const hash = value => createHash('sha256').update(value).digest('hex');
 
 before(async () => {
+  mailServer = http.createServer(async (req, res) => {
+    if (req.headers.authorization !== `Bearer ${mailSecret}`) { res.writeHead(401).end(); return; }
+    let body = '';
+    for await (const chunk of req) body += chunk;
+    deliveries.push(JSON.parse(body));
+    res.writeHead(204).end();
+  });
+  await new Promise(resolve => mailServer.listen(0, '127.0.0.1', resolve));
   docker('run', '--rm', '-d', '--name', container, '-e', 'POSTGRES_PASSWORD=isolated-test-only', '-e', 'POSTGRES_DB=isi_security_test', '-p', '127.0.0.1::5432', 'postgres:16-alpine');
   started = true;
   const port = docker('port', container, '5432/tcp').split(':').at(-1);
@@ -33,7 +45,8 @@ before(async () => {
     NODE_ENV: 'test', WEB_ORIGIN: 'http://localhost:3000', PUBLIC_WEB_URL: 'http://localhost:3000', PUBLIC_API_URL: 'http://localhost:4000',
     JWT_ACCESS_SECRET: randomBytes(48).toString('hex'), JWT_REFRESH_SECRET: randomBytes(48).toString('hex'),
     TOTP_ENCRYPTION_KEY: randomBytes(32).toString('hex'), AUTH_DEV_LINKS: 'false', STORAGE_DRIVER: 'local',
-    AUTH_EMAIL_WEBHOOK_URL: '', AUTH_EMAIL_WEBHOOK_SECRET: '', SECURITY_ALERT_WEBHOOK_URL: '', SECURITY_ALERT_WEBHOOK_SECRET: '',
+    AUTH_EMAIL_WEBHOOK_URL: `http://127.0.0.1:${mailServer.address().port}/auth`, AUTH_EMAIL_WEBHOOK_SECRET: mailSecret, SECURITY_ALERT_WEBHOOK_URL: '', SECURITY_ALERT_WEBHOOK_SECRET: '',
+    SMTP_HOST: '', SMTP_USER: '', SMTP_PASSWORD: '', SMTP_FROM: '',
     CLEAN_ORPHAN_UPLOADS_ON_START: 'false', SEED_ON_FIRST_RUN: 'false',
   });
   execFileSync(process.execPath, [require.resolve('prisma/build/index.js'), 'migrate', 'deploy'], { cwd: root, env: process.env, windowsHide: true, timeout: 120000, stdio: 'pipe', encoding: 'utf8' });
@@ -51,7 +64,10 @@ before(async () => {
 
 after(async () => {
   try { if (app) await app.close(); }
-  finally { if (started) docker('stop', container); }
+  finally {
+    if (mailServer) await new Promise(resolve => mailServer.close(resolve));
+    if (started) docker('stop', container);
+  }
 });
 
 async function user(overrides = {}) {
@@ -70,6 +86,126 @@ async function request(route, body, token, cookie) {
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 }
+
+async function delivered(email, type) {
+  for (let i = 0; i < 100; i++) {
+    const mail = deliveries.find(value => value.to === email && value.type === type);
+    if (mail) return mail;
+    await new Promise(resolve => setTimeout(resolve, 25));
+  }
+  assert.fail(`No llegó el correo aislado de ${type}`);
+}
+
+test('la API rechaza dominios externos y bloquea a la cuenta institucional hasta verificar su correo', async () => {
+  const dto = { username: 'registro-institucional', email: ' Persona@UNIVALLE.EDU ', fullName: 'Estudiante Univalle', password };
+  for (const email of ['persona@gmail.com', 'persona@univalle.edu.evil.test']) {
+    const rejected = await request('/auth/register', { ...dto, email });
+    assert.equal(rejected.status, 400);
+    assert.equal(await prisma.user.count({ where: { username: dto.username } }), 0);
+  }
+  const response = await request('/auth/register', dto);
+  assert.equal(response.status, 201);
+  const session = await response.json();
+  assert.equal(session.user.email, 'persona@univalle.edu');
+  assert.equal(session.user.emailVerifiedAt, null);
+  assert.equal(session.emailVerificationPreviewUrl, undefined);
+  assert.equal((await request('/admin/dashboard', undefined, session.accessToken)).status, 403);
+  assert.equal((await request('/users/directory/search', undefined, session.accessToken)).status, 403);
+  assert.equal((await request(`/users/${dto.username}`)).status, 404);
+  const mail = await delivered('persona@univalle.edu', 'EMAIL_VERIFICATION');
+  assert.equal(new URL(mail.actionUrl).pathname, '/verificar-correo');
+  const token = new URLSearchParams(new URL(mail.actionUrl).hash.slice(1)).get('token');
+  const stored = await prisma.authActionToken.findUnique({ where: { tokenHash: hash(token) } });
+  assert.ok(stored); assert.ok(!JSON.stringify(stored).includes(token));
+  const verified = await request('/auth/email/verify', { token });
+  assert.equal(verified.status, 201);
+  assert.equal((await request('/auth/email/verify', { token })).status, 400);
+  assert.equal((await request(`/users/${dto.username}`)).status, 200);
+  assert.equal((await request('/users/directory/search', undefined, session.accessToken)).status, 200);
+  // El correo verificado no concede privilegios de administrador.
+  assert.equal((await request('/admin/dashboard', undefined, session.accessToken)).status, 403);
+});
+
+test('la recuperación entrega el enlace configurado, oculta la existencia de la cuenta e invalida sesiones y tokens', async () => {
+  const account = await user();
+  const session = await auth.login({ identifier: account.username, password });
+  const known = await request('/auth/password/forgot', { email: account.email });
+  const unknown = await request('/auth/password/forgot', { email: 'inexistente@univalle.edu' });
+  assert.equal(known.status, 201); assert.equal(unknown.status, 201);
+  assert.deepEqual(await known.json(), await unknown.json());
+  const mail = await delivered(account.email, 'PASSWORD_RESET');
+  assert.equal(new URL(mail.actionUrl).origin, 'http://localhost:3000');
+  assert.equal(new URL(mail.actionUrl).pathname, '/restablecer-contrasena');
+  const token = new URLSearchParams(new URL(mail.actionUrl).hash.slice(1)).get('token');
+  const newPassword = 'Otra frase privada distinta para acceso';
+  const reset = await request('/auth/password/reset', { token, newPassword });
+  assert.equal(reset.status, 201);
+  assert.equal((await request('/auth/password/reset', { token, newPassword })).status, 400);
+  assert.equal((await request('/auth/me', undefined, session.accessToken)).status, 401);
+  await assert.rejects(() => auth.refresh(session.refreshToken), /inválida/);
+  await assert.rejects(() => auth.login({ identifier: account.username, password }), /inválidas/);
+  assert.ok((await auth.login({ identifier: account.username, password: newPassword })).accessToken);
+});
+
+test('la rotación distingue JWT completos y rechaza un refresh reutilizado fuera de la ventana de concurrencia', async () => {
+  const account = await user();
+  const initial = await auth.login({ identifier: account.username, password });
+  const rotated = await auth.refresh(initial.refreshToken);
+  assert.notEqual(initial.refreshToken, rotated.refreshToken);
+  assert.equal(initial.refreshToken.slice(0, 72), rotated.refreshToken.slice(0, 72));
+  const concurrent = await auth.refresh(initial.refreshToken);
+  assert.ok(concurrent.accessToken); assert.equal(concurrent.refreshToken, undefined);
+  await prisma.refreshSession.updateMany({ where: { userId: account.id }, data: { previousValidUntil: new Date(0) } });
+  await assert.rejects(() => auth.refresh(initial.refreshToken), /inválida/);
+  await assert.rejects(() => auth.refresh(rotated.refreshToken), /inválida/);
+});
+
+test('ranking rechaza filtros inválidos y aplica elegibilidad antes de limitar la clasificación mensual', async () => {
+  for (const query of ['limit=-1', 'limit=1.5', 'category=invalid&period=month', 'period=invalid']) {
+    assert.equal((await request(`/ranking?${query}`)).status, 400);
+  }
+  const role = await prisma.role.upsert({ where: { name: 'STUDENT' }, create: { name: 'STUDENT' }, update: {} });
+  const eligible = await user({ roles: { create: [{ roleId: role.id }] } });
+  const excluded = await user({ isActive: false, roles: { create: [{ roleId: role.id }] } });
+  const teacher = await user();
+  for (const [account, points] of [[eligible, 500], [excluded, 1000], [teacher, 2000]]) {
+    await prisma.pointsTransaction.create({ data: { userId: account.id, category: 'COMMUNITY', reason: 'REGISTRO_COMPLETO', points } });
+  }
+  const result = await request('/ranking?period=month&limit=1');
+  assert.equal(result.status, 200);
+  const ranking = await result.json();
+  assert.equal(ranking.length, 1); assert.equal(ranking[0].userId, eligible.id); assert.equal(ranking[0].points, 500);
+});
+
+test('un reporte se resuelve una sola vez y los puntos corresponden a la decisión confirmada', async () => {
+  const { ReportsService } = require('../dist/reports/reports.module');
+  const reports = app.get(ReportsService);
+  const reporter = await user(), target = await user(), admin = await user();
+  await assert.rejects(() => reports.create({ id: reporter.id }, { targetType: 'USER', targetId: 'inexistente', reason: 'Reporte aislado de seguridad' }), /no existe/);
+  await prisma.pointRule.upsert({ where: { reason: 'REPORTE_VALIDO' }, create: { reason: 'REPORTE_VALIDO', category: 'COMMUNITY', points: 5, label: 'Reporte válido' }, update: { points: 5, isActive: true } });
+  const report = await reports.create({ id: reporter.id }, { targetType: 'USER', targetId: target.id, reason: 'Reporte aislado de seguridad' });
+  const results = await Promise.allSettled([
+    reports.resolve({ id: admin.id, roles: ['ADMIN'] }, report.id, { status: 'VALID' }),
+    reports.resolve({ id: admin.id, roles: ['ADMIN'] }, report.id, { status: 'DISMISSED' }),
+  ]);
+  assert.equal(results.filter(result => result.status === 'fulfilled').length, 1);
+  const confirmed = await prisma.report.findUnique({ where: { id: report.id } });
+  assert.equal(await prisma.pointsTransaction.count({ where: { sourceType: 'REPORT', sourceId: report.id } }), confirmed.status === 'VALID' ? 1 : 0);
+});
+
+test('cambios concurrentes de roles conservan al menos un administrador activo', async () => {
+  const { AdminService } = require('../dist/admin/admin.module');
+  const admin = app.get(AdminService);
+  const role = await prisma.role.upsert({ where: { name: 'ADMIN' }, create: { name: 'ADMIN' }, update: {} });
+  const first = await user({ roles: { create: [{ roleId: role.id }] } });
+  const second = await user({ roles: { create: [{ roleId: role.id }] } });
+  const results = await Promise.allSettled([
+    admin.updateUser(first.id, second.id, { roles: ['STUDENT'] }),
+    admin.updateUser(second.id, first.id, { roles: ['STUDENT'] }),
+  ]);
+  assert.equal(results.filter(result => result.status === 'fulfilled').length, 1);
+  assert.equal(await prisma.user.count({ where: { isActive: true, roles: { some: { role: { name: 'ADMIN' } } } } }), 1);
+});
 
 test('la migración conserva la contraseña predeterminada y la API obliga a cambiarla antes de acceder', async () => {
   const originalHash = await bcrypt.hash('password123', 4);

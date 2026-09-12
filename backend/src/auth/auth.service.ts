@@ -3,6 +3,7 @@ import {
   ConflictException,
   HttpException,
   Injectable,
+  Logger,
   NotFoundException,
   ServiceUnavailableException,
   UnauthorizedException,
@@ -24,6 +25,9 @@ import { AuthUser } from '../common/decorators';
 import { TwoFactorService } from './two-factor.service';
 import { assertNewPassword } from './password-policy';
 import { ChangePasswordDto, LoginDto, RegisterDto, ResetPasswordDto } from './auth.dto';
+import { AuthMailService } from './auth-mail.service';
+import { normalizeInstitutionalEmail } from './institutional-email';
+import { hashRefreshToken, matchesRefreshToken } from './refresh-token-hash';
 
 interface RefreshTokenPayload {
   sub: string;
@@ -48,7 +52,6 @@ export type SessionInspection =
   | { active: true; userId: string; source: 'access' | 'refresh' };
 
 const PASSWORD_ROUNDS = 12;
-const REFRESH_TOKEN_ROUNDS = 8;
 const PASSWORD_RESET_TTL_MS = 30 * 60_000;
 const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60_000;
 const ACTION_LINK_COOLDOWN_MS = 60_000;
@@ -69,12 +72,14 @@ export const hashAuthActionToken = (token: string) => createHash('sha256').updat
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
     private gamification: GamificationService,
     private config: ConfigService<EnvironmentVariables, true>,
     private twoFactor: TwoFactorService,
+    private mail: AuthMailService,
   ) {}
 
   private sanitizeMetadata(metadata: AuthRequestMetadata): AuthRequestMetadata {
@@ -120,7 +125,7 @@ export class AuthService {
   private async createSession(userId: string, securityVersion: number, metadata: AuthRequestMetadata) {
     const sessionId = randomUUID();
     const [accessToken, refreshToken] = await this.signTokenPair(userId, securityVersion, sessionId);
-    const tokenHash = await bcrypt.hash(refreshToken, REFRESH_TOKEN_ROUNDS);
+    const tokenHash = hashRefreshToken(refreshToken);
     const cleanMetadata = this.sanitizeMetadata(metadata);
     const issuedAt = Date.now();
     const expiresAt = new Date(issuedAt + this.config.getOrThrow('JWT_REFRESH_TTL_MS', { infer: true }));
@@ -162,7 +167,7 @@ export class AuthService {
     metadata: AuthRequestMetadata,
   ) {
     const [accessToken, refreshToken] = await this.signTokenPair(userId, securityVersion, sessionId);
-    const tokenHash = await bcrypt.hash(refreshToken, REFRESH_TOKEN_ROUNDS);
+    const tokenHash = hashRefreshToken(refreshToken);
     const cleanMetadata = this.sanitizeMetadata(metadata);
     const now = new Date();
     const updated = await this.prisma.refreshSession.updateMany({
@@ -209,7 +214,7 @@ export class AuthService {
         previousTokenHash: { not: null },
       },
     });
-    if (!latest?.previousTokenHash || !(await bcrypt.compare(refreshToken, latest.previousTokenHash))) return null;
+    if (!latest?.previousTokenHash || !matchesRefreshToken(refreshToken, latest.previousTokenHash)) return null;
     return {
       accessToken: await this.signAccessToken(userId, securityVersion, sessionId),
       refreshToken: undefined,
@@ -289,30 +294,17 @@ export class AuthService {
         && session.absoluteExpiresAt > now;
       if (!structurallyActive) return { active: false };
 
-      const matchesCurrent = await bcrypt.compare(refreshToken, session.tokenHash);
+      const matchesCurrent = matchesRefreshToken(refreshToken, session.tokenHash);
       const matchesGrace = !matchesCurrent
         && !!session.previousTokenHash
         && !!session.previousValidUntil
         && session.previousValidUntil > now
-        && await bcrypt.compare(refreshToken, session.previousTokenHash);
+        && matchesRefreshToken(refreshToken, session.previousTokenHash);
       return matchesCurrent || matchesGrace
         ? { active: true, userId: session.userId, source: 'refresh' }
         : { active: false };
     }
 
-    // Compatibilidad de solo lectura con la cookie única anterior a
-    // RefreshSession. La migración se mantiene exclusivamente en refresh().
-    const legacyUser = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
-      select: { id: true, isActive: true, refreshTokenHash: true },
-    });
-    if (
-      legacyUser?.isActive
-      && legacyUser.refreshTokenHash
-      && await bcrypt.compare(refreshToken, legacyUser.refreshTokenHash)
-    ) {
-      return { active: true, userId: legacyUser.id, source: 'refresh' };
-    }
     return { active: false };
   }
 
@@ -325,36 +317,29 @@ export class AuthService {
   }
 
   private assertActionDeliveryAvailable() {
-    if (
-      !this.config.getOrThrow('AUTH_DEV_LINKS', { infer: true })
-      && !this.config.get('AUTH_EMAIL_WEBHOOK_URL', { infer: true })
-    ) {
-      throw new ServiceUnavailableException('El envío de correo no está configurado');
-    }
+    this.mail.assertAvailable();
+  }
+
+  private queueActionLink(user: { id: string; email: string }, type: AuthTokenType) {
+    void this.issueActionLink(user, type).catch(error => {
+      if (!(error instanceof ActionLinkCooldownException) && !(error instanceof ServiceUnavailableException)) {
+        this.logger.error(`No se pudo preparar el correo de ${type}. Revisa la conexión a la base de datos.`);
+      }
+    });
   }
 
   private async deliverActionLink(email: string, type: AuthTokenType, url: string, expiresAt: Date) {
-    if (this.config.getOrThrow('AUTH_DEV_LINKS', { infer: true })) return;
+    return this.mail.deliver(email, type, url, expiresAt);
+  }
 
-    const webhookUrl = this.config.get('AUTH_EMAIL_WEBHOOK_URL', { infer: true });
-    const webhookSecret = this.config.get('AUTH_EMAIL_WEBHOOK_SECRET', { infer: true });
-    if (!webhookUrl) {
-      throw new ServiceUnavailableException('El envío de correo no está configurado');
-    }
-
+  private async createRegisteredUser(data: Prisma.UserCreateInput) {
     try {
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          ...(webhookSecret ? { authorization: `Bearer ${webhookSecret}` } : {}),
-        },
-        body: JSON.stringify({ to: email, type, actionUrl: url, expiresAt: expiresAt.toISOString() }),
-        signal: AbortSignal.timeout(10_000),
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    } catch {
-      throw new ServiceUnavailableException('No se pudo enviar el correo en este momento');
+      return await this.prisma.user.create({ data });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('El email o nombre de usuario ya está registrado');
+      }
+      throw error;
     }
   }
 
@@ -395,7 +380,8 @@ export class AuthService {
 
   async register(dto: RegisterDto, metadata: AuthRequestMetadata = {}) {
     assertNewPassword(dto.password);
-    const email = dto.email.trim().toLowerCase();
+    const email = normalizeInstitutionalEmail(dto.email);
+    this.assertActionDeliveryAvailable();
     const username = dto.username.trim().toLowerCase();
     const exists = await this.prisma.user.findFirst({
       where: { OR: [{ email }, { username }] },
@@ -409,14 +395,12 @@ export class AuthService {
     });
 
     const passwordHash = await bcrypt.hash(dto.password, PASSWORD_ROUNDS);
-    const user = await this.prisma.user.create({
-      data: {
-        email,
-        username,
-        passwordHash,
-        roles: { create: [{ roleId: studentRole.id }] },
-        profile: { create: { fullName: dto.fullName, semester: dto.semester ?? null } },
-      },
+    const user = await this.createRegisteredUser({
+      email,
+      username,
+      passwordHash,
+      roles: { create: [{ roleId: studentRole.id }] },
+      profile: { create: { fullName: dto.fullName, semester: dto.semester ?? null } },
     });
 
     const tokens = await this.createSession(user.id, user.securityVersion, metadata);
@@ -428,7 +412,7 @@ export class AuthService {
         // La cuenta y su sesión ya existen; el enlace puede regenerarse desde Seguridad.
       }
     } else {
-      void this.issueActionLink(user, 'EMAIL_VERIFICATION').catch(() => undefined);
+      this.queueActionLink(user, 'EMAIL_VERIFICATION');
     }
     return { user: await this.me(user.id), emailVerificationPreviewUrl, ...tokens };
   }
@@ -473,28 +457,7 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
     if (!user || !user.isActive) throw new UnauthorizedException('Sesión inválida');
 
-    let session = await this.prisma.refreshSession.findUnique({ where: { id: payload.jti } });
-    // Puente de una sola vez para cookies emitidas antes de habilitar sesiones múltiples.
-    if (!session && user.refreshTokenHash && await bcrypt.compare(refreshToken, user.refreshTokenHash)) {
-      const expiresAt = new Date(payload.exp * 1_000);
-      session = await this.prisma.refreshSession.upsert({
-        where: { id: payload.jti },
-        create: {
-          id: payload.jti,
-          userId: user.id,
-          securityVersion: user.securityVersion,
-          tokenHash: user.refreshTokenHash,
-          expiresAt,
-          absoluteExpiresAt: new Date(Date.now() + this.config.getOrThrow('SESSION_ABSOLUTE_TTL_MS', { infer: true })),
-          ...this.sanitizeMetadata(metadata),
-        },
-        update: {},
-      });
-      await this.prisma.user.updateMany({
-        where: { id: user.id, refreshTokenHash: user.refreshTokenHash },
-        data: { refreshTokenHash: null },
-      });
-    }
+    const session = await this.prisma.refreshSession.findUnique({ where: { id: payload.jti } });
 
     const sessionIsActive = !!session
       && session.userId === user.id
@@ -503,7 +466,7 @@ export class AuthService {
       && session.expiresAt.getTime() > Date.now();
     const withinAbsoluteLifetime = !!session && session.absoluteExpiresAt.getTime() > Date.now();
     const matchesCurrent = sessionIsActive && session
-      ? await bcrypt.compare(refreshToken, session.tokenHash)
+      ? matchesRefreshToken(refreshToken, session.tokenHash)
       : false;
     if (!sessionIsActive || !withinAbsoluteLifetime || !session) {
       if (session && !session.revokedAt) {
@@ -551,12 +514,12 @@ export class AuthService {
     }
 
     const session = await this.prisma.refreshSession.findUnique({ where: { id: payload.jti } });
-    const matchesCurrent = session?.userId === payload.sub && await bcrypt.compare(refreshToken, session.tokenHash);
+    const matchesCurrent = session?.userId === payload.sub && matchesRefreshToken(refreshToken, session.tokenHash);
     const matchesGraceToken = session?.userId === payload.sub
       && !!session.previousTokenHash
       && !!session.previousValidUntil
       && session.previousValidUntil.getTime() > Date.now()
-      && await bcrypt.compare(refreshToken, session.previousTokenHash);
+      && matchesRefreshToken(refreshToken, session.previousTokenHash);
     if (session && (matchesCurrent || matchesGraceToken)) {
       await this.prisma.refreshSession.updateMany({
         where: { id: session.id, revokedAt: null },
@@ -565,10 +528,6 @@ export class AuthService {
       return { ok: true };
     }
 
-    const legacy = await this.prisma.user.findUnique({ where: { id: payload.sub }, select: { refreshTokenHash: true } });
-    if (legacy?.refreshTokenHash && await bcrypt.compare(refreshToken, legacy.refreshTokenHash)) {
-      await this.prisma.user.update({ where: { id: payload.sub }, data: { refreshTokenHash: null } });
-    }
     return { ok: true };
   }
 
@@ -583,7 +542,7 @@ export class AuthService {
     if (!this.config.getOrThrow('AUTH_DEV_LINKS', { infer: true })) {
       // La entrega se desacopla de la respuesta para reducir diferencias de
       // tiempo observables entre correos existentes e inexistentes.
-      void this.issueActionLink(user, 'PASSWORD_RESET').catch(() => undefined);
+      this.queueActionLink(user, 'PASSWORD_RESET');
       return generic;
     }
     try {

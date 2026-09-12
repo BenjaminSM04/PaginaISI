@@ -1,3 +1,5 @@
+import { isEmail } from 'class-validator';
+
 export const JWT_ALGORITHM = 'HS256' as const;
 export const ACCESS_TOKEN_TYPE = 'access' as const;
 export const REFRESH_TOKEN_TYPE = 'refresh' as const;
@@ -30,6 +32,13 @@ export interface EnvironmentVariables {
   AUTH_DEV_LINKS: boolean;
   AUTH_EMAIL_WEBHOOK_URL?: string;
   AUTH_EMAIL_WEBHOOK_SECRET?: string;
+  SMTP_HOST?: string;
+  SMTP_PORT: number;
+  SMTP_SECURE: boolean;
+  SMTP_USER?: string;
+  SMTP_PASSWORD?: string;
+  SMTP_FROM?: string;
+  SMTP_FROM_NAME: string;
   SECURITY_ALERT_WEBHOOK_URL?: string;
   SECURITY_ALERT_WEBHOOK_SECRET?: string;
 }
@@ -235,8 +244,24 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
       throw new Error('Configuracion invalida: AUTH_EMAIL_WEBHOOK_SECRET debe tener al menos 16 bytes');
     }
   }
-  if (nodeEnvironment === 'production' && !authDevLinks && !authEmailWebhookUrl) {
-    throw new Error('Configuracion invalida: configura AUTH_EMAIL_WEBHOOK_URL o habilita AUTH_DEV_LINKS solo en localhost');
+  const smtpHost = optionalString(config, 'SMTP_HOST');
+  const smtpUser = optionalString(config, 'SMTP_USER');
+  const smtpPassword = optionalString(config, 'SMTP_PASSWORD');
+  const smtpPort = Number(optionalString(config, 'SMTP_PORT') ?? '465');
+  const smtpSecure = booleanValue(config, 'SMTP_SECURE', smtpPort === 465);
+  const smtpFrom = optionalString(config, 'SMTP_FROM') ?? smtpUser;
+  const smtpFromName = optionalString(config, 'SMTP_FROM_NAME') ?? 'SICI · Univalle';
+  if (smtpHost) {
+    if (!/^[a-zA-Z0-9.-]+$/.test(smtpHost)) throw new Error('Configuracion invalida: SMTP_HOST debe ser un nombre de servidor');
+    if (!Number.isInteger(smtpPort) || smtpPort < 1 || smtpPort > 65535) throw new Error('Configuracion invalida: SMTP_PORT debe estar entre 1 y 65535');
+    if ((smtpPort === 465 && !smtpSecure) || (smtpPort === 587 && smtpSecure)) throw new Error('Configuracion invalida: usa SMTP_SECURE=true con 465 o false con 587 (STARTTLS obligatorio)');
+    if (!smtpUser || !smtpPassword) throw new Error('Configuracion invalida: SMTP_USER y SMTP_PASSWORD son obligatorios');
+    if (!smtpFrom || !isEmail(smtpFrom) || /[\r\n]/.test(smtpFromName) || smtpFromName.length > 100) throw new Error('Configuracion invalida: revisa SMTP_FROM y SMTP_FROM_NAME');
+  } else if (smtpUser || smtpPassword || optionalString(config, 'SMTP_FROM')) {
+    throw new Error('Configuracion invalida: las credenciales SMTP requieren SMTP_HOST');
+  }
+  if (nodeEnvironment === 'production' && !authDevLinks && !authEmailWebhookUrl && !smtpHost) {
+    throw new Error('Configuracion invalida: configura SMTP_HOST y sus credenciales, AUTH_EMAIL_WEBHOOK_URL o AUTH_DEV_LINKS solo en localhost');
   }
   const securityAlertWebhookUrl = optionalString(config, 'SECURITY_ALERT_WEBHOOK_URL');
   const securityAlertWebhookSecret = optionalString(config, 'SECURITY_ALERT_WEBHOOK_SECRET');
@@ -339,6 +364,13 @@ export function validateEnvironment(config: Record<string, unknown>): Record<str
     AUTH_DEV_LINKS: authDevLinks,
     AUTH_EMAIL_WEBHOOK_URL: authEmailWebhookUrl,
     AUTH_EMAIL_WEBHOOK_SECRET: authEmailWebhookSecret,
+    SMTP_HOST: smtpHost,
+    SMTP_PORT: smtpPort,
+    SMTP_SECURE: smtpSecure,
+    SMTP_USER: smtpUser,
+    SMTP_PASSWORD: smtpPassword,
+    SMTP_FROM: smtpFrom,
+    SMTP_FROM_NAME: smtpFromName,
     SECURITY_ALERT_WEBHOOK_URL: securityAlertWebhookUrl,
     SECURITY_ALERT_WEBHOOK_SECRET: securityAlertWebhookSecret,
     TOTP_ENCRYPTION_KEY: totpKey,

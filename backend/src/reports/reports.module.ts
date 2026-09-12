@@ -59,35 +59,41 @@ export class ReportsService {
     });
   }
 
-  private async findContentAuthor(targetType: ReportTargetType, targetId: string): Promise<string | null> {
+  private async findContentAuthor(targetType: ReportTargetType, targetId: string, db: Prisma.TransactionClient = this.prisma): Promise<string | null> {
     switch (targetType) {
-      case 'QUESTION': return (await this.prisma.forumQuestion.findUnique({ where: { id: targetId } }))?.authorId ?? null;
-      case 'ANSWER': return (await this.prisma.forumAnswer.findUnique({ where: { id: targetId } }))?.authorId ?? null;
-      case 'PROJECT': return (await this.prisma.project.findUnique({ where: { id: targetId } }))?.ownerId ?? null;
-      case 'ARTICLE': return (await this.prisma.article.findUnique({ where: { id: targetId } }))?.ownerId ?? null;
-      case 'COMMENT': return (await this.prisma.comment.findUnique({ where: { id: targetId } }))?.authorId ?? null;
-      case 'USER': return targetId;
+      case 'QUESTION': return (await db.forumQuestion.findUnique({ where: { id: targetId } }))?.authorId ?? null;
+      case 'ANSWER': return (await db.forumAnswer.findUnique({ where: { id: targetId } }))?.authorId ?? null;
+      case 'PROJECT': return (await db.project.findUnique({ where: { id: targetId } }))?.ownerId ?? null;
+      case 'ARTICLE': return (await db.article.findUnique({ where: { id: targetId } }))?.ownerId ?? null;
+      case 'COMMENT': return (await db.comment.findUnique({ where: { id: targetId } }))?.authorId ?? null;
+      case 'USER': return (await db.user.findUnique({ where: { id: targetId }, select: { id: true } }))?.id ?? null;
       default: return null;
     }
   }
 
   async resolve(admin: AuthUser, id: string, dto: ResolveReportDto) {
-    const report = await this.prisma.report.findUnique({ where: { id } });
-    if (!report) throw new NotFoundException('Reporte no encontrado');
-    if (report.status !== 'PENDING') throw new BadRequestException('El reporte ya fue resuelto');
-
-    const updated = await this.prisma.report.update({
-      where: { id },
-      data: { status: dto.status, resolutionNote: dto.resolutionNote, resolvedById: admin.id, resolvedAt: new Date() },
-    });
-
-    if (dto.status === 'VALID') {
-      await this.gamification.award(report.reporterId, 'REPORTE_VALIDO', 'REPORT', report.id);
-      await this.gamification.grantBadge(report.reporterId, 'CAZADOR_BUGS');
-      if (dto.penalizeAuthor) {
-        const authorId = await this.findContentAuthor(report.targetType, report.targetId);
-        if (authorId) await this.gamification.award(authorId, 'PENALIZACION_SPAM', 'REPORT', report.id);
+    const { updated, authorId } = await this.prisma.$transaction(async tx => {
+      const report = await tx.report.findUnique({ where: { id } });
+      if (!report) throw new NotFoundException('Reporte no encontrado');
+      const claimed = await tx.report.updateMany({
+        where: { id, status: 'PENDING' },
+        data: { status: dto.status, resolutionNote: dto.resolutionNote, resolvedById: admin.id, resolvedAt: new Date() },
+      });
+      if (claimed.count !== 1) throw new BadRequestException('El reporte ya fue resuelto');
+      let authorId: string | null = null;
+      if (dto.status === 'VALID') {
+        await this.gamification.awardInTransaction(tx, report.reporterId, 'REPORTE_VALIDO', 'REPORT', report.id);
+        if (dto.penalizeAuthor) {
+          authorId = await this.findContentAuthor(report.targetType, report.targetId, tx);
+          if (authorId) await this.gamification.awardInTransaction(tx, authorId, 'PENALIZACION_SPAM', 'REPORT', report.id);
+        }
       }
+      return { updated: await tx.report.findUniqueOrThrow({ where: { id } }), authorId };
+    });
+    if (dto.status === 'VALID') {
+      await this.gamification.grantBadge(updated.reporterId, 'CAZADOR_BUGS');
+      await this.gamification.evaluateBadgesForUser(updated.reporterId);
+      if (authorId) await this.gamification.evaluateBadgesForUser(authorId);
     }
     return updated;
   }

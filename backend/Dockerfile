@@ -30,6 +30,7 @@ RUN npm ci --omit=dev --no-audit --no-fund \
     && npm cache clean --force
 
 COPY --from=builder --chown=node:node /app/dist ./dist
+COPY --chown=node:node scripts ./scripts
 COPY --chown=node:node docker-entrypoint.sh ./docker-entrypoint.sh
 RUN mkdir -p /app/uploads && chown node:node /app/uploads
 

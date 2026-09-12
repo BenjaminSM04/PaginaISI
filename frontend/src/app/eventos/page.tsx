@@ -30,7 +30,7 @@ export default async function EventosPage({ searchParams }: { searchParams: Prom
   return (
     <div className="container space-y-10 py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <SectionHeader kicker="Agenda de la carrera" title="Eventos, CTF y talleres" />
+        <SectionHeader as="h1" kicker="Agenda de la carrera" title="Eventos, CTF y talleres" />
         <EventManagementShortcut />
       </div>
 

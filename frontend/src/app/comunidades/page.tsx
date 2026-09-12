@@ -31,7 +31,7 @@ async function CommunitiesDirectory() {
 
   return (
     <div className="container space-y-8 py-10">
-      <SectionHeader kicker="Encuentra tu tribu técnica" title="Comunidades de la carrera" />
+      <SectionHeader as="h1" kicker="Encuentra tu tribu técnica" title="Comunidades de la carrera" />
       <p className="max-w-2xl text-sm text-muted-foreground">
         Cada comunidad tiene docentes asesores, responsables estudiantiles y canales oficiales. Unirte suma{' '}
         <PointReward reason="UNIRSE_COMUNIDAD" suffix="puntos" className="text-success" /> y te conecta con proyectos, eventos y mentorías de esa área.

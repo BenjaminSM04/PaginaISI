@@ -64,7 +64,7 @@ export default function MentoriasPage() {
   return (
     <div className="container space-y-8 py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <SectionHeader kicker="Aprende con la comunidad" title="Mentorías y cursos" />
+        <SectionHeader as="h1" kicker="Aprende con la comunidad" title="Mentorías y cursos" />
         {canManage && (
           <div className="flex flex-wrap gap-2">
             <Link href="/mentorias/gestionar" className={cn(buttonVariants({ variant: 'outline' }))}><Settings /> Gestionar</Link>

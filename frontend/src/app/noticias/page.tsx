@@ -19,7 +19,7 @@ export default async function NoticiasPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="container space-y-8 py-10">
-      <SectionHeader kicker="Actualidad de la carrera" title="Noticias" />
+      <SectionHeader as="h1" kicker="Actualidad de la carrera" title="Noticias" />
       <NewsViewTabs key={`${category ?? 'all'}:${sort}`} initialSort={sort} category={category} recent={recent.items} top={top.items} />
     </div>
   );

@@ -2,6 +2,21 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { PrismaService } from '../prisma/prisma.service';
 import { Public } from '../common/decorators';
+import { Type } from 'class-transformer';
+import { IsIn, IsInt, Max, Min } from 'class-validator';
+import { PointCategory, Prisma } from '@prisma/client';
+
+export class RankingQueryDto {
+  @IsIn(['general', 'dev', 'research', 'community'])
+  category: 'general' | 'dev' | 'research' | 'community' = 'general';
+
+  @IsIn(['all', 'month'])
+  period: 'all' | 'month' = 'all';
+
+  @Type(() => Number)
+  @IsInt() @Min(1) @Max(50)
+  limit = 20;
+}
 
 @ApiTags('gamification')
 @Controller()
@@ -15,27 +30,28 @@ export class GamificationController {
   @ApiQuery({ name: 'period', required: false, enum: ['all', 'month'] })
   @ApiQuery({ name: 'limit', required: false })
   async ranking(
-    @Query('category') category = 'general',
-    @Query('period') period = 'all',
-    @Query('limit') limit = '20',
+    @Query() query: RankingQueryDto,
   ) {
-    const take = Math.min(Number(limit) || 20, 50);
+    const { category, period, limit: take } = query;
+    const eligible: Prisma.UserWhereInput = {
+      isActive: true, emailVerifiedAt: { not: null }, roles: { some: { role: { name: 'STUDENT' } } },
+    };
 
     if (period === 'month') {
       const start = new Date();
       start.setDate(1);
       start.setHours(0, 0, 0, 0);
-      const where: any = { createdAt: { gte: start } };
-      if (category !== 'general') where.category = category.toUpperCase();
+      const where: Prisma.PointsTransactionWhereInput = { createdAt: { gte: start }, user: eligible };
+      if (category !== 'general') where.category = category.toUpperCase() as PointCategory;
       const grouped = await this.prisma.pointsTransaction.groupBy({
         by: ['userId'],
         where,
         _sum: { points: true },
-        orderBy: { _sum: { points: 'desc' } },
+        orderBy: [{ _sum: { points: 'desc' } }, { userId: 'asc' }],
         take,
       });
       const users = await this.prisma.user.findMany({
-        where: { id: { in: grouped.map((g) => g.userId) }, isActive: true, emailVerifiedAt: { not: null } },
+        where: { id: { in: grouped.map((g) => g.userId) }, ...eligible },
         include: { profile: true, badges: true },
       });
       const map = new Map(users.map((u) => [u.id, u]));
@@ -59,8 +75,8 @@ export class GamificationController {
     const orderField =
       category === 'dev' ? 'devPoints' : category === 'research' ? 'researchPoints' : category === 'community' ? 'communityPoints' : 'totalPoints';
     const profiles = await this.prisma.profile.findMany({
-      where: { user: { isActive: true, emailVerifiedAt: { not: null }, roles: { some: { role: { name: 'STUDENT' } } } } },
-      orderBy: { [orderField]: 'desc' },
+      where: { user: eligible },
+      orderBy: [{ [orderField]: 'desc' }, { userId: 'asc' }],
       take,
       include: { user: { select: { id: true, username: true, badges: true } } },
     });
@@ -71,7 +87,7 @@ export class GamificationController {
       fullName: p.fullName,
       avatarUrl: p.avatarUrl,
       semester: p.semester,
-      points: (p as any)[orderField],
+      points: p[orderField],
       totalPoints: p.totalPoints,
       devPoints: p.devPoints,
       researchPoints: p.researchPoints,

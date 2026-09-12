@@ -66,7 +66,7 @@ export default function ForoPage() {
   return (
     <div className="container space-y-8 py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <SectionHeader kicker="Comunidad que se ayuda" title="Foro de preguntas y respuestas" />
+        <SectionHeader as="h1" kicker="Comunidad que se ayuda" title="Foro de preguntas y respuestas" />
         <Link href="/foro/preguntar" className={buttonVariants({ variant: 'accent' })}><MessageSquarePlus /> Hacer una pregunta</Link>
       </div>
 

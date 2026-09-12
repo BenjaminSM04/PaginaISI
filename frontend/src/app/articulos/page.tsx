@@ -26,7 +26,7 @@ export default async function ArticulosPage({ searchParams }: { searchParams: Pr
   return (
     <div className="container space-y-8 py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <SectionHeader kicker="Investigación estudiantil" title="Artículos científicos" />
+        <SectionHeader as="h1" kicker="Investigación estudiantil" title="Artículos científicos" />
         <Link href="/articulos/nuevo" className={buttonVariants({ variant: 'accent' })}><Plus /> Enviar artículo</Link>
       </div>
       <p className="max-w-2xl text-sm text-muted-foreground">

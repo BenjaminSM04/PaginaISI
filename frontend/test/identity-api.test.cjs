@@ -15,6 +15,14 @@ function load(relative) {
 }
 const { resolveTheme, themeCss, contrastRatio, hslChannels } = load('lib/theme.ts');
 
+test('el formulario normaliza el correo institucional y rechaza dominios parecidos y contraseñas truncadas', () => {
+  const { registrationSchema } = load('lib/registration-schema.ts');
+  const payload = { fullName: 'Estudiante Univalle', username: 'estudiante', email: ' Persona@UNIVALLE.EDU ', password: 'Una frase larga privada', confirm: 'Una frase larga privada' };
+  assert.equal(registrationSchema.parse(payload).email, 'persona@univalle.edu');
+  for (const email of ['persona@gmail.com', 'persona@evilunivalle.edu', 'persona@univalle.edu.evil.com', 'persona@est.univalle.edu']) assert.equal(registrationSchema.safeParse({ ...payload, email }).success, false);
+  assert.equal(registrationSchema.safeParse({ ...payload, password: '🙂'.repeat(19), confirm: '🙂'.repeat(19) }).success, false);
+});
+
 test('defaults keep readable text and semantic colors on both page and card backgrounds', () => {
   for (const [mode, palette] of Object.entries(resolveTheme())) {
     for (const background of ['background', 'surface']) {

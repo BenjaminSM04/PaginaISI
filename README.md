@@ -6,6 +6,8 @@ Portal académico **gamificado** de la carrera: página institucional, sociedad 
 
 Institución: **Universidad Privada del Valle (Univalle), Bolivia**. La identidad visual se administra en `/admin/institucion`: nombres, logos claros/oscuros, favicon, dimensiones y paletas. Consulta [identidad paramétrica y despliegue](docs/IDENTIDAD-Y-DESPLIEGUE.md) para aplicar la migración y corregir la API de producción.
 
+El registro público requiere correo **@univalle.edu** y confirmación por enlace antes de habilitar el uso de la cuenta. Recuperación y verificación pueden enviarse directamente por SMTP/Gmail. Preparación de variables, correo y servidor: [guía de despliegue](DESPLIEGUE.md). Resultado de la revisión: [revisión final](REVISION-FINAL.md).
+
 <picture>
   <source media="(max-width: 640px)" srcset="./home-mobile.png">
   <img src="./home-desktop.png" alt="Inicio responsivo del Portal Académico ISI" width="100%">

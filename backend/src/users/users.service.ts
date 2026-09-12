@@ -32,6 +32,8 @@ export class UsersService {
       passwordHash,
       refreshTokenHash,
       securityVersion,
+      mustChangePassword,
+      twoFactorEnabled,
       emailVerifiedAt,
       email,
       ...safe

@@ -6,6 +6,14 @@ El primer acceso muestra `/cambiar-contrasena`. La API consulta la bandera vigen
 
 ## Configuración obligatoria
 
+El registro público acepta exclusivamente correos con dominio exacto `@univalle.edu`. La API y el formulario normalizan espacios externos y mayúsculas; rechazan dominios parecidos, subdominios y sufijos adicionales. La cuenta queda pendiente hasta confirmar el enlace enviado a su correo. No puede utilizar funciones protegidas ni aparecer en perfiles/directorios públicos antes de verificarse. Las cuentas existentes y sus contraseñas se conservan.
+
+El módulo de correo admite SMTP directo y el webhook anterior como alternativa. SMTP tiene prioridad si está configurado. Gmail requiere `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_SECURE=true`, `SMTP_USER`, `SMTP_PASSWORD` (contraseña de aplicación) y `SMTP_FROM`. En 587, usar `SMTP_SECURE=false`: STARTTLS sigue siendo obligatorio. La conexión valida certificados TLS y no registra destinatarios, secretos ni enlaces. Los mensajes incluyen HTML y texto, con vencimiento de 30 minutos para recuperación y 24 horas para verificación. `AUTH_DEV_LINKS=false` habilita la entrega real y evita devolver enlaces al navegador.
+
+Comprobar conectividad y autenticación sin enviar mensajes: `npm run mail:verify -- ../.env` desde backend, o `docker compose exec api npm run mail:verify` desde el despliegue. La aceptación SMTP no garantiza la llegada a la bandeja: también intervienen las políticas antispam del destinatario. Si falla una entrega, se registra un error sin datos privados y puede solicitarse otro enlace tras un minuto.
+
+La migración `20260911090000_refresh_token_integrity` cierra sesiones guardadas con hashes antiguos. Los tokens de renovación ahora se comparan mediante SHA-256 del JWT completo: bcrypt truncaba los valores a 72 bytes y podía confundir dos rotaciones. Después de actualizar, los usuarios deben volver a iniciar sesión una vez. Las contraseñas siguen protegidas con bcrypt.
+
 Generar `TOTP_ENCRYPTION_KEY` con `openssl rand -hex 32` y guardarla como secreto del servidor, independiente de ambos secretos JWT. Producción y Compose rechazan su ausencia. No ponerla en variables `NEXT_PUBLIC_*`, repositorios o logs. Guardar una copia protegida junto al plan de respaldo de PostgreSQL; sin esta clave los secretos TOTP no se pueden recuperar. Cambiarla requiere recifrar previamente los registros existentes; no reemplazarla como una rotación ordinaria de JWT.
 
 Usar HTTPS, hora del servidor sincronizada y correo transaccional configurado. En producción: `AUTH_DEV_LINKS=false`, `SEED_ON_FIRST_RUN=false`, `ALLOW_DEMO_SEED=false`. Esto conserva las cuentas existentes y evita inicializar contenido de demostración. Las cuentas predeterminadas deben quedar asignadas a sus responsables y completar su primer acceso antes de abrir el servicio al público.
@@ -44,4 +52,4 @@ npm audit
 
 La integración crea y elimina su propio contenedor PostgreSQL 16 con puerto efímero en loopback, sin usar `DATABASE_URL` del proyecto. Aplica todas las migraciones y prueba HTTP real, cambio obligatorio, sesiones revocadas, cifrado, vencimiento, bloqueo de intentos y consumo concurrente de TOTP/recuperación. Las pruebas de contratos del backend necesitan el frontend hermano, como en D-PISI.
 
-Referencias técnicas: [OTPAuth](https://github.com/hectorm/otpauth), [OWASP MFA](https://cheatsheetseries.owasp.org/cheatsheets/Multifactor_Authentication_Cheat_Sheet.html), [versiones de Node.js](https://nodejs.org/en/about/previous-releases).
+Referencias técnicas: [SMTP y TLS de Nodemailer](https://nodemailer.com/smtp), [configuración Gmail](https://support.google.com/mail/answer/7104828), [recuperación segura de OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Forgot_Password_Cheat_Sheet.html), [OTPAuth](https://github.com/hectorm/otpauth), [OWASP MFA](https://cheatsheetseries.owasp.org/cheatsheets/Multifactor_Authentication_Cheat_Sheet.html).

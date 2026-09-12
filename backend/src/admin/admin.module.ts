@@ -133,25 +133,28 @@ export class AdminService {
   }
 
   async updateUser(actorId: string, id: string, dto: UpdateUserRolesDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-      include: { roles: { include: { role: true } } },
-    });
-    if (!user) throw new NotFoundException('Usuario no encontrado');
-    const currentlyAdmin = user.roles.some((entry) => entry.role.name === 'ADMIN');
-    const removesAdmin = currentlyAdmin && !dto.roles.includes('ADMIN');
-    const deactivatesAdmin = currentlyAdmin && dto.isActive === false;
-    if (actorId === id && (removesAdmin || dto.isActive === false)) {
-      throw new BadRequestException('No puedes quitarte el rol administrador ni desactivar tu propia cuenta');
-    }
-    if (removesAdmin || deactivatesAdmin) {
-      const otherActiveAdmins = await this.prisma.user.count({
-        where: { id: { not: id }, isActive: true, roles: { some: { role: { name: 'ADMIN' } } } },
+    return this.prisma.$transaction(async (tx) => {
+      // Serializa cambios de roles para que dos administradores no puedan
+      // eliminar simultáneamente al último administrador activo.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(71100911)`;
+      const user = await tx.user.findUnique({
+        where: { id },
+        include: { roles: { include: { role: true } } },
       });
-      if (otherActiveAdmins === 0) throw new BadRequestException('Debe permanecer al menos un administrador activo');
-    }
+      if (!user) throw new NotFoundException('Usuario no encontrado');
+      const currentlyAdmin = user.roles.some((entry) => entry.role.name === 'ADMIN');
+      const removesAdmin = currentlyAdmin && !dto.roles.includes('ADMIN');
+      const deactivatesAdmin = currentlyAdmin && dto.isActive === false;
+      if (actorId === id && (removesAdmin || dto.isActive === false)) {
+        throw new BadRequestException('No puedes quitarte el rol administrador ni desactivar tu propia cuenta');
+      }
+      if (removesAdmin || deactivatesAdmin) {
+        const otherActiveAdmins = await tx.user.count({
+          where: { id: { not: id }, isActive: true, roles: { some: { role: { name: 'ADMIN' } } } },
+        });
+        if (otherActiveAdmins === 0) throw new BadRequestException('Debe permanecer al menos un administrador activo');
+      }
 
-    await this.prisma.$transaction(async (tx) => {
       const roles = [];
       for (const name of dto.roles) {
         roles.push(await tx.role.upsert({ where: { name }, create: { name }, update: {} }));
@@ -172,8 +175,8 @@ export class AdminService {
           });
         }
       }
+      return { ok: true };
     });
-    return { ok: true };
   }
 
   listApprovals() {

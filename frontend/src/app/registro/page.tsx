@@ -13,24 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input, Label, Select } from '@/components/ui/input';
 import { SEMESTERS } from '@/lib/academic';
 import { PointReward } from '@/components/point-reward';
-
-const schema = z
-  .object({
-    fullName: z.string().min(3, 'Ingresa tu nombre completo').max(80),
-    email: z.string().email('Email inválido'),
-    username: z
-      .string()
-      .min(3, 'Mínimo 3 caracteres')
-      .max(30)
-      .regex(/^[a-z0-9_.-]+$/, 'Solo minúsculas, números, punto, guion y guion bajo'),
-    semester: z
-      .string()
-      .optional()
-      .refine((value) => !value || SEMESTERS.includes(Number(value)), 'Selecciona un semestre entre 1º y 8º'),
-    password: z.string().min(12, 'Mínimo 12 caracteres').max(72),
-    confirm: z.string(),
-  })
-  .refine((d) => d.password === d.confirm, { message: 'Las contraseñas no coinciden', path: ['confirm'] });
+import { registrationSchema as schema } from '@/lib/registration-schema';
 
 type FormData = z.infer<typeof schema>;
 
@@ -78,42 +61,44 @@ export default function RegistroPage() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
           <div className="space-y-1.5">
-            <Label>Nombre completo</Label>
-            <Input placeholder="Andrea Vargas" {...register('fullName')} />
+            <Label htmlFor="register-name">Nombre completo</Label>
+            <Input id="register-name" autoComplete="name" placeholder="Nombres y apellidos" {...register('fullName')} />
             {errors.fullName && <p className="text-xs text-danger">{errors.fullName.message}</p>}
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Usuario</Label>
-              <Input placeholder="avargas" {...register('username')} />
+              <Label htmlFor="register-username">Usuario</Label>
+              <Input id="register-username" autoComplete="username" placeholder="Nombre de usuario" {...register('username')} />
               {errors.username && <p className="text-xs text-danger">{errors.username.message}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label>Semestre</Label>
-              <Select {...register('semester')}>
+              <Label htmlFor="register-semester">Semestre</Label>
+              <Select id="register-semester" {...register('semester')}>
                 <option value="">—</option>
                 {SEMESTERS.map((semester) => (
                   <option key={semester} value={semester}>{semester}º semestre</option>
                 ))}
               </Select>
+              {errors.semester && <p className="text-xs text-danger">{errors.semester.message}</p>}
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label>Email</Label>
-            <Input type="email" placeholder="Correo electrónico" {...register('email')} />
+            <Label htmlFor="register-email">Correo institucional</Label>
+            <Input id="register-email" type="email" autoComplete="email" placeholder="nombre@univalle.edu" aria-describedby="institutional-email-help" {...register('email')} />
+            <p id="institutional-email-help" className="text-xs text-muted-foreground">Solo correos @univalle.edu. Recibirás un enlace para confirmar que el correo te pertenece.</p>
             {errors.email && <p className="text-xs text-danger">{errors.email.message}</p>}
           </div>
           <div className="space-y-1.5">
-            <Label>Contraseña</Label>
-            <Input type="password" placeholder="Mínimo 12 caracteres" autoComplete="new-password" {...register('password')} />
+            <Label htmlFor="register-password">Contraseña</Label>
+            <Input id="register-password" type="password" placeholder="Mínimo 12 caracteres" autoComplete="new-password" {...register('password')} />
             {errors.password && <p className="text-xs text-danger">{errors.password.message}</p>}
           </div>
           <div className="space-y-1.5">
-            <Label>Confirmar contraseña</Label>
-            <Input type="password" placeholder="Repite tu contraseña" autoComplete="new-password" {...register('confirm')} />
+            <Label htmlFor="register-confirm">Confirmar contraseña</Label>
+            <Input id="register-confirm" type="password" placeholder="Repite tu contraseña" autoComplete="new-password" {...register('confirm')} />
             {errors.confirm && <p className="text-xs text-danger">{errors.confirm.message}</p>}
           </div>
-          {serverError && <p className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{serverError}</p>}
+          {serverError && <p role="alert" className="rounded-lg border border-danger/30 bg-danger/10 p-3 text-sm text-danger">{serverError}</p>}
           <Button type="submit" disabled={isSubmitting || authLoading} className="w-full" size="lg" variant="accent">
             {isSubmitting || authLoading ? <Loader2 className="animate-spin" /> : <UserPlus />} Crear mi cuenta
           </Button>

@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsEmail, IsInt, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { INSTITUTIONAL_EMAIL_MESSAGE, INSTITUTIONAL_EMAIL_PATTERN } from './institutional-email';
 
 const normalizeIdentifier = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim().toLowerCase() : value;
@@ -9,9 +10,10 @@ const normalizeName = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : value;
 
 export class RegisterDto {
-  @ApiProperty({ example: 'jperez@est.isi.edu.bo' })
+  @ApiProperty({ example: 'nombre@univalle.edu' })
   @Transform(normalizeIdentifier)
   @IsEmail()
+  @Matches(INSTITUTIONAL_EMAIL_PATTERN, { message: INSTITUTIONAL_EMAIL_MESSAGE })
   @MaxLength(254)
   email: string;
 
