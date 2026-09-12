@@ -24,7 +24,8 @@ try {
     output = expression.test(output) ? output.replace(expression, () => `${key}=${value}`) : `${output.trimEnd()}\n${key}=${value}\n`;
   }
   fs.writeFileSync(path.join(root, '.env.production'), output, { mode: 0o600 });
-  console.log(`Configuración preparada en .env.production para ${url.origin}. Transfiérela de forma privada como .env al servidor.`);
+  console.log(`Configuración preparada en .env.production para ${url.origin}. Archivo privado generado desde las claves locales.`);
+  console.log('Servidor existente: conserva sus claves de base de datos, JWT y TOTP; incorpora la URL y SMTP sin reemplazar sus secretos con los locales.');
   console.log('Usa Nginx con HTTPS y /api directo al puerto API (TRUST_PROXY_HOPS=1). Los datos se conservan; el seed demo está desactivado.');
 } catch (error) {
   console.error(error.code === 'ENOENT' ? 'No se encontró .env en la raíz del repositorio.' : error instanceof TypeError ? 'La URL pública no es válida.' : error.message);
