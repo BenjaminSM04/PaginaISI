@@ -51,6 +51,12 @@ Los repositorios B-PISI y F-PISI conservan sus workflows de Coolify. Cada push e
 
 Configurar las variables privadas de la API en Coolify desde el `.env`, incluidas `PUBLIC_WEB_URL` y las variables SMTP. En F-PISI, configurar además la variable de repositorio `PUBLIC_WEB_URL` con el origen HTTPS definitivo antes de construir la imagen. Los secretos de Actions `COOLIFY_WEBHOOK` y `COOLIFY_TOKEN` permanecen en GitHub; no se copian al código ni al `.env` del frontend. Revisar la ruta interna `API_INTERNAL_URL` del frontend de acuerdo con la red del servidor.
 
+## Acceso de CI a los submódulos privados
+
+B-PISI es privado. El CI de D-PISI necesita el secreto de Actions `SUBMODULES_TOKEN`; el `GITHUB_TOKEN` automático solo tiene acceso al repositorio del workflow. Un responsable autorizado debe crear un token de acceso detallado con **Contents: Read-only**, seleccionar D-PISI, B-PISI y F-PISI y, si corresponde, obtener aprobación de la organización. Guardarlo en **D-PISI → Settings → Secrets and variables → Actions → New repository secret** con el nombre `SUBMODULES_TOKEN`.
+
+No pegar el token en el código, en `.env` ni en el chat. Después de configurarlo, ejecutar **Actions → CI → Run workflow**. La sesión utilizada para esta revisión dispone de escritura de código en B-PISI, pero no de administración de sus claves; no se cambió la visibilidad del repositorio ni se copió una credencial personal amplia a Actions.
+
 ## Operación local
 
 ```bash

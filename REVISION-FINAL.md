@@ -44,6 +44,8 @@ Se revisaron los módulos, las fronteras de autorización, los flujos de autenti
 
 ## Pendiente externo para publicar
 
+Los commits quedaron publicados en el original y en B-PISI, F-PISI y D-PISI. Las comprobaciones de los tres primeros pasaron. El CI de D-PISI requiere configurar `SUBMODULES_TOKEN` para descargar el backend privado; falló durante checkout, antes de ejecutar pruebas. La versión conjunta se verificó localmente. Las instrucciones están en [DESPLIEGUE.md](DESPLIEGUE.md).
+
 Falta la URL pública HTTPS definitiva. El `.env` actual funciona localmente y contiene las credenciales privadas de correo. Cuando se confirme el dominio, ejecutar el generador explicado en [DESPLIEGUE.md](DESPLIEGUE.md), transferir la configuración por un canal privado y comprobar un correo real recibido en un buzón institucional.
 
 Las cuentas previas conservan sus correos originales. La recuperación requiere que la dirección guardada sea un buzón real accesible. Antes de abrir el sitio al público, asignar las cuentas predefinidas a sus responsables y completar sus cambios de contraseña; el contenido de presentación existente no se elimina automáticamente.
