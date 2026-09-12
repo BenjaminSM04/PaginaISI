@@ -1,6 +1,6 @@
 # Revisión final para presentación y despliegue
 
-Fecha: 11 de septiembre de 2026. Institución: Universidad Privada del Valle, Bolivia.
+Fecha: 12 de septiembre de 2026. Institución: Universidad Privada del Valle, Bolivia.
 
 ## Alcance y evidencia
 
@@ -32,11 +32,12 @@ Se revisaron los módulos, las fronteras de autorización, los flujos de autenti
 7. Los cambios de roles se serializan para conservar un administrador activo.
 8. Formularios con etiquetas asociadas, placeholders profesionales y títulos principales correctos en siete catálogos.
 9. Guía y generador de configuración de despliegue que conserva claves, configura HTTPS/CORS y desactiva demo/Swagger.
+10. Integración del inicializador de producción agregado al repositorio backend: conserva reglas e insignias existentes y revoca sesiones, tokens y desafíos al solicitar un restablecimiento administrativo de contraseña. Publicación de imágenes y activación de Coolify manuales hasta completar la configuración definitiva.
 
 ## Validación
 
 - Backend: 124 pruebas unitarias y de contratos aprobadas; typecheck y build correctos.
-- Integración: 15 pruebas con PostgreSQL desechable aprobadas, incluyendo registro, correo, recuperación, replay, 2FA, ranking y concurrencia administrativa.
+- Integración: 16 pruebas con PostgreSQL desechable aprobadas, incluyendo registro, correo, recuperación, replay, 2FA, ranking, concurrencia administrativa e inicialización de despliegue.
 - Frontend: 8 pruebas aprobadas; typecheck, lint y build correctos. Persisten advertencias previas de tipado `any` y uso de imágenes, sin errores de lint.
 - Chromium: 26 páginas públicas/detalles y 6 recorridos móviles; sin errores JavaScript, respuestas 500 ni desbordamiento horizontal en los recorridos comprobados. Se probó el rechazo de un correo externo y la pantalla de activación con una respuesta controlada para evitar crear cuentas o enviar mensajes reales.
 - SMTP: Gmail aceptó TLS y autenticación tanto desde el equipo como desde el contenedor. La comprobación no envía mensajes; el flujo de correo completo se verificó con un receptor local aislado.

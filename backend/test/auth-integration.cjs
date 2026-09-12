@@ -207,6 +207,23 @@ test('cambios concurrentes de roles conservan al menos un administrador activo',
   assert.equal(await prisma.user.count({ where: { isActive: true, roles: { some: { role: { name: 'ADMIN' } } } } }), 1);
 });
 
+test('el inicializador de despliegue conserva configuraciones y revoca accesos al restablecer una contraseña', async () => {
+  const account = await user();
+  const session = await auth.login({ identifier: account.username, password });
+  const adminEnvironment = { ...process.env, ADMIN_SEED_EMAIL: account.email, ADMIN_SEED_USERNAME: account.username, ADMIN_SEED_PASSWORD: password, ADMIN_SEED_RESET_PASSWORD: 'false' };
+  const seed = env => execFileSync(process.execPath, [require.resolve('ts-node/dist/bin.js'), '--transpile-only', 'prisma/seed-deploy.ts'], { cwd: root, env, windowsHide: true, timeout: 30000, stdio: 'pipe' });
+  await prisma.pointRule.upsert({ where: { reason: 'REPORTE_VALIDO' }, create: { reason: 'REPORTE_VALIDO', category: 'COMMUNITY', points: 17, label: 'Regla institucional' }, update: { points: 17 } });
+  seed(adminEnvironment);
+  assert.equal((await prisma.pointRule.findUnique({ where: { reason: 'REPORTE_VALIDO' } })).points, 17);
+  assert.equal((await request('/auth/me', undefined, session.accessToken)).status, 200);
+  seed({ ...adminEnvironment, ADMIN_SEED_RESET_PASSWORD: 'true', ADMIN_SEED_PASSWORD: 'Nueva frase privada de administración' });
+  assert.equal((await request('/auth/me', undefined, session.accessToken)).status, 401);
+  await assert.rejects(() => auth.refresh(session.refreshToken), /inválida/);
+  const updated = await prisma.user.findUnique({ where: { id: account.id } });
+  assert.equal(updated.mustChangePassword, true);
+  assert.ok(await bcrypt.compare('Nueva frase privada de administración', updated.passwordHash));
+});
+
 test('la migración conserva la contraseña predeterminada y la API obliga a cambiarla antes de acceder', async () => {
   const originalHash = await bcrypt.hash('password123', 4);
   const account = await user({ username: 'admin', passwordHash: originalHash });

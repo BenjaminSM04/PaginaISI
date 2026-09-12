@@ -43,6 +43,8 @@ El comando genera `.env.production` conservando los secretos existentes y config
 
 Las migraciones se aplican al iniciar la API. La actualización de integridad de sesiones cierra sesiones antiguas y exige volver a iniciar sesión; no cambia contraseñas ni secretos TOTP.
 
+Para una base de producción nueva, el backend incluye `npm run seed:deploy`: crea únicamente roles, reglas, insignias y la cuenta administrativa. No carga proyectos ni noticias de demostración y conserva las reglas existentes al repetirse. Proporcionar `ADMIN_SEED_EMAIL`, `ADMIN_SEED_USERNAME` y `ADMIN_SEED_PASSWORD` mediante variables privadas del proceso que ejecuta el comando. La cuenta inicial exige cambiar su contraseña. `ADMIN_SEED_RESET_PASSWORD=true` solicita expresamente restablecerla y revoca las sesiones anteriores; no usar esa opción para un reinicio ordinario.
+
 ## Variante con Coolify
 
 Los repositorios B-PISI y F-PISI conservan sus workflows de Coolify. Cada push ejecuta comprobaciones; publicar imágenes y llamar al webhook requiere ejecutar manualmente **Actions → Run workflow**. Esto permite completar las variables y la URL antes de activar el servidor.

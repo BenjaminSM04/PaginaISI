@@ -20,6 +20,6 @@
     "noFallthroughCasesInSwitch": false,
     "resolveJsonModule": true
   },
-  "include": ["src/**/*", "prisma/seed.ts"],
+  "include": ["src/**/*", "prisma/seed.ts", "prisma/seed-deploy.ts"],
   "exclude": ["node_modules", "dist"]
 }

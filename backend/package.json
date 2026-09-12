@@ -19,6 +19,7 @@
     "seed": "npm run seed:demo",
     "seed:demo": "ts-node --transpile-only prisma/seed.ts",
     "seed:presentation": "ts-node --transpile-only prisma/presentation-seed.ts",
+    "seed:deploy": "ts-node --transpile-only prisma/seed-deploy.ts",
     "test:auth:integration": "npm run build && node --test test/auth-integration.cjs",
     "mail:verify": "node scripts/verificar-correo.cjs"
   },

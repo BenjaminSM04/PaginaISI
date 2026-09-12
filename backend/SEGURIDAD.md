@@ -14,6 +14,8 @@ Comprobar conectividad y autenticación sin enviar mensajes: `npm run mail:verif
 
 La migración `20260911090000_refresh_token_integrity` cierra sesiones guardadas con hashes antiguos. Los tokens de renovación ahora se comparan mediante SHA-256 del JWT completo: bcrypt truncaba los valores a 72 bytes y podía confundir dos rotaciones. Después de actualizar, los usuarios deben volver a iniciar sesión una vez. Las contraseñas siguen protegidas con bcrypt.
 
+El inicializador `npm run seed:deploy` conserva las reglas e insignias configuradas previamente. La opción explícita `ADMIN_SEED_RESET_PASSWORD=true` cambia la contraseña, activa el cambio obligatorio, incrementa la versión de seguridad y revoca sesiones, enlaces y desafíos pendientes dentro de una transacción. Conserva el segundo factor ya habilitado.
+
 Generar `TOTP_ENCRYPTION_KEY` con `openssl rand -hex 32` y guardarla como secreto del servidor, independiente de ambos secretos JWT. Producción y Compose rechazan su ausencia. No ponerla en variables `NEXT_PUBLIC_*`, repositorios o logs. Guardar una copia protegida junto al plan de respaldo de PostgreSQL; sin esta clave los secretos TOTP no se pueden recuperar. Cambiarla requiere recifrar previamente los registros existentes; no reemplazarla como una rotación ordinaria de JWT.
 
 Usar HTTPS, hora del servidor sincronizada y correo transaccional configurado. En producción: `AUTH_DEV_LINKS=false`, `SEED_ON_FIRST_RUN=false`, `ALLOW_DEMO_SEED=false`. Esto conserva las cuentas existentes y evita inicializar contenido de demostración. Las cuentas predeterminadas deben quedar asignadas a sus responsables y completar su primer acceso antes de abrir el servicio al público.
