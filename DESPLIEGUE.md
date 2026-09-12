@@ -43,6 +43,12 @@ El comando genera `.env.production` conservando los secretos existentes y config
 
 Las migraciones se aplican al iniciar la API. La actualización de integridad de sesiones cierra sesiones antiguas y exige volver a iniciar sesión; no cambia contraseñas ni secretos TOTP.
 
+## Variante con Coolify
+
+Los repositorios B-PISI y F-PISI conservan sus workflows de Coolify. Cada push ejecuta comprobaciones; publicar imágenes y llamar al webhook requiere ejecutar manualmente **Actions → Run workflow**. Esto permite completar las variables y la URL antes de activar el servidor.
+
+Configurar las variables privadas de la API en Coolify desde el `.env`, incluidas `PUBLIC_WEB_URL` y las variables SMTP. En F-PISI, configurar además la variable de repositorio `PUBLIC_WEB_URL` con el origen HTTPS definitivo antes de construir la imagen. Los secretos de Actions `COOLIFY_WEBHOOK` y `COOLIFY_TOKEN` permanecen en GitHub; no se copian al código ni al `.env` del frontend. Revisar la ruta interna `API_INTERNAL_URL` del frontend de acuerdo con la red del servidor.
+
 ## Operación local
 
 ```bash
