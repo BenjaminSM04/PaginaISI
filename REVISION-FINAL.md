@@ -9,7 +9,7 @@ Se revisaron los módulos, las fronteras de autorización, los flujos de autenti
 | Área | Revisión realizada |
 |---|---|
 | Identidad, navegación y presentación | Paleta, logos, formularios y capturas en escritorio/móvil; encabezados principales accesibles. |
-| Registro y perfiles | Dominio exacto `@univalle.edu`, normalización, enlace de activación, bloqueo de acciones y perfiles antes de verificar; campos de seguridad excluidos del perfil público. |
+| Registro y perfiles | Dominio `univalle.edu` y subdominios institucionales, normalización, enlace de activación, bloqueo de acciones y perfiles antes de verificar; campos de seguridad excluidos del perfil público. |
 | Login, sesiones y 2FA | Primer cambio obligatorio, rotación, revocación, expiración, cifrado TOTP, recuperación y consumo concurrente de códigos. |
 | Correo | Configuración SMTP/Gmail, TLS, autenticación real y pruebas de entrega con destinatarios aislados; mensajes en HTML/texto. |
 | Noticias, proyectos y artículos | Catálogos y detalles públicos; contratos de revisión, publicación, versiones, edición colaborativa y permisos cubiertos por las pruebas del repositorio. |
@@ -49,3 +49,9 @@ Los commits quedaron publicados en el original y en B-PISI, F-PISI y D-PISI. Las
 URL pública confirmada: https://www.isilp.com. Se comprobó respuesta HTTP 200 del portal, login y `/api/health`, con base de datos disponible; el dominio sin www redirige al dominio confirmado. Se preparó `.env.production` privado y se configuró `PUBLIC_WEB_URL` en F-PISI. Sigue pendiente incorporar la configuración al servidor conservando sus secretos actuales, desplegar la nueva versión y comprobar un correo real recibido en un buzón institucional. La revisión pública no envió correos ni modificó cuentas. Los formularios de login, registro y recuperación respondieron HTTP 200 y se renderizaron en Chromium. El registro publicado aún muestra ejemplos de nombre/usuario y la etiqueta genérica «Email»; las mejoras institucionales del código revisado todavía requieren actualizar la versión en producción.
 
 Las cuentas previas conservan sus correos originales. La recuperación requiere que la dirección guardada sea un buzón real accesible. Antes de abrir el sitio al público, asignar las cuentas predefinidas a sus responsables y completar sus cambios de contraseña; el contenido de presentación existente no se elimina automáticamente.
+
+## Corrección de registro, correo y perfil
+
+Se aceptan el dominio institucional y subdominios válidos (estudiantes, posgrado y otros), manteniendo el rechazo de dominios falsos. Los usuarios pendientes reciben una explicación de activación; su perfil permanece oculto hasta verificar. La página pública consulta sin caché, reserva el estado inexistente para HTTP 404 y ofrece reintentar los errores temporales.
+
+Validación de esta corrección: 125 pruebas de backend, 17 de integración con PostgreSQL desechable y 10 de frontend aprobadas; typecheck, lint y builds correctos, con advertencias de lint anteriores. Chromium comprobó el rechazo de un dominio falso, la aceptación de est.univalle.edu y la explicación de activación mediante respuestas controladas. Una segunda prueba de navegador con API aislada confirmó que Reintentar recupera un perfil tras HTTP 503 y que HTTP 404 muestra el estado inexistente. Los contenedores locales se reconstruyeron y quedaron saludables. Gmail aceptó TLS y autenticación desde el host y el contenedor actualizado; no se enviaron correos reales. La recepción institucional y la actualización de Coolify quedan a cargo del despliegue.

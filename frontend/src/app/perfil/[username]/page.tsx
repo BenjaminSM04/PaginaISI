@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Award, CheckCircle2, Code2, ExternalLink, FlaskConical, Github, Linkedin, MessageSquare, Users } from 'lucide-react';
-import { serverGet } from '@/lib/server-api';
+import { apiInternalOrigin } from '@/lib/api-origin';
+import { fetchPublicProfile } from '@/lib/public-profile';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ArticleCard, ProjectCard, QuestionCard } from '@/components/cards';
@@ -11,11 +12,11 @@ import type { UserBadgeAward } from '@/lib/types';
 import { badgeRuleExplanation } from '@/lib/badge-rules';
 import { formatDate } from '@/lib/utils';
 
-export const revalidate = 30;
+export const dynamic = 'force-dynamic';
 
 export default async function PerfilPublicoPage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params;
-  const user = await serverGet<any>(`/users/${username}`, null, 15);
+  const user = await fetchPublicProfile<any>(apiInternalOrigin(), username);
   if (!user) notFound();
 
   const p = user.profile ?? {};

@@ -15,11 +15,39 @@ function load(relative) {
 }
 const { resolveTheme, themeCss, contrastRatio, hslChannels } = load('lib/theme.ts');
 
+test('el perfil se consulta sin caché y solo los 404 se interpretan como inexistentes', async () => {
+  const { fetchPublicProfile } = load('lib/public-profile.ts');
+  const original = global.fetch;
+  try {
+    let status = 404;
+    global.fetch = async (url, options) => {
+      assert.equal(url, 'http://api:4000/api/users/nuevo');
+      assert.equal(options.cache, 'no-store');
+      return Response.json({ username: 'nuevo' }, { status });
+    };
+    assert.equal(await fetchPublicProfile('http://api:4000', 'nuevo'), null);
+    status = 200;
+    assert.equal((await fetchPublicProfile('http://api:4000', 'nuevo')).username, 'nuevo');
+    for (status of [401, 403, 429, 500, 503]) await assert.rejects(() => fetchPublicProfile('http://api:4000', 'nuevo'));
+    global.fetch = async () => { throw new Error('Conexión interrumpida'); };
+    await assert.rejects(() => fetchPublicProfile('http://api:4000', 'nuevo'));
+  } finally { global.fetch = original; }
+});
+
+test('el enlace del perfil dirige a activación hasta verificar la cuenta', () => {
+  const { ownProfileHref } = load('lib/public-profile.ts');
+  assert.equal(ownProfileHref({ username: 'nuevo', emailVerifiedAt: null }), '/cuenta?tab=seguridad');
+  assert.equal(ownProfileHref({ username: 'nuevo', emailVerifiedAt: new Date().toISOString() }), '/perfil/nuevo');
+});
+
 test('el formulario normaliza el correo institucional y rechaza dominios parecidos y contraseñas truncadas', () => {
   const { registrationSchema } = load('lib/registration-schema.ts');
   const payload = { fullName: 'Estudiante Univalle', username: 'estudiante', email: ' Persona@UNIVALLE.EDU ', password: 'Una frase larga privada', confirm: 'Una frase larga privada' };
   assert.equal(registrationSchema.parse(payload).email, 'persona@univalle.edu');
-  for (const email of ['persona@gmail.com', 'persona@evilunivalle.edu', 'persona@univalle.edu.evil.com', 'persona@est.univalle.edu']) assert.equal(registrationSchema.safeParse({ ...payload, email }).success, false);
+  for (const email of ['sma3005753@est.univalle.edu', ' Persona@POSTGRADO.UNIVALLE.EDU ', 'persona@est.sede.univalle.edu']) {
+    assert.equal(registrationSchema.parse({ ...payload, email }).email, email.trim().toLowerCase());
+  }
+  for (const email of ['persona@gmail.com', 'persona@evilunivalle.edu', 'persona@univalle.edu.evil.com', 'persona@.univalle.edu', 'persona@est..univalle.edu', 'persona@-est.univalle.edu', 'persona@est-.univalle.edu', 'persona@est_univalle.edu']) assert.equal(registrationSchema.safeParse({ ...payload, email }).success, false);
   assert.equal(registrationSchema.safeParse({ ...payload, password: '🙂'.repeat(19), confirm: '🙂'.repeat(19) }).success, false);
 });
 

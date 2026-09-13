@@ -12,6 +12,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/auth-context';
 import { api } from '@/lib/api';
+import { ownProfileHref } from '@/lib/public-profile';
 import { visibleApplicationsQueryKey } from '@/lib/application-query';
 import type { InstitutionalApplication } from '@/lib/types';
 import { Avatar } from '@/components/ui/avatar';
@@ -313,7 +314,7 @@ export function Navbar() {
                     </div>
                   </div>
                   <div className="mt-1 space-y-0.5">
-                    <Link href={`/perfil/${user.username}`} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-secondary transition">
+                    <Link href={ownProfileHref(user)} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-secondary transition">
                       <User className="h-4 w-4 text-primary" /> Mi perfil público
                     </Link>
                     <Link href="/cuenta" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-secondary transition">

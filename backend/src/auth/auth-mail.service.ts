@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthTokenType } from '@prisma/client';
 import { createTransport, Transporter } from 'nodemailer';
 import { EnvironmentVariables } from '../config/environment';
+import { mailDiagnostic } from './mail-diagnostic';
 
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, char => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -45,6 +46,7 @@ export class AuthMailService implements OnModuleDestroy {
 
   assertAvailable() {
     if (!this.config.getOrThrow('AUTH_DEV_LINKS', { infer: true }) && !this.transport && !this.config.get('AUTH_EMAIL_WEBHOOK_URL', { infer: true })) {
+      this.logger.error(mailDiagnostic({ code: 'SMTP_CONFIG' }));
       throw new ServiceUnavailableException('El envío de correo no está configurado');
     }
   }
@@ -69,9 +71,9 @@ export class AuthMailService implements OnModuleDestroy {
         signal: AbortSignal.timeout(10_000),
       });
       if (!response.ok) throw new Error('Delivery rejected');
-    } catch {
+    } catch (error) {
       // Nunca registrar destinatarios, enlaces, contraseñas ni respuestas SMTP.
-      this.logger.error(`No se pudo entregar el correo de ${type}. Revisa el proveedor y la configuración de correo.`);
+      this.logger.error(`No se pudo entregar el correo de ${type}. ${mailDiagnostic(error)}.`);
       throw new ServiceUnavailableException('No se pudo enviar el correo en este momento. Intenta nuevamente en un minuto.');
     }
   }

@@ -6,7 +6,7 @@ El primer acceso muestra `/cambiar-contrasena`. La API consulta la bandera vigen
 
 ## Configuración obligatoria
 
-El registro público acepta exclusivamente correos con dominio exacto `@univalle.edu`. La API y el formulario normalizan espacios externos y mayúsculas; rechazan dominios parecidos, subdominios y sufijos adicionales. La cuenta queda pendiente hasta confirmar el enlace enviado a su correo. No puede utilizar funciones protegidas ni aparecer en perfiles/directorios públicos antes de verificarse. Las cuentas existentes y sus contraseñas se conservan.
+El registro público acepta exclusivamente correos con dominio `univalle.edu` o sus subdominios válidos, como `est.univalle.edu`. La API y el formulario normalizan espacios externos y mayúsculas; rechazan dominios parecidos, subdominios malformados y sufijos posteriores a `univalle.edu`. La cuenta queda pendiente hasta confirmar el enlace enviado a su correo. No puede utilizar funciones protegidas ni aparecer en perfiles/directorios públicos antes de verificarse. Las cuentas existentes y sus contraseñas se conservan.
 
 El módulo de correo admite SMTP directo y el webhook anterior como alternativa. SMTP tiene prioridad si está configurado. Gmail requiere `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_SECURE=true`, `SMTP_USER`, `SMTP_PASSWORD` (contraseña de aplicación) y `SMTP_FROM`. En 587, usar `SMTP_SECURE=false`: STARTTLS sigue siendo obligatorio. La conexión valida certificados TLS y no registra destinatarios, secretos ni enlaces. Los mensajes incluyen HTML y texto, con vencimiento de 30 minutos para recuperación y 24 horas para verificación. `AUTH_DEV_LINKS=false` habilita la entrega real y evita devolver enlaces al navegador.
 

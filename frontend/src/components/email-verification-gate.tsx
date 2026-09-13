@@ -39,6 +39,7 @@ function PendingVerification() {
         <MailCheck className="h-10 w-10 text-primary" aria-hidden="true" />
         <h1 className="font-serif-heading text-2xl font-bold text-primary">Verifica tu correo institucional</h1>
         <p className="break-all font-medium">{user?.email}</p>
+        <p className="text-sm text-muted-foreground">Tu perfil público estará disponible cuando verifiques tu correo.</p>
         <p role={error ? 'alert' : 'status'} className={error ? 'text-sm text-danger' : 'text-sm text-muted-foreground'}>{message}</p>
         <p className="text-sm text-muted-foreground">Revisa también la carpeta de correo no deseado. El enlace vence en 24 horas.</p>
         <div className="flex flex-col gap-3">

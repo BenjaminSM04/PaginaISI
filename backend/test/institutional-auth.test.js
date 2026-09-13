@@ -8,12 +8,26 @@ const { hashRefreshToken, matchesRefreshToken } = require('../dist/auth/refresh-
 const { authEmailContent, AuthMailService } = require('../dist/auth/auth-mail.service');
 const { ConfigService } = require('@nestjs/config');
 const { validateEnvironment } = require('../dist/config/environment');
+const { mailDiagnostic } = require('../dist/auth/mail-diagnostic');
 
-test('el registro acepta solo el dominio institucional exacto y normaliza mayúsculas y espacios externos', () => {
+test('el diagnóstico distingue autenticación, conexión y configuración sin divulgar secretos', () => {
+  for (const [code, category] of [['EAUTH', 'SMTP_AUTH'], ['ETIMEDOUT', 'SMTP_CONNECTION'], ['EDNS', 'SMTP_CONNECTION'], ['ESOCKET', 'SMTP_CONNECTION'], ['SMTP_CONFIG', 'SMTP_CONFIG'], ['EENVELOPE', 'MAIL_DELIVERY']]) {
+    const diagnostic = mailDiagnostic({ code, message: 'secreto privado', response: 'destinatario privado' });
+    assert.ok(diagnostic.startsWith(category));
+    assert.ok(!diagnostic.includes('privado'));
+  }
+  assert.ok(mailDiagnostic(null).startsWith('MAIL_DELIVERY'));
+});
+
+test('el registro acepta el dominio institucional y sus subdominios y normaliza mayúsculas y espacios externos', () => {
   const dto = email => plainToInstance(RegisterDto, { email, username: 'estudiante', fullName: 'Estudiante Univalle', password: 'Una frase larga privada' });
   assert.equal(normalizeInstitutionalEmail(' Persona@UNIVALLE.EDU '), 'persona@univalle.edu');
   assert.equal(validateSync(dto(' Persona@UNIVALLE.EDU ')).length, 0);
-  for (const email of ['persona@gmail.com', 'persona@evilunivalle.edu', 'persona@univalle.edu.evil.com', 'persona@est.univalle.edu', 'persona@@univalle.edu', 'a b@univalle.edu']) {
+  for (const email of ['sma3005753@est.univalle.edu', ' Persona@POSTGRADO.UNIVALLE.EDU ', 'persona@est.sede.univalle.edu']) {
+    assert.equal(normalizeInstitutionalEmail(email), email.trim().toLowerCase());
+    assert.equal(validateSync(dto(email)).length, 0);
+  }
+  for (const email of ['persona@gmail.com', 'persona@evilunivalle.edu', 'persona@univalle.edu.evil.com', 'persona@.univalle.edu', 'persona@est..univalle.edu', 'persona@-est.univalle.edu', 'persona@est-.univalle.edu', 'persona@est_univalle.edu', 'persona@@univalle.edu', 'a b@univalle.edu']) {
     assert.throws(() => normalizeInstitutionalEmail(email));
     assert.ok(validateSync(dto(email)).some(error => error.property === 'email'));
   }
@@ -62,8 +76,14 @@ test('la entrega SMTP conserva enlaces y destinatario, rechaza fallos y no enví
   assert.deepEqual(message.to, { name: '', address: 'student@univalle.edu' });
   assert.ok(message.text.includes('#token=isolated'));
   mail.transport.sendMail = async () => { throw new Error('Provider failure with private details'); };
-  mail.logger = { error() {} };
+  const logs = [];
+  mail.logger = { error(value) { logs.push(value); } };
   await assert.rejects(() => mail.deliver('student@univalle.edu', 'PASSWORD_RESET', 'https://example.test', new Date()), error => error.getStatus() === 503 && !error.message.includes('private details'));
+  assert.match(logs.at(-1), /MAIL_DELIVERY/);
+  assert.ok(!logs.join('').includes('private details'));
+  mail.transport.sendMail = async () => { throw { code: 'EAUTH', response: 'private details' }; };
+  await assert.rejects(() => mail.deliver('student@univalle.edu', 'EMAIL_VERIFICATION', 'https://example.test', new Date()), error => error.getStatus() === 503);
+  assert.match(logs.at(-1), /SMTP_AUTH/);
   config.set('AUTH_DEV_LINKS', true);
   await assert.doesNotReject(() => mail.deliver('student@univalle.edu', 'PASSWORD_RESET', 'https://example.test', new Date()));
   mail.onModuleDestroy();

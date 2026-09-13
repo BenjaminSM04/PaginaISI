@@ -10,7 +10,7 @@ const normalizeName = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : value;
 
 export class RegisterDto {
-  @ApiProperty({ example: 'nombre@univalle.edu' })
+  @ApiProperty({ example: 'nombre@est.univalle.edu' })
   @Transform(normalizeIdentifier)
   @IsEmail()
   @Matches(INSTITUTIONAL_EMAIL_PATTERN, { message: INSTITUTIONAL_EMAIL_MESSAGE })

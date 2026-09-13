@@ -97,7 +97,7 @@ async function delivered(email, type) {
 }
 
 test('la API rechaza dominios externos y bloquea a la cuenta institucional hasta verificar su correo', async () => {
-  const dto = { username: 'registro-institucional', email: ' Persona@UNIVALLE.EDU ', fullName: 'Estudiante Univalle', password };
+  const dto = { username: 'registro-institucional', email: ' Persona@EST.UNIVALLE.EDU ', fullName: 'Estudiante Univalle', password };
   for (const email of ['persona@gmail.com', 'persona@univalle.edu.evil.test']) {
     const rejected = await request('/auth/register', { ...dto, email });
     assert.equal(rejected.status, 400);
@@ -106,13 +106,13 @@ test('la API rechaza dominios externos y bloquea a la cuenta institucional hasta
   const response = await request('/auth/register', dto);
   assert.equal(response.status, 201);
   const session = await response.json();
-  assert.equal(session.user.email, 'persona@univalle.edu');
+  assert.equal(session.user.email, 'persona@est.univalle.edu');
   assert.equal(session.user.emailVerifiedAt, null);
   assert.equal(session.emailVerificationPreviewUrl, undefined);
   assert.equal((await request('/admin/dashboard', undefined, session.accessToken)).status, 403);
   assert.equal((await request('/users/directory/search', undefined, session.accessToken)).status, 403);
   assert.equal((await request(`/users/${dto.username}`)).status, 404);
-  const mail = await delivered('persona@univalle.edu', 'EMAIL_VERIFICATION');
+  const mail = await delivered('persona@est.univalle.edu', 'EMAIL_VERIFICATION');
   assert.equal(new URL(mail.actionUrl).pathname, '/verificar-correo');
   const token = new URLSearchParams(new URL(mail.actionUrl).hash.slice(1)).get('token');
   const stored = await prisma.authActionToken.findUnique({ where: { tokenHash: hash(token) } });
@@ -124,6 +124,23 @@ test('la API rechaza dominios externos y bloquea a la cuenta institucional hasta
   assert.equal((await request('/users/directory/search', undefined, session.accessToken)).status, 200);
   // El correo verificado no concede privilegios de administrador.
   assert.equal((await request('/admin/dashboard', undefined, session.accessToken)).status, 403);
+});
+
+test('un enlace vencido no activa el perfil y se puede solicitar otro para verificarlo', async () => {
+  const account = await user({ email: 'nuevo@postgrado.univalle.edu', emailVerifiedAt: null });
+  const session = await auth.login({ identifier: account.username, password });
+  const expired = randomBytes(32).toString('base64url');
+  await prisma.authActionToken.create({ data: { userId: account.id, type: 'EMAIL_VERIFICATION', tokenHash: hash(expired), expiresAt: new Date(0), createdAt: new Date(0) } });
+  assert.equal((await request('/auth/email/verify', { token: expired })).status, 400);
+  assert.equal((await request(`/users/${account.username}`)).status, 404);
+  assert.equal((await request('/auth/email/verification', {}, session.accessToken)).status, 201);
+  const mail = await delivered(account.email, 'EMAIL_VERIFICATION');
+  const token = new URLSearchParams(new URL(mail.actionUrl).hash.slice(1)).get('token');
+  assert.equal((await request('/auth/email/verify', { token })).status, 201);
+  const profile = await request(`/users/${account.username}`);
+  assert.equal(profile.status, 200);
+  const body = await profile.json();
+  for (const field of ['email', 'passwordHash', 'refreshTokenHash', 'securityVersion', 'twoFactorEnabled']) assert.equal(body[field], undefined);
 });
 
 test('la recuperación entrega el enlace configurado, oculta la existencia de la cuenta e invalida sesiones y tokens', async () => {

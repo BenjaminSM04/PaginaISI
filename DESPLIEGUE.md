@@ -6,7 +6,7 @@ La aplicación se ejecuta con Docker Compose: PostgreSQL, API y web. En el repos
 
 El `.env` local contiene las claves de base de datos, JWT, cifrado TOTP y correo. No se publica en Git ni se incluye en las imágenes Docker. Conservarlo en un canal privado y restringir su acceso en el servidor. No generar otra clave TOTP al trasladar una base con 2FA activo.
 
-El correo usa `siciunivalle@gmail.com` como remitente técnico. Esto es independiente de la política de registro: las cuentas nuevas del portal deben usar `@univalle.edu` y verificar su correo. Las cuentas anteriores conservan sus direcciones; la recuperación llega al correo registrado de cada usuario. Una dirección ficticia del seed no puede recibir mensajes reales.
+El correo usa `siciunivalle@gmail.com` como remitente técnico. Esto es independiente de la política de registro: las cuentas nuevas del portal deben usar `univalle.edu` o sus subdominios institucionales (por ejemplo, `est.univalle.edu`) y verificar su correo. Las cuentas anteriores conservan sus direcciones; la recuperación llega al correo registrado de cada usuario. Una dirección ficticia del seed no puede recibir mensajes reales.
 
 La URL pública confirmada es **https://www.isilp.com**. Usar ese origen en `PUBLIC_WEB_URL` y `WEB_ORIGIN` de producción. El `.env` local conserva localhost para las pruebas en este equipo.
 
@@ -68,3 +68,11 @@ docker compose stop
 Portal: `http://localhost:3000`. El correo real también funciona localmente, pero sus enlaces abren localhost y deben probarse en el mismo equipo.
 
 `docker compose stop` conserva los datos. Para actualizaciones: respaldar primero, actualizar el repositorio y sus submódulos, y reconstruir. No usar `down -v` para una actualización: elimina los volúmenes de base de datos y archivos.
+
+## Diagnóstico de correo tras actualizar Coolify
+
+Actualizar primero la imagen del backend. Si Coolify utiliza GHCR, ejecutar manualmente el workflow de B-PISI y F-PISI para publicar las imágenes nuevas; un push por sí solo ejecuta las comprobaciones. Desde la terminal del contenedor de la API, ejecutar `npm run mail:verify`. No ejecutar Docker dentro del contenedor.
+
+El diagnóstico comprueba TLS y autenticación sin enviar mensajes. `SMTP_AUTH` indica credenciales rechazadas; `SMTP_CONNECTION` indica un problema de DNS, red, puerto o TLS; `SMTP_CONFIG` indica variables ausentes o inválidas. `MAIL_DELIVERY` requiere revisar el proveedor. Si aparece «Missing script», la imagen no contiene la versión actual. Compartir solo la categoría del error, nunca secretos ni enlaces de autenticación.
+
+Una verificación correcta no confirma recepción: completar después un registro con un buzón institucional propio, abrir el enlace y comprobar el perfil. Conservar `PUBLIC_WEB_URL=https://www.isilp.com` y los secretos existentes del servidor.

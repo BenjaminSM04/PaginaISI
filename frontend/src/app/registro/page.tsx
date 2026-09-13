@@ -84,8 +84,8 @@ export default function RegistroPage() {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="register-email">Correo institucional</Label>
-            <Input id="register-email" type="email" autoComplete="email" placeholder="nombre@univalle.edu" aria-describedby="institutional-email-help" {...register('email')} />
-            <p id="institutional-email-help" className="text-xs text-muted-foreground">Solo correos @univalle.edu. Recibirás un enlace para confirmar que el correo te pertenece.</p>
+            <Input id="register-email" type="email" autoComplete="email" placeholder="nombre@est.univalle.edu" aria-describedby="institutional-email-help" {...register('email')} />
+            <p id="institutional-email-help" className="text-xs text-muted-foreground">Se aceptan correos de univalle.edu y sus subdominios, como est.univalle.edu. Recibirás un enlace para confirmar que el correo te pertenece.</p>
             {errors.email && <p className="text-xs text-danger">{errors.email.message}</p>}
           </div>
           <div className="space-y-1.5">
